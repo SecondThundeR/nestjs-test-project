@@ -1,12 +1,38 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { OrdersService } from './orders.service';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import {
+  type CreateOrderPayload,
+  ORDERS_PATTERNS,
+  type UpdateOrderStatusPayload,
+} from '@app/contracts';
 
 @Controller()
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  @Get()
-  getHello(): string {
-    return this.ordersService.getHello();
+  @MessagePattern(ORDERS_PATTERNS.CREATE)
+  create(@Payload() payload: CreateOrderPayload) {
+    return this.ordersService.create(payload.userId, payload.shippingAddress);
+  }
+
+  @MessagePattern(ORDERS_PATTERNS.FIND_ALL)
+  findAll(@Payload() userId?: string) {
+    return this.ordersService.findAll(userId);
+  }
+
+  @MessagePattern(ORDERS_PATTERNS.FIND_ONE)
+  findOne(@Payload() id: string) {
+    return this.ordersService.findOne(id);
+  }
+
+  @MessagePattern(ORDERS_PATTERNS.UPDATE_STATUS)
+  updateStatus(@Payload() payload: UpdateOrderStatusPayload) {
+    return this.ordersService.updateStatus(payload.id, payload.status);
+  }
+
+  @MessagePattern(ORDERS_PATTERNS.CANCEL)
+  cancel(@Payload() id: string) {
+    return this.ordersService.cancel(id);
   }
 }

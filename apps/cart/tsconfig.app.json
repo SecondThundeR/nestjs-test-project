@@ -2,9 +2,8 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "declaration": false,
-    "outDir": "../../dist/apps/cart",
-    "rootDir": "./src"
+    "outDir": "../../dist/apps/cart"
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../../libs/**/*"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }
