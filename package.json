@@ -10,13 +10,20 @@
     "npm": ">=11.16.0"
   },
   "scripts": {
-    "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "build": "nest build gateway && nest build products && nest build cart && nest build orders",
+    "build:gateway": "nest build gateway",
+    "build:products": "nest build products",
+    "build:cart": "nest build cart",
+    "build:orders": "nest build orders",
+    "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
+    "start": "nest start gateway",
+    "start:gateway": "nest start gateway --start",
+    "start:products": "nest start products --start",
+    "start:cart": "nest start cart --start",
+    "start:orders": "nest start orders --start",
+    "start:dev": "concurrently -n gateway,products,cart,orders -c blue,green,magenta,yellow \"npm:start:gateway\" \"npm:start:products\" \"npm:start:cart\" \"npm:start:orders\"",
+    "start:prod": "concurrently -n gateway,products,cart,orders -c blue,green,magenta,yellow \"node dist/apps/gateway/main\" \"node dist/apps/products/main\" \"node dist/apps/cart/main\" \"node dist/apps/orders/main\"",
+    "lint": "eslint \"{apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -26,7 +33,10 @@
   "dependencies": {
     "@nestjs/common": "11.1.24",
     "@nestjs/core": "11.1.24",
+    "@nestjs/microservices": "11.1.24",
     "@nestjs/platform-express": "11.1.24",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.15.1",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2"
   },
@@ -40,6 +50,7 @@
     "@types/jest": "30.0.0",
     "@types/node": "25.9.2",
     "@types/supertest": "7.2.0",
+    "concurrently": "10.0.3",
     "eslint": "10.4.1",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-prettier": "5.5.6",
@@ -61,16 +72,35 @@
       "json",
       "ts"
     ],
-    "rootDir": "src",
+    "rootDir": ".",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       ".+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "apps/**/*.(controller|service).ts",
+      "apps/**/common/*.ts",
+      "libs/**/filters/*.ts"
     ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "\\.module\\.ts$",
+      "/main\\.ts$",
+      "\\.interface\\.ts$",
+      "\\.dto\\.ts$",
+      "\\.(spec|e2e-spec)\\.ts$",
+      "libs/contracts/src/index.ts",
+      "libs/contracts/src/(patterns|config)/"
+    ],
+    "coverageDirectory": "./coverage",
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/apps/",
+      "<rootDir>/libs/"
+    ],
+    "moduleNameMapper": {
+      "^@app/contracts(|/.*)$": "<rootDir>/libs/contracts/src/$1"
+    }
   },
   "allowScripts": {
     "@nestjs/core@11.1.24": true,
