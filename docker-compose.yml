@@ -1,16 +1,80 @@
+x-app-base: &app-base
+  build:
+    context: .
+    dockerfile: Dockerfile
+  env_file:
+    - .env
+  restart: unless-stopped
+
 services:
+  gateway:
+    <<: *app-base
+    command: ['node', 'dist/apps/gateway/main']
+    environment:
+      PRODUCTS_HOST: products
+      CART_HOST: cart
+      ORDERS_HOST: orders
+      USERS_HOST: users
+    ports:
+      - '${GATEWAY_PORT:-3000}:${GATEWAY_PORT:-3000}'
+    depends_on:
+      - products
+      - cart
+      - orders
+      - users
+
+  products:
+    <<: *app-base
+    command: ['node', 'dist/apps/products/main']
+    environment:
+      PRODUCTS_DB_HOST: products-db
+      PRODUCTS_DB_PORT: 5432
+    depends_on:
+      products-db:
+        condition: service_healthy
+
+  cart:
+    <<: *app-base
+    command: ['node', 'dist/apps/cart/main']
+    environment:
+      CART_DB_HOST: cart-db
+      CART_DB_PORT: 5432
+    depends_on:
+      cart-db:
+        condition: service_healthy
+
+  orders:
+    <<: *app-base
+    command: ['node', 'dist/apps/orders/main']
+    environment:
+      ORDERS_DB_HOST: orders-db
+      ORDERS_DB_PORT: 5432
+    depends_on:
+      orders-db:
+        condition: service_healthy
+
+  users:
+    <<: *app-base
+    command: ['node', 'dist/apps/users/main']
+    environment:
+      USERS_DB_HOST: users-db
+      USERS_DB_PORT: 5432
+    depends_on:
+      users-db:
+        condition: service_healthy
+
   products-db:
     image: postgres:18.4
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: products
+      POSTGRES_USER: ${PRODUCTS_DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${PRODUCTS_DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${PRODUCTS_DB_NAME:-products}
     ports:
-      - '5532:5432'
+      - '${PRODUCTS_DB_PORT:-5532}:5432'
     volumes:
       - products-db-data:/var/lib/postgresql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d products']
+      test: ['CMD-SHELL', 'pg_isready -U ${PRODUCTS_DB_USERNAME:-postgres} -d ${PRODUCTS_DB_NAME:-products}']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -18,15 +82,15 @@ services:
   cart-db:
     image: postgres:18.4
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: cart
+      POSTGRES_USER: ${CART_DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${CART_DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${CART_DB_NAME:-cart}
     ports:
-      - '5533:5432'
+      - '${CART_DB_PORT:-5533}:5432'
     volumes:
       - cart-db-data:/var/lib/postgresql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d cart']
+      test: ['CMD-SHELL', 'pg_isready -U ${CART_DB_USERNAME:-postgres} -d ${CART_DB_NAME:-cart}']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -34,15 +98,15 @@ services:
   orders-db:
     image: postgres:18.4
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: orders
+      POSTGRES_USER: ${ORDERS_DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${ORDERS_DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${ORDERS_DB_NAME:-orders}
     ports:
-      - '5534:5432'
+      - '${ORDERS_DB_PORT:-5534}:5432'
     volumes:
       - orders-db-data:/var/lib/postgresql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d orders']
+      test: ['CMD-SHELL', 'pg_isready -U ${ORDERS_DB_USERNAME:-postgres} -d ${ORDERS_DB_NAME:-orders}']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -50,15 +114,15 @@ services:
   users-db:
     image: postgres:18.4
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: users
+      POSTGRES_USER: ${USERS_DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${USERS_DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${USERS_DB_NAME:-users}
     ports:
-      - '5535:5432'
+      - '${USERS_DB_PORT:-5535}:5432'
     volumes:
       - users-db-data:/var/lib/postgresql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d users']
+      test: ['CMD-SHELL', 'pg_isready -U ${USERS_DB_USERNAME:-postgres} -d ${USERS_DB_NAME:-users}']
       interval: 5s
       timeout: 5s
       retries: 5

@@ -10,7 +10,8 @@
     "npm": ">=11.16.0"
   },
   "scripts": {
-    "docker:up": "docker compose up -d",
+    "docker:up": "docker compose up -d --build",
+    "docker:db": "docker compose up -d products-db cart-db orders-db users-db",
     "docker:down": "docker compose down",
     "build": "nest build gateway && nest build products && nest build cart && nest build orders && nest build users",
     "build:gateway": "nest build gateway",
