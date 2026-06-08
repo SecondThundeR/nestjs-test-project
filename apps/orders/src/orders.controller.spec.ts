@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import {
@@ -25,7 +25,7 @@ describe('OrdersController', () => {
       cancel: jest.fn(),
     };
 
-    const app: TestingModule = await Test.createTestingModule({
+    const app = await Test.createTestingModule({
       controllers: [OrdersController],
       providers: [{ provide: OrdersService, useValue: ordersService }],
     }).compile();

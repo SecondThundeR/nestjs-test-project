@@ -1,9 +1,9 @@
 import {
-  CreateOrderDto,
-  Order,
+  type CreateOrderDto,
+  type Order,
   ORDERS_PATTERNS,
   SERVICE_NAMES,
-  UpdateOrderStatusDto,
+  type UpdateOrderStatusDto,
 } from '@app/contracts';
 import {
   Body,
@@ -14,7 +14,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import type { ClientProxy } from '@nestjs/microservices';
 import { UserId } from '../common/user-id.decorator';
 import { rpcSend } from '../common/rpc.util';
 

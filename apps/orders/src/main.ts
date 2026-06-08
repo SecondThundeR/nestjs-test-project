@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { OrdersModule } from './orders.module';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { GlobalRpcExceptionFilter, SERVICE_PORTS } from '@app/contracts';
 import { Logger, ValidationPipe } from '@nestjs/common';
 

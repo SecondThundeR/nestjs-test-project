@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { of, throwError } from 'rxjs';
 import {
@@ -58,7 +58,7 @@ describe('OrdersService', () => {
     productsClient = { send: jest.fn() };
     cartClient = { send: jest.fn() };
 
-    const moduleRef: TestingModule = await Test.createTestingModule({
+    const moduleRef = await Test.createTestingModule({
       providers: [
         OrdersService,
         { provide: SERVICE_NAMES.PRODUCTS, useValue: productsClient },

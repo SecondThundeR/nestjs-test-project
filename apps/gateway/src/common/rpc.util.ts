@@ -1,6 +1,6 @@
-import { RpcErrorPayload } from '@app/contracts';
+import type { RpcErrorPayload } from '@app/contracts';
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import type { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
 export async function rpcSend<T>(

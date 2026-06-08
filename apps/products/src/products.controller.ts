@@ -2,7 +2,7 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ProductsService } from './products.service';
 import {
-  CreateProductDto,
+  type CreateProductDto,
   PRODUCT_PATTERNS,
   type UpdateProductPayload,
 } from '@app/contracts';

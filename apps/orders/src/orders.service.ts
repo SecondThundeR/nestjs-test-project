@@ -1,9 +1,9 @@
 import {
-  Cart,
+  type Cart,
   CART_PATTERNS,
-  Order,
+  type Order,
   OrderStatus,
-  Product,
+  type Product,
   PRODUCT_PATTERNS,
   SERVICE_NAMES,
 } from '@app/contracts';
@@ -13,7 +13,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import type { ClientProxy } from '@nestjs/microservices';
 import { randomUUID } from 'node:crypto';
 import { firstValueFrom } from 'rxjs';
 

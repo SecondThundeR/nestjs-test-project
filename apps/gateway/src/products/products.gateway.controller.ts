@@ -1,9 +1,9 @@
 import {
-  CreateProductDto,
-  Product,
+  type CreateProductDto,
+  type Product,
   PRODUCT_PATTERNS,
   SERVICE_NAMES,
-  UpdateProductDto,
+  type UpdateProductDto,
 } from '@app/contracts';
 import {
   Body,
@@ -15,7 +15,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import type { ClientProxy } from '@nestjs/microservices';
 import { rpcSend } from '../common/rpc.util';
 
 @Controller('product')

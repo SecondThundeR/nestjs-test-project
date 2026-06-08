@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestMicroservice, ValidationPipe } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { type INestMicroservice, ValidationPipe } from '@nestjs/common';
 import {
-  ClientProxy,
+  type ClientProxy,
   ClientProxyFactory,
-  MicroserviceOptions,
+  type MicroserviceOptions,
   Transport,
 } from '@nestjs/microservices';
 import { firstValueFrom, of } from 'rxjs';
@@ -40,7 +40,7 @@ describe('Cart microservice (e2e)', () => {
   const productsClient = { send: jest.fn(), emit: jest.fn() };
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+    const moduleFixture = await Test.createTestingModule({
       imports: [CartModule],
     })
       .overrideProvider(SERVICE_NAMES.PRODUCTS)

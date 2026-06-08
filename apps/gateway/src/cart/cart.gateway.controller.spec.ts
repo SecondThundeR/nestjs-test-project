@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
 import {
   CART_PATTERNS,
@@ -17,7 +17,7 @@ describe('CartGatewayController', () => {
   beforeEach(async () => {
     cart = { send: jest.fn() };
 
-    const moduleRef: TestingModule = await Test.createTestingModule({
+    const moduleRef = await Test.createTestingModule({
       controllers: [CartGatewayController],
       providers: [{ provide: SERVICE_NAMES.CART, useValue: cart }],
     }).compile();

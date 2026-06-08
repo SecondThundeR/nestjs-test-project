@@ -1,4 +1,8 @@
-import { CreateProductDto, Product, UpdateProductDto } from '@app/contracts';
+import type {
+  CreateProductDto,
+  Product,
+  UpdateProductDto,
+} from '@app/contracts';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 

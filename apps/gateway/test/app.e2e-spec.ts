@@ -1,5 +1,5 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { of, throwError } from 'rxjs';
 import request from 'supertest';
 import type { Server } from 'node:http';
@@ -18,7 +18,7 @@ describe('Gateway (e2e)', () => {
   const orders = { send: jest.fn(), emit: jest.fn() };
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+    const moduleFixture = await Test.createTestingModule({
       imports: [GatewayModule],
     })
       .overrideProvider(SERVICE_NAMES.PRODUCTS)

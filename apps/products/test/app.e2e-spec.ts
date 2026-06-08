@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestMicroservice, ValidationPipe } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { type INestMicroservice, ValidationPipe } from '@nestjs/common';
 import {
-  ClientProxy,
+  type ClientProxy,
   ClientProxyFactory,
-  MicroserviceOptions,
+  type MicroserviceOptions,
   Transport,
 } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
@@ -22,7 +22,7 @@ describe('Products microservice (e2e)', () => {
   let client: ClientProxy;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+    const moduleFixture = await Test.createTestingModule({
       imports: [ProductsModule],
     }).compile();
 

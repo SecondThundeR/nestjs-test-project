@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { CartController } from './cart.controller';
 import { CartService } from './cart.service';
 import type {
@@ -22,7 +22,7 @@ describe('CartController', () => {
       clear: jest.fn(),
     };
 
-    const app: TestingModule = await Test.createTestingModule({
+    const app = await Test.createTestingModule({
       controllers: [CartController],
       providers: [{ provide: CartService, useValue: cartService }],
     }).compile();

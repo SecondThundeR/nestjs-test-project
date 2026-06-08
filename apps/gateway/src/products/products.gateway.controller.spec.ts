@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
 import {
   PRODUCT_PATTERNS,
@@ -15,7 +15,7 @@ describe('ProductsGatewayController', () => {
   beforeEach(async () => {
     products = { send: jest.fn() };
 
-    const moduleRef: TestingModule = await Test.createTestingModule({
+    const moduleRef = await Test.createTestingModule({
       controllers: [ProductsGatewayController],
       providers: [{ provide: SERVICE_NAMES.PRODUCTS, useValue: products }],
     }).compile();

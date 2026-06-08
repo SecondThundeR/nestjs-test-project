@@ -1,8 +1,8 @@
 import {
-  AddCartItemDto,
-  Cart,
-  CartItem,
-  Product,
+  type AddCartItemDto,
+  type Cart,
+  type CartItem,
+  type Product,
   PRODUCT_PATTERNS,
   SERVICE_NAMES,
 } from '@app/contracts';
@@ -12,7 +12,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import type { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
