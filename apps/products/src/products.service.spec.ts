@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import type { CreateProductDto } from '@app/contracts';
 import { ProductsService } from './products.service';
 
@@ -69,8 +69,8 @@ describe('ProductsService', () => {
       expect(service.findOne(product.id)).toBe(product);
     });
 
-    it('throws NotFoundException for an unknown id', () => {
-      expect(() => service.findOne('missing')).toThrow(NotFoundException);
+    it('throws RpcException for an unknown id', () => {
+      expect(() => service.findOne('missing')).toThrow(RpcException);
     });
   });
 
@@ -97,9 +97,9 @@ describe('ProductsService', () => {
       expect(service.findOne(product.id)).toEqual(updated);
     });
 
-    it('throws NotFoundException for an unknown id', () => {
+    it('throws RpcException for an unknown id', () => {
       expect(() => service.update('missing', { price: 1 })).toThrow(
-        NotFoundException,
+        RpcException,
       );
     });
   });
@@ -112,11 +112,11 @@ describe('ProductsService', () => {
         id: product.id,
         deleted: true,
       });
-      expect(() => service.findOne(product.id)).toThrow(NotFoundException);
+      expect(() => service.findOne(product.id)).toThrow(RpcException);
     });
 
-    it('throws NotFoundException for an unknown id', () => {
-      expect(() => service.remove('missing')).toThrow(NotFoundException);
+    it('throws RpcException for an unknown id', () => {
+      expect(() => service.remove('missing')).toThrow(RpcException);
     });
   });
 });

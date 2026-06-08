@@ -1,17 +1,13 @@
 import {
-  type AddCartItemDto,
+  AddCartItemDto,
   type Cart,
   type CartItem,
   type Product,
   PRODUCT_PATTERNS,
+  RpcErrors,
   SERVICE_NAMES,
 } from '@app/contracts';
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
@@ -38,7 +34,7 @@ export class CartService {
     const nextQuantity = (existing?.quantity ?? 0) + dto.quantity;
 
     if (product.stock < nextQuantity) {
-      throw new BadRequestException(
+      throw RpcErrors.badRequest(
         `Only ${product.stock} units of "${product.name}" are in stock`,
       );
     }
@@ -64,7 +60,7 @@ export class CartService {
     const cart = this.carts.get(userId);
     const item = cart?.items.find((item) => item.productId === productId);
     if (!cart || !item) {
-      throw new NotFoundException(`Item ${productId} is not in the cart`);
+      throw RpcErrors.notFound(`Item ${productId} is not in the cart`);
     }
 
     if (quantity === 0) {
@@ -73,7 +69,7 @@ export class CartService {
 
     const product = await this.fetchProduct(productId);
     if (product.stock < quantity) {
-      throw new BadRequestException(
+      throw RpcErrors.badRequest(
         `Only ${product.stock} units of "${product.name}" are in stock`,
       );
     }
@@ -86,7 +82,7 @@ export class CartService {
   removeItem(userId: string, productId: string) {
     const cart = this.carts.get(userId);
     if (!cart) {
-      throw new NotFoundException('Cart is empty');
+      throw RpcErrors.notFound('Cart is empty');
     }
     cart.items = cart.items.filter((item) => item.productId !== productId);
     return this.persist(cart);
@@ -106,7 +102,7 @@ export class CartService {
       ),
     ).catch(() => null);
     if (!product) {
-      throw new NotFoundException(`Product ${productId} not found`);
+      throw RpcErrors.notFound(`Product ${productId} not found`);
     }
     return product;
   }

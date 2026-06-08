@@ -16,7 +16,7 @@ export interface RpcErrorPayload {
 
 @Catch(RpcException)
 export class GlobalRpcExceptionFilter implements RpcExceptionFilter<RpcException> {
-  catch(exception: RpcException, _host: ArgumentsHost): Observable<any> {
+  catch(exception: RpcException, _host: ArgumentsHost): Observable<never> {
     return throwError(() => this.toPayload(exception));
   }
 

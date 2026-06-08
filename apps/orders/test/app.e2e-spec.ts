@@ -13,6 +13,7 @@ import {
   ORDERS_PATTERNS,
   OrderStatus,
   PRODUCT_PATTERNS,
+  rpcValidationExceptionFactory,
   SERVICE_NAMES,
   type Cart,
   type CartItem,
@@ -72,7 +73,11 @@ describe('Orders microservice (e2e)', () => {
       options: { host: HOST, port: PORT },
     });
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, transform: true }),
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        exceptionFactory: rpcValidationExceptionFactory,
+      }),
     );
     app.useGlobalFilters(new GlobalRpcExceptionFilter());
     await app.listen();
@@ -165,12 +170,12 @@ describe('Orders microservice (e2e)', () => {
         userId: USER,
         shippingAddress: ADDRESS,
       }),
-    ).rejects.toMatchObject({ status: 'error' });
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 
   it('rejects finding an unknown order', async () => {
     await expect(
       send<Order>(ORDERS_PATTERNS.FIND_ONE, 'missing'),
-    ).rejects.toMatchObject({ status: 'error' });
+    ).rejects.toMatchObject({ statusCode: 404 });
   });
 });

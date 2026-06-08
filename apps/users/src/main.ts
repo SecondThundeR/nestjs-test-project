@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { CartModule } from './cart.module';
+import { UsersModule } from './users.module';
 import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
 import {
   GlobalRpcExceptionFilter,
@@ -10,10 +10,10 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    CartModule,
+    UsersModule,
     {
       transport: Transport.TCP,
-      options: { host: '0.0.0.0', port: SERVICE_PORTS.CART },
+      options: { host: '0.0.0.0', port: SERVICE_PORTS.USERS },
     },
   );
 
@@ -28,8 +28,8 @@ async function bootstrap() {
 
   await app.listen();
   Logger.log(
-    `Cart microservice is listening on TCP port ${SERVICE_PORTS.CART}`,
-    'Cart',
+    `Users microservice is listening on TCP port ${SERVICE_PORTS.USERS}`,
+    'Users',
   );
 }
 

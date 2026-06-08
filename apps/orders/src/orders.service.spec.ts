@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { of, throwError } from 'rxjs';
 import {
   CART_PATTERNS,
@@ -139,31 +139,31 @@ describe('OrdersService', () => {
       expect(service.findAll(USER)).toContainEqual(order);
     });
 
-    it('throws BadRequestException when the cart is empty', async () => {
+    it('throws RpcException when the cart is empty', async () => {
       cartClient.send.mockReturnValue(of(makeCart([])));
 
       await expect(service.create(USER, ADDRESS)).rejects.toBeInstanceOf(
-        BadRequestException,
+        RpcException,
       );
     });
 
-    it('throws BadRequestException when a product no longer exists', async () => {
+    it('throws RpcException when a product no longer exists', async () => {
       cartClient.send.mockReturnValue(of(makeCart([makeCartItem()])));
       productsClient.send.mockReturnValue(of([]));
 
       await expect(service.create(USER, ADDRESS)).rejects.toBeInstanceOf(
-        BadRequestException,
+        RpcException,
       );
     });
 
-    it('throws BadRequestException when stock is insufficient', async () => {
+    it('throws RpcException when stock is insufficient', async () => {
       cartClient.send.mockReturnValue(
         of(makeCart([makeCartItem({ quantity: 10 })])),
       );
       productsClient.send.mockReturnValue(of([makeProduct({ stock: 3 })]));
 
       await expect(service.create(USER, ADDRESS)).rejects.toBeInstanceOf(
-        BadRequestException,
+        RpcException,
       );
     });
   });
@@ -182,8 +182,8 @@ describe('OrdersService', () => {
   });
 
   describe('findOne', () => {
-    it('throws NotFoundException for an unknown id', () => {
-      expect(() => service.findOne('missing')).toThrow(NotFoundException);
+    it('throws RpcException for an unknown id', () => {
+      expect(() => service.findOne('missing')).toThrow(RpcException);
     });
   });
 
@@ -197,18 +197,18 @@ describe('OrdersService', () => {
       expect(service.findOne(order.id).status).toBe(OrderStatus.SHIPPED);
     });
 
-    it('throws NotFoundException for an unknown id', () => {
+    it('throws RpcException for an unknown id', () => {
       expect(() => service.updateStatus('missing', OrderStatus.PAID)).toThrow(
-        NotFoundException,
+        RpcException,
       );
     });
 
-    it('throws BadRequestException when the order is cancelled', async () => {
+    it('throws RpcException when the order is cancelled', async () => {
       const order = await createOrder();
       await service.cancel(order.id);
 
       expect(() => service.updateStatus(order.id, OrderStatus.PAID)).toThrow(
-        BadRequestException,
+        RpcException,
       );
     });
   });
@@ -266,18 +266,18 @@ describe('OrdersService', () => {
       expect(productsClient.send).not.toHaveBeenCalled();
     });
 
-    it('throws BadRequestException when the order is already shipped', async () => {
+    it('throws RpcException when the order is already shipped', async () => {
       const order = await createOrder();
       service.updateStatus(order.id, OrderStatus.SHIPPED);
 
       await expect(service.cancel(order.id)).rejects.toBeInstanceOf(
-        BadRequestException,
+        RpcException,
       );
     });
 
-    it('throws NotFoundException for an unknown id', async () => {
+    it('throws RpcException for an unknown id', async () => {
       await expect(service.cancel('missing')).rejects.toBeInstanceOf(
-        NotFoundException,
+        RpcException,
       );
     });
   });

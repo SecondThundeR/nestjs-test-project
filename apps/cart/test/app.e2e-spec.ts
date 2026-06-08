@@ -10,6 +10,7 @@ import { firstValueFrom, of } from 'rxjs';
 import {
   CART_PATTERNS,
   GlobalRpcExceptionFilter,
+  rpcValidationExceptionFactory,
   SERVICE_NAMES,
   type Cart,
   type Product,
@@ -52,7 +53,11 @@ describe('Cart microservice (e2e)', () => {
       options: { host: HOST, port: PORT },
     });
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, transform: true }),
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        exceptionFactory: rpcValidationExceptionFactory,
+      }),
     );
     app.useGlobalFilters(new GlobalRpcExceptionFilter());
     await app.listen();
@@ -147,6 +152,6 @@ describe('Cart microservice (e2e)', () => {
         userId: USER,
         item: { productId: 'missing', quantity: 1 },
       }),
-    ).rejects.toMatchObject({ status: 'error' });
+    ).rejects.toMatchObject({ statusCode: 404 });
   });
 });

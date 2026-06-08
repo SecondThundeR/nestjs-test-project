@@ -1,9 +1,9 @@
 import {
-  type AddCartItemDto,
+  AddCartItemDto,
   type Cart,
   CART_PATTERNS,
   SERVICE_NAMES,
-  type UpdateCartItemDto,
+  UpdateCartItemDto,
 } from '@app/contracts';
 import {
   Body,
@@ -14,22 +14,25 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
-import { UserId } from '../common/user-id.decorator';
+import { CurrentUserId } from '../common/current-user.decorator';
+import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { rpcSend } from '../common/rpc.util';
 
 @Controller('cart')
+@UseGuards(JwtAuthGuard)
 export class CartGatewayController {
   constructor(@Inject(SERVICE_NAMES.CART) private readonly cart: ClientProxy) {}
 
   @Get()
-  get(@UserId() userId: string) {
+  get(@CurrentUserId() userId: string) {
     return rpcSend<Cart>(this.cart, CART_PATTERNS.GET, userId);
   }
 
   @Post('items')
-  addItem(@UserId() userId: string, @Body() dto: AddCartItemDto) {
+  addItem(@CurrentUserId() userId: string, @Body() dto: AddCartItemDto) {
     return rpcSend<Cart>(this.cart, CART_PATTERNS.ADD_ITEM, {
       userId,
       item: dto,
@@ -38,7 +41,7 @@ export class CartGatewayController {
 
   @Patch('items/:productId')
   updateItem(
-    @UserId() userId: string,
+    @CurrentUserId() userId: string,
     @Param('productId') productId: string,
     @Body() dto: UpdateCartItemDto,
   ) {
@@ -50,7 +53,10 @@ export class CartGatewayController {
   }
 
   @Delete('items/:productId')
-  removeItem(@UserId() userId: string, @Param('productId') productId: string) {
+  removeItem(
+    @CurrentUserId() userId: string,
+    @Param('productId') productId: string,
+  ) {
     return rpcSend<Cart>(this.cart, CART_PATTERNS.REMOVE_ITEM, {
       userId,
       productId,
@@ -58,7 +64,7 @@ export class CartGatewayController {
   }
 
   @Delete()
-  clear(@UserId() userId: string) {
+  clear(@CurrentUserId() userId: string) {
     return rpcSend<Cart>(this.cart, CART_PATTERNS.CLEAR, userId);
   }
 }

@@ -22,3 +22,9 @@ export const ORDERS_PATTERNS = {
   UPDATE_STATUS: 'order.updateStatus',
   CANCEL: 'order.cancel',
 } as const;
+
+export const USERS_PATTERNS = {
+  REGISTER: 'user.register',
+  LOGIN: 'user.login',
+  VERIFY: 'user.verify',
+} as const;

@@ -10,19 +10,21 @@
     "npm": ">=11.16.0"
   },
   "scripts": {
-    "build": "nest build gateway && nest build products && nest build cart && nest build orders",
+    "build": "nest build gateway && nest build products && nest build cart && nest build orders && nest build users",
     "build:gateway": "nest build gateway",
     "build:products": "nest build products",
     "build:cart": "nest build cart",
     "build:orders": "nest build orders",
+    "build:users": "nest build users",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start gateway",
     "start:gateway": "nest start gateway --start",
     "start:products": "nest start products --start",
     "start:cart": "nest start cart --start",
     "start:orders": "nest start orders --start",
-    "start:dev": "concurrently -n gateway,products,cart,orders -c blue,green,magenta,yellow \"npm:start:gateway\" \"npm:start:products\" \"npm:start:cart\" \"npm:start:orders\"",
-    "start:prod": "concurrently -n gateway,products,cart,orders -c blue,green,magenta,yellow \"node dist/apps/gateway/main\" \"node dist/apps/products/main\" \"node dist/apps/cart/main\" \"node dist/apps/orders/main\"",
+    "start:users": "nest start users --start",
+    "start:dev": "concurrently -n gateway,products,cart,orders,users -c blue,green,magenta,yellow,cyan \"npm:start:gateway\" \"npm:start:products\" \"npm:start:cart\" \"npm:start:orders\" \"npm:start:users\"",
+    "start:prod": "concurrently -n gateway,products,cart,orders,users -c blue,green,magenta,yellow,cyan \"node dist/apps/gateway/main\" \"node dist/apps/products/main\" \"node dist/apps/cart/main\" \"node dist/apps/orders/main\" \"node dist/apps/users/main\"",
     "lint": "eslint \"{apps,libs,test}/**/*.ts\"",
     "lint:fix": "eslint \"{apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
@@ -34,10 +36,14 @@
   "dependencies": {
     "@nestjs/common": "11.1.24",
     "@nestjs/core": "11.1.24",
+    "@nestjs/jwt": "11.0.2",
     "@nestjs/microservices": "11.1.24",
+    "@nestjs/passport": "11.0.5",
     "@nestjs/platform-express": "11.1.24",
+    "bcrypt": "6.0.0",
     "class-transformer": "0.5.1",
     "class-validator": "0.15.1",
+    "passport": "0.7.0",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2"
   },
@@ -47,6 +53,7 @@
     "@nestjs/cli": "11.0.21",
     "@nestjs/schematics": "11.1.0",
     "@nestjs/testing": "11.1.24",
+    "@types/bcrypt": "6.0.0",
     "@types/express": "5.0.6",
     "@types/jest": "30.0.0",
     "@types/node": "25.9.2",
@@ -105,6 +112,7 @@
   },
   "allowScripts": {
     "@nestjs/core@11.1.24": true,
-    "unrs-resolver@1.12.2": true
+    "unrs-resolver@1.12.2": true,
+    "bcrypt@6.0.0": true
   }
 }

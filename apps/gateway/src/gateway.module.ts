@@ -1,13 +1,21 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { SERVICE_HOSTS, SERVICE_NAMES, SERVICE_PORTS } from '@app/contracts';
+import { JwtModule } from '@nestjs/jwt';
+import {
+  JWT_CONFIG,
+  SERVICE_HOSTS,
+  SERVICE_NAMES,
+  SERVICE_PORTS,
+} from '@app/contracts';
 import { ProductsGatewayController } from './products/products.gateway.controller';
 import { CartGatewayController } from './cart/cart.gateway.controller';
 import { OrdersGatewayController } from './orders/orders.gateway.controller';
 import { HealthController } from './health.controller';
+import { UsersGatewayController } from './users/users.gateway.controller';
 
 @Module({
   imports: [
+    JwtModule.register({ secret: JWT_CONFIG.secret }),
     ClientsModule.register([
       {
         name: SERVICE_NAMES.PRODUCTS,
@@ -24,6 +32,11 @@ import { HealthController } from './health.controller';
         transport: Transport.TCP,
         options: { host: SERVICE_HOSTS.ORDERS, port: SERVICE_PORTS.ORDERS },
       },
+      {
+        name: SERVICE_NAMES.USERS,
+        transport: Transport.TCP,
+        options: { host: SERVICE_HOSTS.USERS, port: SERVICE_PORTS.USERS },
+      },
     ]),
   ],
   controllers: [
@@ -31,6 +44,7 @@ import { HealthController } from './health.controller';
     ProductsGatewayController,
     CartGatewayController,
     OrdersGatewayController,
+    UsersGatewayController,
   ],
 })
 export class GatewayModule {}

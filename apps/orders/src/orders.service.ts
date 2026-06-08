@@ -5,14 +5,10 @@ import {
   OrderStatus,
   type Product,
   PRODUCT_PATTERNS,
+  RpcErrors,
   SERVICE_NAMES,
 } from '@app/contracts';
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import { randomUUID } from 'node:crypto';
 import { firstValueFrom } from 'rxjs';
@@ -33,9 +29,7 @@ export class OrdersService {
     );
 
     if (!cart.items.length) {
-      throw new BadRequestException(
-        'Cannot create an order from an empty cart',
-      );
+      throw RpcErrors.badRequest('Cannot create an order from an empty cart');
     }
 
     const productIds = cart.items.map(({ productId }) => productId);
@@ -53,13 +47,13 @@ export class OrdersService {
     const items = cart.items.map((cartItem) => {
       const product = productsMap.get(cartItem.productId);
       if (!product) {
-        throw new BadRequestException(
+        throw RpcErrors.badRequest(
           `Product ${cartItem.productId} is no longer available`,
         );
       }
 
       if (product.stock < cartItem.quantity) {
-        throw new BadRequestException(
+        throw RpcErrors.badRequest(
           `Only ${product.stock} units of "${product.name}" are in stock`,
         );
       }
@@ -115,7 +109,7 @@ export class OrdersService {
   findOne(id: string) {
     const order = this.orders.get(id);
     if (!order) {
-      throw new NotFoundException(`Order ${id} not found`);
+      throw RpcErrors.notFound(`Order ${id} not found`);
     }
     return order;
   }
@@ -123,7 +117,7 @@ export class OrdersService {
   updateStatus(id: string, status: OrderStatus) {
     const order = this.findOne(id);
     if (order.status === OrderStatus.CANCELLED) {
-      throw new BadRequestException('A cancelled order cannot change status');
+      throw RpcErrors.badRequest('A cancelled order cannot change status');
     }
     order.status = status;
     order.updatedAt = new Date().toISOString();
@@ -140,7 +134,7 @@ export class OrdersService {
       order.status === OrderStatus.SHIPPED ||
       order.status === OrderStatus.DELIVERED
     ) {
-      throw new BadRequestException(
+      throw RpcErrors.badRequest(
         `Cannot cancel an order that is already ${order.status}`,
       );
     }

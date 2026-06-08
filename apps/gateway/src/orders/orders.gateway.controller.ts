@@ -1,9 +1,9 @@
 import {
-  type CreateOrderDto,
+  CreateOrderDto,
   type Order,
   ORDERS_PATTERNS,
   SERVICE_NAMES,
-  type UpdateOrderStatusDto,
+  UpdateOrderStatusDto,
 } from '@app/contracts';
 import {
   Body,
@@ -13,19 +13,22 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
-import { UserId } from '../common/user-id.decorator';
+import { CurrentUserId } from '../common/current-user.decorator';
+import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { rpcSend } from '../common/rpc.util';
 
 @Controller('orders')
+@UseGuards(JwtAuthGuard)
 export class OrdersGatewayController {
   constructor(
     @Inject(SERVICE_NAMES.ORDERS) private readonly orders: ClientProxy,
   ) {}
 
   @Post()
-  create(@UserId() userId: string, @Body() dto: CreateOrderDto) {
+  create(@CurrentUserId() userId: string, @Body() dto: CreateOrderDto) {
     return rpcSend<Order>(this.orders, ORDERS_PATTERNS.CREATE, {
       userId,
       shippingAddress: dto.shippingAddress,
@@ -33,7 +36,7 @@ export class OrdersGatewayController {
   }
 
   @Get()
-  findAll(@UserId() userId: string) {
+  findAll(@CurrentUserId() userId: string) {
     return rpcSend<Order[]>(this.orders, ORDERS_PATTERNS.FIND_ALL, userId);
   }
 
