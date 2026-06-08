@@ -1,5 +1,5 @@
 import {
-  type AddCartItemDto,
+  AddCartItemDto,
   type Cart,
   type CartItem,
   type Product,

@@ -1,9 +1,9 @@
 import {
-  type AddCartItemDto,
+  AddCartItemDto,
   type Cart,
   CART_PATTERNS,
   SERVICE_NAMES,
-  type UpdateCartItemDto,
+  UpdateCartItemDto,
 } from '@app/contracts';
 import {
   Body,

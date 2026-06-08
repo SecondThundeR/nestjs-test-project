@@ -1,9 +1,9 @@
 import {
-  type CreateOrderDto,
+  CreateOrderDto,
   type Order,
   ORDERS_PATTERNS,
   SERVICE_NAMES,
-  type UpdateOrderStatusDto,
+  UpdateOrderStatusDto,
 } from '@app/contracts';
 import {
   Body,

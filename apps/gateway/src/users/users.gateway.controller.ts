@@ -1,7 +1,7 @@
 import {
-  type LoginUserDto,
+  LoginUserDto,
   type PublicUser,
-  type RegisterUserDto,
+  RegisterUserDto,
   SERVICE_NAMES,
   USERS_PATTERNS,
 } from '@app/contracts';

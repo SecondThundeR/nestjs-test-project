@@ -1,9 +1,9 @@
 import {
   type AuthResult,
   type JwtPayload,
-  type LoginUserDto,
+  LoginUserDto,
   type PublicUser,
-  type RegisterUserDto,
+  RegisterUserDto,
   RpcErrors,
   type User,
 } from '@app/contracts';
