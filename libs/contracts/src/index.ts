@@ -9,6 +9,8 @@ export * from './config/services.config';
 export * from './filters/rpc-errors';
 export * from './filters/rpc-exception.filter';
 
+export * from './logger/winston.logger';
+
 export * from './orders/order.dto';
 export * from './orders/order.interface';
 

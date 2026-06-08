@@ -1,7 +1,9 @@
 import type { RpcErrorPayload } from '@app/contracts';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+
+const logger = new Logger('RpcSend');
 
 export async function rpcSend<T>(
   client: ClientProxy,
@@ -11,7 +13,15 @@ export async function rpcSend<T>(
   try {
     return await firstValueFrom(client.send<T>(pattern, data));
   } catch (error) {
-    throw toHttpException(error);
+    const httpException = toHttpException(error);
+    const status = httpException.getStatus();
+    const message = `"${pattern}" failed with ${status}: ${httpException.message}`;
+    if (status >= 500) {
+      logger.error(message);
+    } else {
+      logger.debug(message);
+    }
+    throw httpException;
   }
 }
 
