@@ -1,11 +1,18 @@
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { GatewayModule } from './gateway.module';
-import { type ServicesConfig, servicesConfig } from '@app/contracts';
+import {
+  createWinstonLogger,
+  type ServicesConfig,
+  servicesConfig,
+} from '@app/contracts';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(GatewayModule);
+  const app = await NestFactory.create<NestExpressApplication>(GatewayModule, {
+    logger: createWinstonLogger('Gateway'),
+  });
 
   const services = app.get<ServicesConfig>(servicesConfig.KEY);
 

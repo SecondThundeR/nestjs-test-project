@@ -8,7 +8,7 @@ import {
   RpcErrors,
   SERVICE_NAMES,
 } from '@app/contracts';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
@@ -18,6 +18,8 @@ import { OrderEntity } from './entities/order.entity';
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     @InjectRepository(OrderEntity)
     private readonly orders: Repository<OrderEntity>,
@@ -27,11 +29,13 @@ export class OrdersService {
   ) {}
 
   async create(userId: string, shippingAddress: string) {
+    this.logger.log(`Creating order for user ${userId}`);
     const cart = await firstValueFrom(
       this.cartClient.send<Cart>(CART_PATTERNS.GET, userId),
     );
 
     if (!cart.items.length) {
+      this.logger.warn(`User ${userId} tried to order with an empty cart`);
       throw RpcErrors.badRequest('Cannot create an order from an empty cart');
     }
 
@@ -72,6 +76,9 @@ export class OrdersService {
       };
     });
 
+    this.logger.debug(
+      `Reserving stock for ${items.length} product(s) on user ${userId}'s order`,
+    );
     await Promise.all(
       items.map((item) => {
         const product = productsMap.get(item.productId)!;
@@ -99,16 +106,26 @@ export class OrdersService {
 
     await firstValueFrom(this.cartClient.send(CART_PATTERNS.CLEAR, userId));
 
+    this.logger.log(
+      `Created order ${order.id} for user ${userId}: ${items.length} item(s), total ${order.total}`,
+    );
     return order;
   }
 
-  findAll(userId?: string) {
-    return this.orders.find({ where: userId ? { userId } : {} });
+  async findAll(userId?: string) {
+    const orders = await this.orders.find({
+      where: userId ? { userId } : {},
+    });
+    this.logger.debug(
+      `Listing ${orders.length} order(s)${userId ? ` for user ${userId}` : ''}`,
+    );
+    return orders;
   }
 
   async findOne(id: string) {
     const order = await this.orders.findOneBy({ id });
     if (!order) {
+      this.logger.warn(`Order ${id} not found`);
       throw RpcErrors.notFound(`Order ${id} not found`);
     }
     return order;
@@ -117,21 +134,28 @@ export class OrdersService {
   async updateStatus(id: string, status: OrderStatus) {
     const order = await this.findOne(id);
     if (order.status === OrderStatus.CANCELLED) {
+      this.logger.warn(`Order ${id} is cancelled and cannot change status`);
       throw RpcErrors.badRequest('A cancelled order cannot change status');
     }
+    const previous = order.status;
     order.status = status;
-    return this.orders.save(order);
+    const saved = await this.orders.save(order);
+    this.logger.log(`Order ${id} status ${previous} -> ${status}`);
+    return saved;
   }
 
   async cancel(id: string) {
+    this.logger.log(`Cancelling order ${id}`);
     const order = await this.findOne(id);
     if (order.status === OrderStatus.CANCELLED) {
+      this.logger.debug(`Order ${id} is already cancelled`);
       return order;
     }
     if (
       order.status === OrderStatus.SHIPPED ||
       order.status === OrderStatus.DELIVERED
     ) {
+      this.logger.warn(`Cannot cancel order ${id}: already ${order.status}`);
       throw RpcErrors.badRequest(
         `Cannot cancel an order that is already ${order.status}`,
       );
@@ -159,6 +183,8 @@ export class OrdersService {
     );
 
     order.status = OrderStatus.CANCELLED;
-    return this.orders.save(order);
+    const saved = await this.orders.save(order);
+    this.logger.log(`Order ${id} cancelled and stock restored`);
+    return saved;
   }
 }

@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { OrdersModule } from './orders.module';
 import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
 import {
+  createWinstonLogger,
   GlobalRpcExceptionFilter,
   rpcValidationExceptionFactory,
   servicesConfig,
@@ -16,6 +17,7 @@ async function bootstrap() {
     {
       transport: Transport.TCP,
       options: { host: '0.0.0.0', port: ports.orders },
+      logger: createWinstonLogger('Orders'),
     },
   );
 

@@ -6,7 +6,7 @@ import {
   RpcErrors,
   SERVICE_NAMES,
 } from '@app/contracts';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,6 +15,8 @@ import { CartSchema } from './schemas/cart.schema';
 
 @Injectable()
 export class CartService {
+  private readonly logger = new Logger(CartService.name);
+
   constructor(
     @InjectRepository(CartSchema)
     private readonly carts: Repository<Cart>,
@@ -24,10 +26,16 @@ export class CartService {
 
   async get(userId: string): Promise<Cart> {
     const cart = await this.carts.findOneBy({ userId });
+    this.logger.debug(
+      `Cart for user ${userId} has ${cart?.items.length ?? 0} item(s)`,
+    );
     return cart ?? this.emptyCart(userId);
   }
 
   async addItem(userId: string, dto: AddCartItemDto) {
+    this.logger.log(
+      `User ${userId} adding ${dto.quantity}x product ${dto.productId} to cart`,
+    );
     const product = await this.fetchProduct(dto.productId);
 
     const cart =
@@ -38,6 +46,9 @@ export class CartService {
     const nextQuantity = (existing?.quantity ?? 0) + dto.quantity;
 
     if (product.stock < nextQuantity) {
+      this.logger.warn(
+        `Rejected add for user ${userId}: only ${product.stock} of "${product.name}" in stock (requested ${nextQuantity})`,
+      );
       throw RpcErrors.badRequest(
         `Only ${product.stock} units of "${product.name}" are in stock`,
       );
@@ -61,9 +72,15 @@ export class CartService {
   }
 
   async updateItem(userId: string, productId: string, quantity: number) {
+    this.logger.log(
+      `User ${userId} setting product ${productId} quantity to ${quantity}`,
+    );
     const cart = await this.carts.findOneBy({ userId });
     const item = cart?.items.find((item) => item.productId === productId);
     if (!cart || !item) {
+      this.logger.warn(
+        `User ${userId} cannot update item ${productId}: not in cart`,
+      );
       throw RpcErrors.notFound(`Item ${productId} is not in the cart`);
     }
 
@@ -73,6 +90,9 @@ export class CartService {
 
     const product = await this.fetchProduct(productId);
     if (product.stock < quantity) {
+      this.logger.warn(
+        `Rejected update for user ${userId}: only ${product.stock} of "${product.name}" in stock (requested ${quantity})`,
+      );
       throw RpcErrors.badRequest(
         `Only ${product.stock} units of "${product.name}" are in stock`,
       );
@@ -84,8 +104,10 @@ export class CartService {
   }
 
   async removeItem(userId: string, productId: string) {
+    this.logger.log(`User ${userId} removing product ${productId} from cart`);
     const cart = await this.carts.findOneBy({ userId });
     if (!cart) {
+      this.logger.warn(`User ${userId} cannot remove item: cart is empty`);
       throw RpcErrors.notFound('Cart is empty');
     }
     cart.items = cart.items.filter((item) => item.productId !== productId);
@@ -93,6 +115,7 @@ export class CartService {
   }
 
   clear(userId: string) {
+    this.logger.log(`Clearing cart for user ${userId}`);
     return this.carts.save(this.newCart(userId));
   }
 
@@ -109,9 +132,13 @@ export class CartService {
     return product;
   }
 
-  private persist(cart: Cart) {
+  private async persist(cart: Cart) {
     this.recalculate(cart);
-    return this.carts.save(cart);
+    const saved = await this.carts.save(cart);
+    this.logger.debug(
+      `Persisted cart for user ${cart.userId}: ${cart.items.length} item(s), total ${cart.total}`,
+    );
+    return saved;
   }
 
   private recalculate(cart: Cart) {

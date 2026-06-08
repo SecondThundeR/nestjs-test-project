@@ -6,7 +6,7 @@ import {
   RegisterUserDto,
   RpcErrors,
 } from '@app/contracts';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
@@ -18,6 +18,8 @@ const SALT_ROUNDS = 10;
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
@@ -26,7 +28,9 @@ export class UsersService {
 
   async register(dto: RegisterUserDto): Promise<AuthResult> {
     const email = dto.email.toLowerCase();
+    this.logger.log(`Registration attempt for ${email}`);
     if (await this.users.findOneBy({ email })) {
+      this.logger.warn(`Registration rejected: ${email} already registered`);
       throw RpcErrors.conflict(`Email ${dto.email} is already registered`);
     }
 
@@ -39,16 +43,21 @@ export class UsersService {
       }),
     );
 
+    this.logger.log(`Registered user ${user.id} (${email})`);
     return this.buildAuthResult(user);
   }
 
   async login(dto: LoginUserDto): Promise<AuthResult> {
-    const user = await this.users.findOneBy({ email: dto.email.toLowerCase() });
+    const email = dto.email.toLowerCase();
+    this.logger.log(`Login attempt for ${email}`);
+    const user = await this.users.findOneBy({ email });
 
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
+      this.logger.warn(`Failed login for ${email}`);
       throw RpcErrors.unauthorized('Invalid email or password');
     }
 
+    this.logger.log(`User ${user.id} (${email}) logged in`);
     return this.buildAuthResult(user);
   }
 
@@ -58,14 +67,17 @@ export class UsersService {
     try {
       payload = this.jwtService.verify<JwtPayload>(token);
     } catch {
+      this.logger.warn('Token verification failed: invalid or expired token');
       throw RpcErrors.unauthorized('Invalid or expired token');
     }
 
     const user = await this.users.findOneBy({ id: payload.sub });
     if (!user) {
+      this.logger.warn(`Token valid but user ${payload.sub} no longer exists`);
       throw RpcErrors.unauthorized('Invalid or expired token');
     }
 
+    this.logger.debug(`Verified token for user ${user.id}`);
     return this.toPublicUser(user);
   }
 

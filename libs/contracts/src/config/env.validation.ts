@@ -13,6 +13,16 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  LOG_LEVEL?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  LOG_FORMAT?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
   JWT_SECRET?: string;
 
   @IsOptional()
