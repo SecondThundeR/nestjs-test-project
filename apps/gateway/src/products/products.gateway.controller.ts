@@ -1,9 +1,9 @@
 import {
-  type CreateProductDto,
+  CreateProductDto,
   type Product,
   PRODUCT_PATTERNS,
   SERVICE_NAMES,
-  type UpdateProductDto,
+  UpdateProductDto,
 } from '@app/contracts';
 import {
   Body,

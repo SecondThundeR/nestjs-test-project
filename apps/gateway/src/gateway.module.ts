@@ -5,6 +5,7 @@ import { ProductsGatewayController } from './products/products.gateway.controlle
 import { CartGatewayController } from './cart/cart.gateway.controller';
 import { OrdersGatewayController } from './orders/orders.gateway.controller';
 import { HealthController } from './health.controller';
+import { UsersGatewayController } from './users/users.gateway.controller';
 
 @Module({
   imports: [
@@ -24,6 +25,11 @@ import { HealthController } from './health.controller';
         transport: Transport.TCP,
         options: { host: SERVICE_HOSTS.ORDERS, port: SERVICE_PORTS.ORDERS },
       },
+      {
+        name: SERVICE_NAMES.USERS,
+        transport: Transport.TCP,
+        options: { host: SERVICE_HOSTS.USERS, port: SERVICE_PORTS.USERS },
+      },
     ]),
   ],
   controllers: [
@@ -31,6 +37,7 @@ import { HealthController } from './health.controller';
     ProductsGatewayController,
     CartGatewayController,
     OrdersGatewayController,
+    UsersGatewayController,
   ],
 })
 export class GatewayModule {}
