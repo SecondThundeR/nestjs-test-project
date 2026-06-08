@@ -11,13 +11,13 @@ import type { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
-import { CartEntity } from './entities/cart.entity';
+import { CartSchema } from './schemas/cart.schema';
 
 @Injectable()
 export class CartService {
   constructor(
-    @InjectRepository(CartEntity)
-    private readonly carts: Repository<CartEntity>,
+    @InjectRepository(CartSchema)
+    private readonly carts: Repository<Cart>,
     @Inject(SERVICE_NAMES.PRODUCTS)
     private readonly productsClient: ClientProxy,
   ) {}
@@ -109,12 +109,12 @@ export class CartService {
     return product;
   }
 
-  private persist(cart: CartEntity) {
+  private persist(cart: Cart) {
     this.recalculate(cart);
     return this.carts.save(cart);
   }
 
-  private recalculate(cart: CartEntity) {
+  private recalculate(cart: Cart) {
     let total = 0;
     for (const item of cart.items) {
       const subtotal = item.price * item.quantity;

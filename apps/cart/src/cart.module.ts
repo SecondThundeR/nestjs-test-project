@@ -10,7 +10,7 @@ import {
 } from '@app/contracts';
 import { CartController } from './cart.controller';
 import { CartService } from './cart.service';
-import { CartEntity } from './entities/cart.entity';
+import { CartSchema } from './schemas/cart.schema';
 
 @Module({
   imports: [
@@ -20,9 +20,9 @@ import { CartEntity } from './entities/cart.entity';
       validate: validateEnv,
     }),
     TypeOrmModule.forRootAsync({
-      useFactory: () => buildDatabaseOptions('CART', [CartEntity]),
+      useFactory: () => buildDatabaseOptions('CART', [CartSchema]),
     }),
-    TypeOrmModule.forFeature([CartEntity]),
+    TypeOrmModule.forFeature([CartSchema]),
     ClientsModule.registerAsync([
       {
         name: SERVICE_NAMES.PRODUCTS,

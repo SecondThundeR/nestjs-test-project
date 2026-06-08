@@ -6,7 +6,7 @@ import { of, throwError } from 'rxjs';
 import { PRODUCT_PATTERNS, SERVICE_NAMES, type Product } from '@app/contracts';
 import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import { CartService } from './cart.service';
-import { CartEntity } from './entities/cart.entity';
+import { CartSchema } from './schemas/cart.schema';
 
 const USER = 'user-1';
 
@@ -31,14 +31,14 @@ describe('CartService', () => {
 
   beforeEach(async () => {
     productsClient = { send: jest.fn() };
-    dataSource = await createInMemoryDataSource([CartEntity]);
+    dataSource = await createInMemoryDataSource([CartSchema]);
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         CartService,
         {
-          provide: getRepositoryToken(CartEntity),
-          useValue: dataSource.getRepository(CartEntity),
+          provide: getRepositoryToken(CartSchema),
+          useValue: dataSource.getRepository(CartSchema),
         },
         { provide: SERVICE_NAMES.PRODUCTS, useValue: productsClient },
       ],

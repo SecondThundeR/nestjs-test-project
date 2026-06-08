@@ -18,7 +18,7 @@ import {
 } from '@app/contracts';
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
 import { CartModule } from './../src/cart.module';
-import { CartEntity } from './../src/entities/cart.entity';
+import { CartSchema } from '../src/schemas/cart.schema';
 
 const HOST = '127.0.0.1';
 const PORT = 4002;
@@ -44,7 +44,7 @@ describe('Cart microservice (e2e)', () => {
   const productsClient = { send: jest.fn(), emit: jest.fn() };
 
   beforeAll(async () => {
-    const dataSource = await createInMemoryDataSource([CartEntity]);
+    const dataSource = await createInMemoryDataSource([CartSchema]);
 
     const moduleFixture = await Test.createTestingModule({
       imports: [CartModule],
