@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import {
-  JWT_CONFIG,
+  authConfig,
   type JwtPayload,
   type RegisterUserDto,
 } from '@app/contracts';
@@ -16,8 +16,8 @@ describe('UsersService', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         JwtModule.register({
-          secret: JWT_CONFIG.secret,
-          signOptions: { expiresIn: JWT_CONFIG.expiresIn },
+          secret: authConfig().secret,
+          signOptions: { expiresIn: authConfig().expiresIn },
         }),
       ],
       providers: [UsersService],

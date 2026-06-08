@@ -1,19 +1,21 @@
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { OrdersModule } from './orders.module';
 import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
 import {
   GlobalRpcExceptionFilter,
   rpcValidationExceptionFactory,
-  SERVICE_PORTS,
+  servicesConfig,
 } from '@app/contracts';
 import { Logger, ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
+  const { ports } = servicesConfig();
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     OrdersModule,
     {
       transport: Transport.TCP,
-      options: { host: '0.0.0.0', port: SERVICE_PORTS.ORDERS },
+      options: { host: '0.0.0.0', port: ports.orders },
     },
   );
 
@@ -28,7 +30,7 @@ async function bootstrap() {
 
   await app.listen();
   Logger.log(
-    `Orders microservice is listening on TCP port ${SERVICE_PORTS.ORDERS}`,
+    `Orders microservice is listening on TCP port ${ports.orders}`,
     'Orders',
   );
 }

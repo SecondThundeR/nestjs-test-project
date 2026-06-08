@@ -1,3 +1,6 @@
+import { registerAs } from '@nestjs/config';
+import type { ConfigType } from '@nestjs/config';
+
 export const SERVICE_NAMES = {
   PRODUCTS: 'PRODUCTS_SERVICE',
   CART: 'CART_SERVICE',
@@ -5,17 +8,20 @@ export const SERVICE_NAMES = {
   USERS: 'USERS_SERVICE',
 } as const;
 
-export const SERVICE_PORTS = {
-  GATEWAY: Number(process.env.GATEWAY_PORT ?? 3000),
-  PRODUCTS: Number(process.env.PRODUCTS_PORT ?? 3001),
-  CART: Number(process.env.CART_PORT ?? 3002),
-  ORDERS: Number(process.env.ORDERS_PORT ?? 3003),
-  USERS: Number(process.env.USERS_PORT ?? 3004),
-};
+export const servicesConfig = registerAs('services', () => ({
+  ports: {
+    gateway: Number(process.env.GATEWAY_PORT ?? 3000),
+    products: Number(process.env.PRODUCTS_PORT ?? 3001),
+    cart: Number(process.env.CART_PORT ?? 3002),
+    orders: Number(process.env.ORDERS_PORT ?? 3003),
+    users: Number(process.env.USERS_PORT ?? 3004),
+  },
+  hosts: {
+    products: process.env.PRODUCTS_HOST ?? '127.0.0.1',
+    cart: process.env.CART_HOST ?? '127.0.0.1',
+    orders: process.env.ORDERS_HOST ?? '127.0.0.1',
+    users: process.env.USERS_HOST ?? '127.0.0.1',
+  },
+}));
 
-export const SERVICE_HOSTS = {
-  PRODUCTS: process.env.PRODUCTS_HOST ?? '127.0.0.1',
-  CART: process.env.CART_HOST ?? '127.0.0.1',
-  ORDERS: process.env.ORDERS_HOST ?? '127.0.0.1',
-  USERS: process.env.USERS_HOST ?? '127.0.0.1',
-};
+export type ServicesConfig = ConfigType<typeof servicesConfig>;

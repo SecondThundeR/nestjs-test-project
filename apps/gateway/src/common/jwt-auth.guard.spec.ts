@@ -1,10 +1,10 @@
 import { type ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { JWT_CONFIG, type JwtPayload } from '@app/contracts';
+import { authConfig, type JwtPayload } from '@app/contracts';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 describe('JwtAuthGuard', () => {
-  const jwtService = new JwtService({ secret: JWT_CONFIG.secret });
+  const jwtService = new JwtService({ secret: authConfig().secret });
   const guard = new JwtAuthGuard(jwtService);
 
   function contextWithAuth(authorization: string | undefined): {
