@@ -25,8 +25,6 @@ describe('GlobalRpcExceptionFilter', () => {
     );
   }
 
-  // toPayload is private but covers branches that catch() (which only ever
-  // receives an RpcException) cannot reach on its own.
   function toPayload(exception: unknown): RpcErrorPayload {
     return (
       filter as unknown as {

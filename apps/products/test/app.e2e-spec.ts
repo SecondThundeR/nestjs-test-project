@@ -11,6 +11,7 @@ import {
   GlobalRpcExceptionFilter,
   PRODUCT_PATTERNS,
   type Product,
+  rpcValidationExceptionFactory,
 } from '@app/contracts';
 import { ProductsModule } from './../src/products.module';
 
@@ -31,7 +32,11 @@ describe('Products microservice (e2e)', () => {
       options: { host: HOST, port: PORT },
     });
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, transform: true }),
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        exceptionFactory: rpcValidationExceptionFactory,
+      }),
     );
     app.useGlobalFilters(new GlobalRpcExceptionFilter());
     await app.listen();
@@ -91,12 +96,12 @@ describe('Products microservice (e2e)', () => {
   it('rejects finding an unknown product', async () => {
     await expect(
       send<Product>(PRODUCT_PATTERNS.FIND_ONE, 'missing'),
-    ).rejects.toMatchObject({ status: 'error' });
+    ).rejects.toMatchObject({ statusCode: 404 });
   });
 
   it('rejects an invalid create payload via the validation pipe', async () => {
     await expect(
       send<Product>(PRODUCT_PATTERNS.CREATE, { name: 'x', price: -1 }),
-    ).rejects.toMatchObject({ status: 'error' });
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 });

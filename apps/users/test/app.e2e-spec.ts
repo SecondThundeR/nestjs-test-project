@@ -11,6 +11,7 @@ import {
   type AuthResult,
   GlobalRpcExceptionFilter,
   type PublicUser,
+  rpcValidationExceptionFactory,
   USERS_PATTERNS,
 } from '@app/contracts';
 import { UsersModule } from './../src/users.module';
@@ -32,7 +33,11 @@ describe('Users microservice (e2e)', () => {
       options: { host: HOST, port: PORT },
     });
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, transform: true }),
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        exceptionFactory: rpcValidationExceptionFactory,
+      }),
     );
     app.useGlobalFilters(new GlobalRpcExceptionFilter());
     await app.listen();
@@ -83,7 +88,7 @@ describe('Users microservice (e2e)', () => {
   it('rejects verifying a malformed token', async () => {
     await expect(
       send<PublicUser>(USERS_PATTERNS.VERIFY, 'not-a-token'),
-    ).rejects.toMatchObject({ status: 'error' });
+    ).rejects.toMatchObject({ statusCode: 401 });
   });
 
   it('rejects registering a duplicate email', async () => {
@@ -99,7 +104,7 @@ describe('Users microservice (e2e)', () => {
         name: 'Dup',
         password: 'password123',
       }),
-    ).rejects.toMatchObject({ status: 'error' });
+    ).rejects.toMatchObject({ statusCode: 409 });
   });
 
   it('rejects login with a wrong password', async () => {
@@ -114,7 +119,7 @@ describe('Users microservice (e2e)', () => {
         email: 'wrong@example.com',
         password: 'nope',
       }),
-    ).rejects.toMatchObject({ status: 'error' });
+    ).rejects.toMatchObject({ statusCode: 401 });
   });
 
   it('rejects an invalid register payload via the validation pipe', async () => {
@@ -124,6 +129,6 @@ describe('Users microservice (e2e)', () => {
         name: 'x',
         password: 'short',
       }),
-    ).rejects.toMatchObject({ status: 'error' });
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 });

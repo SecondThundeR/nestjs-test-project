@@ -1,9 +1,10 @@
-import type {
-  CreateProductDto,
-  Product,
-  UpdateProductDto,
+import {
+  type CreateProductDto,
+  type Product,
+  RpcErrors,
+  type UpdateProductDto,
 } from '@app/contracts';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 
 @Injectable()
@@ -34,7 +35,7 @@ export class ProductsService {
   findOne(id: string) {
     const product = this.products.get(id);
     if (!product) {
-      throw new NotFoundException(`Product ${id} not found`);
+      throw RpcErrors.notFound(`Product ${id} not found`);
     }
     return product;
   }
@@ -57,7 +58,7 @@ export class ProductsService {
 
   remove(id: string) {
     if (!this.products.delete(id)) {
-      throw new NotFoundException(`Product ${id} not found`);
+      throw RpcErrors.notFound(`Product ${id} not found`);
     }
     return { id, deleted: true };
   }

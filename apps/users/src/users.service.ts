@@ -1,16 +1,13 @@
-import type {
-  AuthResult,
-  JwtPayload,
-  LoginUserDto,
-  PublicUser,
-  RegisterUserDto,
-  User,
-} from '@app/contracts';
 import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+  type AuthResult,
+  type JwtPayload,
+  type LoginUserDto,
+  type PublicUser,
+  type RegisterUserDto,
+  RpcErrors,
+  type User,
+} from '@app/contracts';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
@@ -27,7 +24,7 @@ export class UsersService {
   async register(dto: RegisterUserDto): Promise<AuthResult> {
     const email = dto.email.toLowerCase();
     if (this.idsByEmail.has(email)) {
-      throw new ConflictException(`Email ${dto.email} is already registered`);
+      throw RpcErrors.conflict(`Email ${dto.email} is already registered`);
     }
 
     const now = new Date().toISOString();
@@ -51,7 +48,7 @@ export class UsersService {
     const user = id ? this.users.get(id) : undefined;
 
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw RpcErrors.unauthorized('Invalid email or password');
     }
 
     return this.buildAuthResult(user);
@@ -63,12 +60,12 @@ export class UsersService {
     try {
       payload = this.jwtService.verify<JwtPayload>(token);
     } catch {
-      throw new UnauthorizedException('Invalid or expired token');
+      throw RpcErrors.unauthorized('Invalid or expired token');
     }
 
     const user = this.users.get(payload.sub);
     if (!user) {
-      throw new UnauthorizedException('Invalid or expired token');
+      throw RpcErrors.unauthorized('Invalid or expired token');
     }
 
     return this.toPublicUser(user);

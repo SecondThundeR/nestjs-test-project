@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import {
   JWT_CONFIG,
@@ -65,11 +65,11 @@ describe('UsersService', () => {
       expect(user.email).toBe('jane@example.com');
     });
 
-    it('throws ConflictException when the email is already registered', async () => {
+    it('throws RpcException when the email is already registered', async () => {
       await register();
 
       await expect(register({ email: 'JANE@example.com' })).rejects.toThrow(
-        ConflictException,
+        RpcException,
       );
     });
   });
@@ -99,13 +99,13 @@ describe('UsersService', () => {
       expect(user.id).toBe(registered.user.id);
     });
 
-    it('throws UnauthorizedException for an unknown email', async () => {
+    it('throws RpcException for an unknown email', async () => {
       await expect(
         service.login({ email: 'missing@example.com', password: 'whatever' }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toThrow(RpcException);
     });
 
-    it('throws UnauthorizedException for a wrong password', async () => {
+    it('throws RpcException for a wrong password', async () => {
       await register();
 
       await expect(
@@ -113,7 +113,7 @@ describe('UsersService', () => {
           email: 'jane@example.com',
           password: 'wrong-password',
         }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toThrow(RpcException);
     });
   });
 
@@ -124,16 +124,14 @@ describe('UsersService', () => {
       expect(service.verify(accessToken)).toEqual(user);
     });
 
-    it('throws UnauthorizedException for a malformed token', () => {
-      expect(() => service.verify('not-a-token')).toThrow(
-        UnauthorizedException,
-      );
+    it('throws RpcException for a malformed token', () => {
+      expect(() => service.verify('not-a-token')).toThrow(RpcException);
     });
 
-    it('throws UnauthorizedException when the user no longer exists', () => {
+    it('throws RpcException when the user no longer exists', () => {
       const token = jwtService.sign({ sub: 'missing', email: 'x@example.com' });
 
-      expect(() => service.verify(token)).toThrow(UnauthorizedException);
+      expect(() => service.verify(token)).toThrow(RpcException);
     });
   });
 });

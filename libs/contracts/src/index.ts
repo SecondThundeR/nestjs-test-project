@@ -4,6 +4,7 @@ export * from './cart/cart.interface';
 export * from './config/auth.config';
 export * from './config/services.config';
 
+export * from './filters/rpc-errors';
 export * from './filters/rpc-exception.filter';
 
 export * from './orders/order.dto';

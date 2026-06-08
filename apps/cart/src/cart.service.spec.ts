@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { of, throwError } from 'rxjs';
 import { PRODUCT_PATTERNS, SERVICE_NAMES, type Product } from '@app/contracts';
 import { CartService } from './cart.service';
@@ -121,12 +121,12 @@ describe('CartService', () => {
       expect(cart.total).toBe(0.3);
     });
 
-    it('throws BadRequestException when stock is insufficient', async () => {
+    it('throws RpcException when stock is insufficient', async () => {
       productsClient.send.mockReturnValue(of(makeProduct({ stock: 2 })));
 
       await expect(
         service.addItem(USER, { productId: 'p-1', quantity: 5 }),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      ).rejects.toBeInstanceOf(RpcException);
     });
 
     it('accounts for existing quantity when checking stock', async () => {
@@ -135,23 +135,23 @@ describe('CartService', () => {
 
       await expect(
         service.addItem(USER, { productId: 'p-1', quantity: 2 }),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      ).rejects.toBeInstanceOf(RpcException);
     });
 
-    it('throws NotFoundException when the product does not exist', async () => {
+    it('throws RpcException when the product does not exist', async () => {
       productsClient.send.mockReturnValue(of(null));
 
       await expect(
         service.addItem(USER, { productId: 'missing', quantity: 1 }),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(RpcException);
     });
 
-    it('throws NotFoundException when the products client errors', async () => {
+    it('throws RpcException when the products client errors', async () => {
       productsClient.send.mockReturnValue(throwError(() => new Error('down')));
 
       await expect(
         service.addItem(USER, { productId: 'p-1', quantity: 1 }),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(RpcException);
     });
   });
 
@@ -175,23 +175,23 @@ describe('CartService', () => {
       expect(cart.total).toBe(44);
     });
 
-    it('throws NotFoundException when the cart does not exist', async () => {
+    it('throws RpcException when the cart does not exist', async () => {
       await expect(
         service.updateItem('nobody', 'p-1', 1),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(RpcException);
     });
 
-    it('throws NotFoundException when the item is not in the cart', async () => {
+    it('throws RpcException when the item is not in the cart', async () => {
       await expect(
         service.updateItem(USER, 'other-product', 1),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(RpcException);
     });
 
-    it('throws BadRequestException when stock is insufficient', async () => {
+    it('throws RpcException when stock is insufficient', async () => {
       productsClient.send.mockReturnValue(of(makeProduct({ stock: 1 })));
 
       await expect(service.updateItem(USER, 'p-1', 5)).rejects.toBeInstanceOf(
-        BadRequestException,
+        RpcException,
       );
     });
 
@@ -223,10 +223,8 @@ describe('CartService', () => {
       expect(cart.total).toBe(5);
     });
 
-    it('throws NotFoundException when the cart does not exist', () => {
-      expect(() => service.removeItem('nobody', 'p-1')).toThrow(
-        NotFoundException,
-      );
+    it('throws RpcException when the cart does not exist', () => {
+      expect(() => service.removeItem('nobody', 'p-1')).toThrow(RpcException);
     });
   });
 

@@ -1,7 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { CartModule } from './cart.module';
 import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
-import { GlobalRpcExceptionFilter, SERVICE_PORTS } from '@app/contracts';
+import {
+  GlobalRpcExceptionFilter,
+  rpcValidationExceptionFactory,
+  SERVICE_PORTS,
+} from '@app/contracts';
 import { Logger, ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
@@ -17,6 +21,7 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       transform: true,
+      exceptionFactory: rpcValidationExceptionFactory,
     }),
   );
   app.useGlobalFilters(new GlobalRpcExceptionFilter());
