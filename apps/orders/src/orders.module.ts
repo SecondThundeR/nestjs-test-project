@@ -1,21 +1,36 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, type ConfigType } from '@nestjs/config';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { SERVICE_NAMES, servicesConfig, validateEnv } from '@app/contracts';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
-import { ClientsModule, Transport } from '@nestjs/microservices';
-import { SERVICE_HOSTS, SERVICE_NAMES, SERVICE_PORTS } from '@app/contracts';
 
 @Module({
   imports: [
-    ClientsModule.register([
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [servicesConfig],
+      validate: validateEnv,
+    }),
+    ClientsModule.registerAsync([
       {
         name: SERVICE_NAMES.PRODUCTS,
-        transport: Transport.TCP,
-        options: { host: SERVICE_HOSTS.PRODUCTS, port: SERVICE_PORTS.PRODUCTS },
+        inject: [servicesConfig.KEY],
+        useFactory: (services: ConfigType<typeof servicesConfig>) => ({
+          transport: Transport.TCP,
+          options: {
+            host: services.hosts.products,
+            port: services.ports.products,
+          },
+        }),
       },
       {
         name: SERVICE_NAMES.CART,
-        transport: Transport.TCP,
-        options: { host: SERVICE_HOSTS.CART, port: SERVICE_PORTS.CART },
+        inject: [servicesConfig.KEY],
+        useFactory: (services: ConfigType<typeof servicesConfig>) => ({
+          transport: Transport.TCP,
+          options: { host: services.hosts.cart, port: services.ports.cart },
+        }),
       },
     ]),
   ],

@@ -5,8 +5,8 @@ import { of, throwError } from 'rxjs';
 import request from 'supertest';
 import type { Server } from 'node:http';
 import {
+  authConfig,
   CART_PATTERNS,
-  JWT_CONFIG,
   ORDERS_PATTERNS,
   PRODUCT_PATTERNS,
   SERVICE_NAMES,
@@ -21,7 +21,7 @@ describe('Gateway (e2e)', () => {
   const orders = { send: jest.fn(), emit: jest.fn() };
   const users = { send: jest.fn(), emit: jest.fn() };
 
-  const jwtService = new JwtService({ secret: JWT_CONFIG.secret });
+  const jwtService = new JwtService({ secret: authConfig().secret });
   const aliceToken = jwtService.sign({
     sub: 'alice',
     email: 'alice@example.com',

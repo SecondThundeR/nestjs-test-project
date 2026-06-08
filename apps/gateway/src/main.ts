@@ -1,10 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { GatewayModule } from './gateway.module';
-import { SERVICE_PORTS } from '@app/contracts';
+import { type ServicesConfig, servicesConfig } from '@app/contracts';
 import { Logger, ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(GatewayModule);
+
+  const services = app.get<ServicesConfig>(servicesConfig.KEY);
 
   app.setGlobalPrefix('api');
   app.enableCors();
@@ -16,9 +18,9 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(SERVICE_PORTS.GATEWAY);
+  await app.listen(services.ports.gateway);
   Logger.log(
-    `API Gateway is running on http://localhost:${SERVICE_PORTS.GATEWAY}/api`,
+    `API Gateway is running on http://localhost:${services.ports.gateway}/api`,
     'Gateway',
   );
 }

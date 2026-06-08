@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, type ConfigType } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { JwtModule } from '@nestjs/jwt';
 import {
-  JWT_CONFIG,
-  SERVICE_HOSTS,
+  authConfig,
   SERVICE_NAMES,
-  SERVICE_PORTS,
+  servicesConfig,
+  validateEnv,
 } from '@app/contracts';
 import { ProductsGatewayController } from './products/products.gateway.controller';
 import { CartGatewayController } from './cart/cart.gateway.controller';
@@ -15,27 +16,55 @@ import { UsersGatewayController } from './users/users.gateway.controller';
 
 @Module({
   imports: [
-    JwtModule.register({ secret: JWT_CONFIG.secret }),
-    ClientsModule.register([
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [authConfig, servicesConfig],
+      validate: validateEnv,
+    }),
+    JwtModule.registerAsync({
+      inject: [authConfig.KEY],
+      useFactory: (auth: ConfigType<typeof authConfig>) => ({
+        secret: auth.secret,
+      }),
+    }),
+    ClientsModule.registerAsync([
       {
         name: SERVICE_NAMES.PRODUCTS,
-        transport: Transport.TCP,
-        options: { host: SERVICE_HOSTS.PRODUCTS, port: SERVICE_PORTS.PRODUCTS },
+        inject: [servicesConfig.KEY],
+        useFactory: (services: ConfigType<typeof servicesConfig>) => ({
+          transport: Transport.TCP,
+          options: {
+            host: services.hosts.products,
+            port: services.ports.products,
+          },
+        }),
       },
       {
         name: SERVICE_NAMES.CART,
-        transport: Transport.TCP,
-        options: { host: SERVICE_HOSTS.CART, port: SERVICE_PORTS.CART },
+        inject: [servicesConfig.KEY],
+        useFactory: (services: ConfigType<typeof servicesConfig>) => ({
+          transport: Transport.TCP,
+          options: { host: services.hosts.cart, port: services.ports.cart },
+        }),
       },
       {
         name: SERVICE_NAMES.ORDERS,
-        transport: Transport.TCP,
-        options: { host: SERVICE_HOSTS.ORDERS, port: SERVICE_PORTS.ORDERS },
+        inject: [servicesConfig.KEY],
+        useFactory: (services: ConfigType<typeof servicesConfig>) => ({
+          transport: Transport.TCP,
+          options: {
+            host: services.hosts.orders,
+            port: services.ports.orders,
+          },
+        }),
       },
       {
         name: SERVICE_NAMES.USERS,
-        transport: Transport.TCP,
-        options: { host: SERVICE_HOSTS.USERS, port: SERVICE_PORTS.USERS },
+        inject: [servicesConfig.KEY],
+        useFactory: (services: ConfigType<typeof servicesConfig>) => ({
+          transport: Transport.TCP,
+          options: { host: services.hosts.users, port: services.ports.users },
+        }),
       },
     ]),
   ],

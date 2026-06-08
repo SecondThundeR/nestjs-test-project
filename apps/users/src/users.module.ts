@@ -1,16 +1,25 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, type ConfigType } from '@nestjs/config';
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
-import { JWT_CONFIG } from '@app/contracts';
+import { authConfig, validateEnv } from '@app/contracts';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
 @Module({
   imports: [
-    JwtModule.register({
-      secret: JWT_CONFIG.secret,
-      signOptions: {
-        expiresIn: JWT_CONFIG.expiresIn as JwtSignOptions['expiresIn'],
-      },
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [authConfig],
+      validate: validateEnv,
+    }),
+    JwtModule.registerAsync({
+      inject: [authConfig.KEY],
+      useFactory: (auth: ConfigType<typeof authConfig>) => ({
+        secret: auth.secret,
+        signOptions: {
+          expiresIn: auth.expiresIn as JwtSignOptions['expiresIn'],
+        },
+      }),
     }),
   ],
   controllers: [UsersController],
