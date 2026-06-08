@@ -8,6 +8,7 @@ import {
 } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import {
+  type AuthResult,
   GlobalRpcExceptionFilter,
   type PublicUser,
   USERS_PATTERNS,
@@ -52,24 +53,37 @@ describe('Users microservice (e2e)', () => {
     return firstValueFrom(client.send<T>(pattern, payload));
   }
 
-  it('registers a user and logs in over TCP', async () => {
-    const registered = await send<PublicUser>(USERS_PATTERNS.REGISTER, {
+  it('registers, logs in and verifies a token over TCP', async () => {
+    const registered = await send<AuthResult>(USERS_PATTERNS.REGISTER, {
       email: 'jane@example.com',
       name: 'Jane',
       password: 'password123',
     });
-    expect(registered).toMatchObject({
+    expect(registered.user).toMatchObject({
       email: 'jane@example.com',
       name: 'Jane',
     });
-    expect(typeof registered.id).toBe('string');
-    expect(registered).not.toHaveProperty('passwordHash');
+    expect(typeof registered.user.id).toBe('string');
+    expect(typeof registered.accessToken).toBe('string');
+    expect(registered.user).not.toHaveProperty('passwordHash');
 
-    const loggedIn = await send<PublicUser>(USERS_PATTERNS.LOGIN, {
+    const loggedIn = await send<AuthResult>(USERS_PATTERNS.LOGIN, {
       email: 'jane@example.com',
       password: 'password123',
     });
-    expect(loggedIn.id).toBe(registered.id);
+    expect(loggedIn.user.id).toBe(registered.user.id);
+
+    const verified = await send<PublicUser>(
+      USERS_PATTERNS.VERIFY,
+      loggedIn.accessToken,
+    );
+    expect(verified.id).toBe(registered.user.id);
+  });
+
+  it('rejects verifying a malformed token', async () => {
+    await expect(
+      send<PublicUser>(USERS_PATTERNS.VERIFY, 'not-a-token'),
+    ).rejects.toMatchObject({ status: 'error' });
   });
 
   it('rejects registering a duplicate email', async () => {

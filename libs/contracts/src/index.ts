@@ -1,6 +1,7 @@
 export * from './cart/cart.dto';
 export * from './cart/cart.interface';
 
+export * from './config/auth.config';
 export * from './config/services.config';
 
 export * from './filters/rpc-exception.filter';

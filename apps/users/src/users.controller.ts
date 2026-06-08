@@ -16,4 +16,9 @@ export class UsersController {
   login(@Payload() dto: LoginUserDto) {
     return this.usersService.login(dto);
   }
+
+  @MessagePattern(USERS_PATTERNS.VERIFY)
+  verify(@Payload() token: string) {
+    return this.usersService.verify(token);
+  }
 }

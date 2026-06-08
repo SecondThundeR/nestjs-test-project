@@ -5,12 +5,15 @@ import type { LoginUserDto, RegisterUserDto } from '@app/contracts';
 
 describe('UsersController', () => {
   let usersController: UsersController;
-  let usersService: jest.Mocked<Pick<UsersService, 'register' | 'login'>>;
+  let usersService: jest.Mocked<
+    Pick<UsersService, 'register' | 'login' | 'verify'>
+  >;
 
   beforeEach(async () => {
     usersService = {
       register: jest.fn(),
       login: jest.fn(),
+      verify: jest.fn(),
     };
 
     const app = await Test.createTestingModule({
@@ -44,5 +47,13 @@ describe('UsersController', () => {
 
     expect(usersController.login(dto)).toBe(user);
     expect(usersService.login).toHaveBeenCalledWith(dto);
+  });
+
+  it('delegates verify() to the service with the token', () => {
+    const user = {} as never;
+    usersService.verify.mockReturnValue(user);
+
+    expect(usersController.verify('a.b.c')).toBe(user);
+    expect(usersService.verify).toHaveBeenCalledWith('a.b.c');
   });
 });
