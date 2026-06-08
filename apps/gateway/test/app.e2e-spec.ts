@@ -1,13 +1,16 @@
 import { Test } from '@nestjs/testing';
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { of, throwError } from 'rxjs';
 import request from 'supertest';
 import type { Server } from 'node:http';
 import {
   CART_PATTERNS,
+  JWT_CONFIG,
   ORDERS_PATTERNS,
   PRODUCT_PATTERNS,
   SERVICE_NAMES,
+  USERS_PATTERNS,
 } from '@app/contracts';
 import { GatewayModule } from './../src/gateway.module';
 
@@ -16,6 +19,14 @@ describe('Gateway (e2e)', () => {
   const products = { send: jest.fn(), emit: jest.fn() };
   const cart = { send: jest.fn(), emit: jest.fn() };
   const orders = { send: jest.fn(), emit: jest.fn() };
+  const users = { send: jest.fn(), emit: jest.fn() };
+
+  const jwtService = new JwtService({ secret: JWT_CONFIG.secret });
+  const aliceToken = jwtService.sign({
+    sub: 'alice',
+    email: 'alice@example.com',
+  });
+  const auth = `Bearer ${aliceToken}`;
 
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
@@ -27,6 +38,8 @@ describe('Gateway (e2e)', () => {
       .useValue(cart)
       .overrideProvider(SERVICE_NAMES.ORDERS)
       .useValue(orders)
+      .overrideProvider(SERVICE_NAMES.USERS)
+      .useValue(users)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -49,6 +62,7 @@ describe('Gateway (e2e)', () => {
     products.send.mockReset();
     cart.send.mockReset();
     orders.send.mockReset();
+    users.send.mockReset();
   });
 
   const http = () => request(app.getHttpServer() as Server);
@@ -125,37 +139,97 @@ describe('Gateway (e2e)', () => {
     });
   });
 
-  describe('cart (user resolution)', () => {
-    it('uses the x-user-id header when provided', async () => {
+  describe('cart (JWT auth)', () => {
+    it('resolves the user from the bearer token', async () => {
       cart.send.mockReturnValue(of({ userId: 'alice', items: [] }));
 
-      await http().get('/api/cart').set('x-user-id', 'alice').expect(200);
+      await http().get('/api/cart').set('authorization', auth).expect(200);
 
       expect(cart.send).toHaveBeenCalledWith(CART_PATTERNS.GET, 'alice');
     });
 
-    it('falls back to demo-user when no header is present', async () => {
-      cart.send.mockReturnValue(of({ userId: 'demo-user', items: [] }));
+    it('rejects an unauthenticated request with 401', async () => {
+      await http().get('/api/cart').expect(401);
 
-      await http().get('/api/cart').expect(200);
+      expect(cart.send).not.toHaveBeenCalled();
+    });
 
-      expect(cart.send).toHaveBeenCalledWith(CART_PATTERNS.GET, 'demo-user');
+    it('rejects a request with an invalid token with 401', async () => {
+      await http()
+        .get('/api/cart')
+        .set('authorization', 'Bearer not-a-token')
+        .expect(401);
+
+      expect(cart.send).not.toHaveBeenCalled();
     });
   });
 
-  describe('orders', () => {
-    it('POST /api/orders forwards userId and shippingAddress', async () => {
+  describe('orders (JWT auth)', () => {
+    it('forwards the token user and shippingAddress', async () => {
       orders.send.mockReturnValue(of({ id: 'o-1' }));
 
       await http()
         .post('/api/orders')
-        .set('x-user-id', 'alice')
+        .set('authorization', auth)
         .send({ shippingAddress: '1 Test Street' })
         .expect(201);
 
       expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.CREATE, {
         userId: 'alice',
         shippingAddress: '1 Test Street',
+      });
+    });
+
+    it('rejects an unauthenticated request with 401', async () => {
+      await http()
+        .post('/api/orders')
+        .send({ shippingAddress: '1 Test Street' })
+        .expect(401);
+
+      expect(orders.send).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('users (public auth routes)', () => {
+    it('POST /api/users/register forwards the body and returns the auth result', async () => {
+      const result = {
+        accessToken: 'jwt-token',
+        user: { id: 'u-1', email: 'jane@example.com', name: 'Jane' },
+      };
+      users.send.mockReturnValue(of(result));
+
+      const res = await http()
+        .post('/api/users/register')
+        .send({
+          email: 'jane@example.com',
+          name: 'Jane',
+          password: 'password123',
+        })
+        .expect(201);
+
+      expect(res.body).toEqual(result);
+      expect(users.send).toHaveBeenCalledWith(USERS_PATTERNS.REGISTER, {
+        email: 'jane@example.com',
+        name: 'Jane',
+        password: 'password123',
+      });
+    });
+
+    it('POST /api/users/login is reachable without a token', async () => {
+      const result = {
+        accessToken: 'jwt-token',
+        user: { id: 'u-1', email: 'jane@example.com', name: 'Jane' },
+      };
+      users.send.mockReturnValue(of(result));
+
+      await http()
+        .post('/api/users/login')
+        .send({ email: 'jane@example.com', password: 'password123' })
+        .expect(201);
+
+      expect(users.send).toHaveBeenCalledWith(USERS_PATTERNS.LOGIN, {
+        email: 'jane@example.com',
+        password: 'password123',
       });
     });
   });

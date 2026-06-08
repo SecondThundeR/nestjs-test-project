@@ -1,6 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { SERVICE_HOSTS, SERVICE_NAMES, SERVICE_PORTS } from '@app/contracts';
+import { JwtModule } from '@nestjs/jwt';
+import {
+  JWT_CONFIG,
+  SERVICE_HOSTS,
+  SERVICE_NAMES,
+  SERVICE_PORTS,
+} from '@app/contracts';
 import { ProductsGatewayController } from './products/products.gateway.controller';
 import { CartGatewayController } from './cart/cart.gateway.controller';
 import { OrdersGatewayController } from './orders/orders.gateway.controller';
@@ -9,6 +15,7 @@ import { UsersGatewayController } from './users/users.gateway.controller';
 
 @Module({
   imports: [
+    JwtModule.register({ secret: JWT_CONFIG.secret }),
     ClientsModule.register([
       {
         name: SERVICE_NAMES.PRODUCTS,

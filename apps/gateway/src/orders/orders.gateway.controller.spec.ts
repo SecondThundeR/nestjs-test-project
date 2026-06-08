@@ -1,6 +1,8 @@
 import { Test } from '@nestjs/testing';
+import { JwtModule } from '@nestjs/jwt';
 import { of } from 'rxjs';
 import {
+  JWT_CONFIG,
   ORDERS_PATTERNS,
   OrderStatus,
   SERVICE_NAMES,
@@ -19,6 +21,7 @@ describe('OrdersGatewayController', () => {
     orders = { send: jest.fn() };
 
     const moduleRef = await Test.createTestingModule({
+      imports: [JwtModule.register({ secret: JWT_CONFIG.secret })],
       controllers: [OrdersGatewayController],
       providers: [{ provide: SERVICE_NAMES.ORDERS, useValue: orders }],
     }).compile();

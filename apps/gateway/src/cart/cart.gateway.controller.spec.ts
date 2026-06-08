@@ -1,7 +1,9 @@
 import { Test } from '@nestjs/testing';
+import { JwtModule } from '@nestjs/jwt';
 import { of } from 'rxjs';
 import {
   CART_PATTERNS,
+  JWT_CONFIG,
   SERVICE_NAMES,
   type AddCartItemDto,
   type UpdateCartItemDto,
@@ -18,6 +20,7 @@ describe('CartGatewayController', () => {
     cart = { send: jest.fn() };
 
     const moduleRef = await Test.createTestingModule({
+      imports: [JwtModule.register({ secret: JWT_CONFIG.secret })],
       controllers: [CartGatewayController],
       providers: [{ provide: SERVICE_NAMES.CART, useValue: cart }],
     }).compile();
