@@ -2,6 +2,7 @@ export * from './cart/cart.dto';
 export * from './cart/cart.interface';
 
 export * from './config/auth.config';
+export * from './config/database.config';
 export * from './config/env.validation';
 export * from './config/services.config';
 

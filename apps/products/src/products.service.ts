@@ -1,39 +1,39 @@
 import {
   type CreateProductDto,
-  type Product,
   RpcErrors,
   type UpdateProductDto,
 } from '@app/contracts';
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
+import { In, Repository } from 'typeorm';
+import { ProductEntity } from './entities/product.entity';
 
 @Injectable()
 export class ProductsService {
-  private readonly products = new Map<string, Product>();
+  constructor(
+    @InjectRepository(ProductEntity)
+    private readonly products: Repository<ProductEntity>,
+  ) {}
 
   create(dto: CreateProductDto) {
-    const now = new Date().toISOString();
-    const product: Product = {
+    const product = this.products.create({
       id: randomUUID(),
       name: dto.name,
       description: dto.description ?? '',
       price: dto.price,
       stock: dto.stock ?? 0,
-      createdAt: now,
-      updatedAt: now,
-    };
+    });
 
-    this.products.set(product.id, product);
-
-    return product;
+    return this.products.save(product);
   }
 
   findAll() {
-    return [...this.products.values()];
+    return this.products.find();
   }
 
-  findOne(id: string) {
-    const product = this.products.get(id);
+  async findOne(id: string) {
+    const product = await this.products.findOneBy({ id });
     if (!product) {
       throw RpcErrors.notFound(`Product ${id} not found`);
     }
@@ -41,23 +41,24 @@ export class ProductsService {
   }
 
   findMany(ids: string[]) {
-    return ids
-      .map((id) => this.products.get(id))
-      .filter((p): p is Product => Boolean(p));
+    if (!ids.length) {
+      return Promise.resolve([]);
+    }
+    return this.products.findBy({ id: In(ids) });
   }
 
-  update(id: string, dto: UpdateProductDto) {
-    const product = this.findOne(id);
-    const updated = {
+  async update(id: string, dto: UpdateProductDto) {
+    const product = await this.findOne(id);
+    const newProduct = {
       ...product,
       ...dto,
     };
-    this.products.set(id, updated);
-    return updated;
+    return this.products.save(newProduct);
   }
 
-  remove(id: string) {
-    if (!this.products.delete(id)) {
+  async remove(id: string) {
+    const { affected } = await this.products.delete(id);
+    if (!affected) {
       throw RpcErrors.notFound(`Product ${id} not found`);
     }
     return { id, deleted: true };

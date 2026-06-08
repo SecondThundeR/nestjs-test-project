@@ -1,7 +1,6 @@
 import {
   AddCartItemDto,
   type Cart,
-  type CartItem,
   type Product,
   PRODUCT_PATTERNS,
   RpcErrors,
@@ -9,25 +8,30 @@ import {
 } from '@app/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
+import { CartSchema } from './schemas/cart.schema';
 
 @Injectable()
 export class CartService {
-  private readonly carts = new Map<string, Cart>();
-
   constructor(
+    @InjectRepository(CartSchema)
+    private readonly carts: Repository<Cart>,
     @Inject(SERVICE_NAMES.PRODUCTS)
     private readonly productsClient: ClientProxy,
   ) {}
 
-  get(userId: string) {
-    return this.carts.get(userId) ?? this.emptyCart(userId);
+  async get(userId: string): Promise<Cart> {
+    const cart = await this.carts.findOneBy({ userId });
+    return cart ?? this.emptyCart(userId);
   }
 
   async addItem(userId: string, dto: AddCartItemDto) {
     const product = await this.fetchProduct(dto.productId);
 
-    const cart = this.carts.get(userId) ?? this.emptyCart(userId);
+    const cart =
+      (await this.carts.findOneBy({ userId })) ?? this.newCart(userId);
     const existing = cart.items.find(
       ({ productId }) => productId === product.id,
     );
@@ -57,7 +61,7 @@ export class CartService {
   }
 
   async updateItem(userId: string, productId: string, quantity: number) {
-    const cart = this.carts.get(userId);
+    const cart = await this.carts.findOneBy({ userId });
     const item = cart?.items.find((item) => item.productId === productId);
     if (!cart || !item) {
       throw RpcErrors.notFound(`Item ${productId} is not in the cart`);
@@ -79,8 +83,8 @@ export class CartService {
     return this.persist(cart);
   }
 
-  removeItem(userId: string, productId: string) {
-    const cart = this.carts.get(userId);
+  async removeItem(userId: string, productId: string) {
+    const cart = await this.carts.findOneBy({ userId });
     if (!cart) {
       throw RpcErrors.notFound('Cart is empty');
     }
@@ -89,9 +93,7 @@ export class CartService {
   }
 
   clear(userId: string) {
-    const cart = this.emptyCart(userId);
-    this.carts.set(userId, cart);
-    return cart;
+    return this.carts.save(this.newCart(userId));
   }
 
   private async fetchProduct(productId: string) {
@@ -109,8 +111,7 @@ export class CartService {
 
   private persist(cart: Cart) {
     this.recalculate(cart);
-    this.carts.set(cart.userId, cart);
-    return cart;
+    return this.carts.save(cart);
   }
 
   private recalculate(cart: Cart) {
@@ -121,13 +122,16 @@ export class CartService {
       total += item.subtotal;
     }
     cart.total = Math.round(total * 100) / 100;
-    cart.updatedAt = new Date().toISOString();
   }
 
-  private emptyCart(userId: string) {
+  private newCart(userId: string) {
+    return this.carts.create({ userId, items: [], total: 0 });
+  }
+
+  private emptyCart(userId: string): Cart {
     return {
       userId,
-      items: [] as CartItem[],
+      items: [],
       total: 0,
       updatedAt: new Date().toISOString(),
     };

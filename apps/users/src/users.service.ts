@@ -5,47 +5,45 @@ import {
   type PublicUser,
   RegisterUserDto,
   RpcErrors,
-  type User,
 } from '@app/contracts';
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { UserEntity } from './entities/user.entity';
 
 const SALT_ROUNDS = 10;
 
 @Injectable()
 export class UsersService {
-  private readonly users = new Map<string, User>();
-  private readonly idsByEmail = new Map<string, string>();
-
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    @InjectRepository(UserEntity)
+    private readonly users: Repository<UserEntity>,
+    private readonly jwtService: JwtService,
+  ) {}
 
   async register(dto: RegisterUserDto): Promise<AuthResult> {
     const email = dto.email.toLowerCase();
-    if (this.idsByEmail.has(email)) {
+    if (await this.users.findOneBy({ email })) {
       throw RpcErrors.conflict(`Email ${dto.email} is already registered`);
     }
 
-    const now = new Date().toISOString();
-    const user: User = {
-      id: randomUUID(),
-      email,
-      name: dto.name,
-      passwordHash: await bcrypt.hash(dto.password, SALT_ROUNDS),
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    this.users.set(user.id, user);
-    this.idsByEmail.set(email, user.id);
+    const user = await this.users.save(
+      this.users.create({
+        id: randomUUID(),
+        email,
+        name: dto.name,
+        passwordHash: await bcrypt.hash(dto.password, SALT_ROUNDS),
+      }),
+    );
 
     return this.buildAuthResult(user);
   }
 
   async login(dto: LoginUserDto): Promise<AuthResult> {
-    const id = this.idsByEmail.get(dto.email.toLowerCase());
-    const user = id ? this.users.get(id) : undefined;
+    const user = await this.users.findOneBy({ email: dto.email.toLowerCase() });
 
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
       throw RpcErrors.unauthorized('Invalid email or password');
@@ -54,7 +52,7 @@ export class UsersService {
     return this.buildAuthResult(user);
   }
 
-  verify(token: string): PublicUser {
+  async verify(token: string): Promise<PublicUser> {
     let payload: JwtPayload;
 
     try {
@@ -63,7 +61,7 @@ export class UsersService {
       throw RpcErrors.unauthorized('Invalid or expired token');
     }
 
-    const user = this.users.get(payload.sub);
+    const user = await this.users.findOneBy({ id: payload.sub });
     if (!user) {
       throw RpcErrors.unauthorized('Invalid or expired token');
     }
@@ -71,14 +69,14 @@ export class UsersService {
     return this.toPublicUser(user);
   }
 
-  private buildAuthResult(user: User): AuthResult {
+  private buildAuthResult(user: UserEntity): AuthResult {
     return {
       accessToken: this.jwtService.sign({ sub: user.id, email: user.email }),
       user: this.toPublicUser(user),
     };
   }
 
-  private toPublicUser(user: User): PublicUser {
+  private toPublicUser(user: UserEntity): PublicUser {
     const { passwordHash: _passwordHash, ...publicUser } = user;
     return publicUser;
   }

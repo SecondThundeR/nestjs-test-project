@@ -1,9 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, type ConfigType } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { SERVICE_NAMES, servicesConfig, validateEnv } from '@app/contracts';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import {
+  buildDatabaseOptions,
+  SERVICE_NAMES,
+  servicesConfig,
+  validateEnv,
+} from '@app/contracts';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
+import { OrderEntity } from './entities/order.entity';
 
 @Module({
   imports: [
@@ -12,6 +19,10 @@ import { OrdersService } from './orders.service';
       load: [servicesConfig],
       validate: validateEnv,
     }),
+    TypeOrmModule.forRootAsync({
+      useFactory: () => buildDatabaseOptions('ORDERS', [OrderEntity]),
+    }),
+    TypeOrmModule.forFeature([OrderEntity]),
     ClientsModule.registerAsync([
       {
         name: SERVICE_NAMES.PRODUCTS,

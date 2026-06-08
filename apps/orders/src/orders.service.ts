@@ -1,7 +1,7 @@
 import {
   type Cart,
   CART_PATTERNS,
-  type Order,
+  type OrderItem,
   OrderStatus,
   type Product,
   PRODUCT_PATTERNS,
@@ -10,14 +10,17 @@ import {
 } from '@app/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
+import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
+import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
+import { OrderEntity } from './entities/order.entity';
 
 @Injectable()
 export class OrdersService {
-  private readonly orders = new Map<string, Order>();
-
   constructor(
+    @InjectRepository(OrderEntity)
+    private readonly orders: Repository<OrderEntity>,
     @Inject(SERVICE_NAMES.PRODUCTS)
     private readonly productsClient: ClientProxy,
     @Inject(SERVICE_NAMES.CART) private readonly cartClient: ClientProxy,
@@ -44,7 +47,7 @@ export class OrdersService {
       products.map((product) => [product.id, product]),
     );
 
-    const items = cart.items.map((cartItem) => {
+    const items: OrderItem[] = cart.items.map((cartItem) => {
       const product = productsMap.get(cartItem.productId);
       if (!product) {
         throw RpcErrors.badRequest(
@@ -82,19 +85,17 @@ export class OrdersService {
       }),
     );
 
-    const now = new Date().toISOString();
     const total = items.reduce((sum, { subtotal }) => sum + subtotal, 0);
-    const order = {
-      id: randomUUID(),
-      userId,
-      items,
-      total: Math.round(total * 100) / 100,
-      status: OrderStatus.PENDING,
-      shippingAddress,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.orders.set(order.id, order);
+    const order = await this.orders.save(
+      this.orders.create({
+        id: randomUUID(),
+        userId,
+        items,
+        total: Math.round(total * 100) / 100,
+        status: OrderStatus.PENDING,
+        shippingAddress,
+      }),
+    );
 
     await firstValueFrom(this.cartClient.send(CART_PATTERNS.CLEAR, userId));
 
@@ -102,31 +103,28 @@ export class OrdersService {
   }
 
   findAll(userId?: string) {
-    const all = [...this.orders.values()];
-    return userId ? all.filter((order) => order.userId === userId) : all;
+    return this.orders.find({ where: userId ? { userId } : {} });
   }
 
-  findOne(id: string) {
-    const order = this.orders.get(id);
+  async findOne(id: string) {
+    const order = await this.orders.findOneBy({ id });
     if (!order) {
       throw RpcErrors.notFound(`Order ${id} not found`);
     }
     return order;
   }
 
-  updateStatus(id: string, status: OrderStatus) {
-    const order = this.findOne(id);
+  async updateStatus(id: string, status: OrderStatus) {
+    const order = await this.findOne(id);
     if (order.status === OrderStatus.CANCELLED) {
       throw RpcErrors.badRequest('A cancelled order cannot change status');
     }
     order.status = status;
-    order.updatedAt = new Date().toISOString();
-    this.orders.set(id, order);
-    return order;
+    return this.orders.save(order);
   }
 
   async cancel(id: string) {
-    const order = this.findOne(id);
+    const order = await this.findOne(id);
     if (order.status === OrderStatus.CANCELLED) {
       return order;
     }
@@ -161,8 +159,6 @@ export class OrdersService {
     );
 
     order.status = OrderStatus.CANCELLED;
-    order.updatedAt = new Date().toISOString();
-    this.orders.set(id, order);
-    return order;
+    return this.orders.save(order);
   }
 }

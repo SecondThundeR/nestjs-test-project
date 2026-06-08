@@ -74,6 +74,119 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   USERS_HOST?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  DB_SYNCHRONIZE?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  PRODUCTS_DB_HOST?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(65535)
+  PRODUCTS_DB_PORT?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  PRODUCTS_DB_USERNAME?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  PRODUCTS_DB_PASSWORD?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  PRODUCTS_DB_NAME?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  CART_DB_HOST?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(65535)
+  CART_DB_PORT?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  CART_DB_USERNAME?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  CART_DB_PASSWORD?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  CART_DB_NAME?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  ORDERS_DB_HOST?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(65535)
+  ORDERS_DB_PORT?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  ORDERS_DB_USERNAME?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  ORDERS_DB_PASSWORD?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  ORDERS_DB_NAME?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  USERS_DB_HOST?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(65535)
+  USERS_DB_PORT?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  USERS_DB_USERNAME?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  USERS_DB_PASSWORD?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  USERS_DB_NAME?: string;
 }
 
 export function validateEnv(

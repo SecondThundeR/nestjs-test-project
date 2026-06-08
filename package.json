@@ -10,6 +10,8 @@
     "npm": ">=11.16.0"
   },
   "scripts": {
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
     "build": "nest build gateway && nest build products && nest build cart && nest build orders && nest build users",
     "build:gateway": "nest build gateway",
     "build:products": "nest build products",
@@ -41,13 +43,16 @@
     "@nestjs/microservices": "11.1.24",
     "@nestjs/passport": "11.0.5",
     "@nestjs/platform-express": "11.1.24",
+    "@nestjs/typeorm": "11.0.1",
     "bcrypt": "6.0.0",
     "class-transformer": "0.5.1",
     "class-validator": "0.15.1",
     "dotenv": "17.4.2",
     "passport": "0.7.0",
+    "pg": "8.21.0",
     "reflect-metadata": "0.2.2",
-    "rxjs": "7.8.2"
+    "rxjs": "7.8.2",
+    "typeorm": "1.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "3.3.5",
@@ -66,6 +71,7 @@
     "eslint-plugin-prettier": "5.5.6",
     "globals": "17.6.0",
     "jest": "30.4.2",
+    "pg-mem": "3.0.14",
     "prettier": "3.8.3",
     "source-map-support": "0.5.21",
     "supertest": "7.2.2",

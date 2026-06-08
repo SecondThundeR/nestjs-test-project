@@ -1,17 +1,34 @@
 import { Test } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import type { DataSource } from 'typeorm';
 import type { CreateProductDto } from '@app/contracts';
+import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import { ProductsService } from './products.service';
+import { ProductEntity } from './entities/product.entity';
 
 describe('ProductsService', () => {
   let service: ProductsService;
+  let dataSource: DataSource;
 
   beforeEach(async () => {
+    dataSource = await createInMemoryDataSource([ProductEntity]);
+
     const moduleRef = await Test.createTestingModule({
-      providers: [ProductsService],
+      providers: [
+        ProductsService,
+        {
+          provide: getRepositoryToken(ProductEntity),
+          useValue: dataSource.getRepository(ProductEntity),
+        },
+      ],
     }).compile();
 
     service = moduleRef.get(ProductsService);
+  });
+
+  afterEach(async () => {
+    await dataSource.destroy();
   });
 
   function create(overrides: Partial<CreateProductDto> = {}) {
@@ -19,8 +36,8 @@ describe('ProductsService', () => {
   }
 
   describe('create', () => {
-    it('creates a product with a generated id and timestamps', () => {
-      const product = create();
+    it('creates a product with a generated id and timestamps', async () => {
+      const product = await create();
 
       expect(product).toMatchObject({ name: 'Widget', price: 10 });
       expect(typeof product.id).toBe('string');
@@ -28,95 +45,102 @@ describe('ProductsService', () => {
       expect(typeof product.createdAt).toBe('string');
     });
 
-    it('defaults description to an empty string and stock to 0', () => {
-      const product = create();
+    it('defaults description to an empty string and stock to 0', async () => {
+      const product = await create();
 
       expect(product.description).toBe('');
       expect(product.stock).toBe(0);
     });
 
-    it('keeps provided description and stock', () => {
-      const product = create({ description: 'A widget', stock: 5 });
+    it('keeps provided description and stock', async () => {
+      const product = await create({ description: 'A widget', stock: 5 });
 
       expect(product.description).toBe('A widget');
       expect(product.stock).toBe(5);
     });
 
-    it('stores the product so it can be retrieved', () => {
-      const product = create();
+    it('stores the product so it can be retrieved', async () => {
+      const product = await create();
 
-      expect(service.findOne(product.id)).toBe(product);
+      await expect(service.findOne(product.id)).resolves.toStrictEqual(product);
     });
   });
 
   describe('findAll', () => {
-    it('returns an empty array initially', () => {
-      expect(service.findAll()).toEqual([]);
+    it('returns an empty array initially', async () => {
+      await expect(service.findAll()).resolves.toEqual([]);
     });
 
-    it('returns every created product', () => {
-      const a = create({ name: 'Alpha' });
-      const b = create({ name: 'Beta' });
+    it('returns every created product', async () => {
+      const a = await create({ name: 'Alpha' });
+      const b = await create({ name: 'Beta' });
 
-      expect(service.findAll()).toEqual([a, b]);
+      await expect(service.findAll()).resolves.toEqual([a, b]);
     });
   });
 
   describe('findOne', () => {
-    it('returns the product for a known id', () => {
-      const product = create();
+    it('returns the product for a known id', async () => {
+      const product = await create();
 
-      expect(service.findOne(product.id)).toBe(product);
+      await expect(service.findOne(product.id)).resolves.toStrictEqual(product);
     });
 
-    it('throws RpcException for an unknown id', () => {
-      expect(() => service.findOne('missing')).toThrow(RpcException);
+    it('throws RpcException for an unknown id', async () => {
+      await expect(service.findOne('missing')).rejects.toThrow(RpcException);
     });
   });
 
   describe('findMany', () => {
-    it('returns only the products that exist, skipping unknown ids', () => {
-      const a = create({ name: 'Alpha' });
-      const b = create({ name: 'Beta' });
+    it('returns only the products that exist, skipping unknown ids', async () => {
+      const a = await create({ name: 'Alpha' });
+      const b = await create({ name: 'Beta' });
 
-      expect(service.findMany([a.id, 'missing', b.id])).toEqual([a, b]);
+      await expect(service.findMany([a.id, 'missing', b.id])).resolves.toEqual([
+        a,
+        b,
+      ]);
     });
 
-    it('returns an empty array when none match', () => {
-      expect(service.findMany(['missing'])).toEqual([]);
+    it('returns an empty array when none match', async () => {
+      await expect(service.findMany(['missing'])).resolves.toEqual([]);
+    });
+
+    it('returns an empty array without querying when given no ids', async () => {
+      await expect(service.findMany([])).resolves.toEqual([]);
     });
   });
 
   describe('update', () => {
-    it('merges the provided fields and persists them', () => {
-      const product = create({ price: 10, stock: 3 });
+    it('merges the provided fields and persists them', async () => {
+      const product = await create({ price: 10, stock: 3 });
 
-      const updated = service.update(product.id, { price: 12 });
+      const updated = await service.update(product.id, { price: 12 });
 
       expect(updated).toMatchObject({ price: 12, stock: 3 });
-      expect(service.findOne(product.id)).toEqual(updated);
+      await expect(service.findOne(product.id)).resolves.toEqual(updated);
     });
 
-    it('throws RpcException for an unknown id', () => {
-      expect(() => service.update('missing', { price: 1 })).toThrow(
+    it('throws RpcException for an unknown id', async () => {
+      await expect(service.update('missing', { price: 1 })).rejects.toThrow(
         RpcException,
       );
     });
   });
 
   describe('remove', () => {
-    it('deletes an existing product', () => {
-      const product = create();
+    it('deletes an existing product', async () => {
+      const product = await create();
 
-      expect(service.remove(product.id)).toEqual({
+      await expect(service.remove(product.id)).resolves.toEqual({
         id: product.id,
         deleted: true,
       });
-      expect(() => service.findOne(product.id)).toThrow(RpcException);
+      await expect(service.findOne(product.id)).rejects.toThrow(RpcException);
     });
 
-    it('throws RpcException for an unknown id', () => {
-      expect(() => service.remove('missing')).toThrow(RpcException);
+    it('throws RpcException for an unknown id', async () => {
+      await expect(service.remove('missing')).rejects.toThrow(RpcException);
     });
   });
 });

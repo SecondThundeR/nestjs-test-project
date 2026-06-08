@@ -31,7 +31,12 @@ describe('CartController', () => {
   });
 
   it('delegates get() to the service with the userId', () => {
-    const cart = { userId: 'user-1', items: [], total: 0, updatedAt: 'now' };
+    const cart = Promise.resolve({
+      userId: 'user-1',
+      items: [],
+      total: 0,
+      updatedAt: 'now',
+    });
     cartService.get.mockReturnValue(cart);
 
     expect(cartController.get('user-1')).toBe(cart);
@@ -68,7 +73,12 @@ describe('CartController', () => {
       userId: 'user-1',
       productId: 'p-1',
     };
-    const cart = { userId: 'user-1', items: [], total: 0, updatedAt: 'now' };
+    const cart = Promise.resolve({
+      userId: 'user-1',
+      items: [],
+      total: 0,
+      updatedAt: 'now',
+    });
     cartService.removeItem.mockReturnValue(cart);
 
     expect(cartController.removeItem(payload)).toBe(cart);
@@ -76,7 +86,12 @@ describe('CartController', () => {
   });
 
   it('delegates clear() to the service with the userId', () => {
-    const cart = { userId: 'user-1', items: [], total: 0, updatedAt: 'now' };
+    const cart = Promise.resolve({
+      userId: 'user-1',
+      items: [],
+      total: 0,
+      updatedAt: 'now',
+    });
     cartService.clear.mockReturnValue(cart);
 
     expect(cartController.clear('user-1')).toBe(cart);
