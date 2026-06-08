@@ -7,7 +7,7 @@ import {
   SERVICE_NAMES,
   servicesConfig,
   validateEnv,
-} from '@app/contracts';
+} from '@app/config';
 import { CartController } from './cart.controller';
 import { CartService } from './cart.service';
 import { CartSchema } from './schemas/cart.schema';

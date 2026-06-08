@@ -7,7 +7,7 @@ import {
   SERVICE_NAMES,
   servicesConfig,
   validateEnv,
-} from '@app/contracts';
+} from '@app/config';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { OrderEntity } from './entities/order.entity';

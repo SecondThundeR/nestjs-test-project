@@ -9,12 +9,10 @@ import {
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 import {
-  type AuthResult,
   GlobalRpcExceptionFilter,
-  type PublicUser,
   rpcValidationExceptionFactory,
-  USERS_PATTERNS,
-} from '@app/contracts';
+} from '@app/filters';
+import { type AuthResult, type PublicUser, USERS_PATTERNS } from '@app/domains';
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
 import { UsersModule } from './../src/users.module';
 import { UserEntity } from './../src/entities/user.entity';

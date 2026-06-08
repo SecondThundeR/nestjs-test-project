@@ -1,11 +1,8 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { GatewayModule } from './gateway.module';
-import {
-  createWinstonLogger,
-  type ServicesConfig,
-  servicesConfig,
-} from '@app/contracts';
+import { type ServicesConfig, servicesConfig } from '@app/config';
+import { createWinstonLogger } from '@app/logger';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 

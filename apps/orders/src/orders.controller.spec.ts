@@ -5,7 +5,7 @@ import {
   OrderStatus,
   type CreateOrderPayload,
   type UpdateOrderStatusPayload,
-} from '@app/contracts';
+} from '@app/domains';
 
 describe('OrdersController', () => {
   let ordersController: OrdersController;

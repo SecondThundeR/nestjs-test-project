@@ -6,7 +6,7 @@ import {
   CART_PATTERNS,
   type RemoveCartItemPayload,
   type UpdateCartItemPayload,
-} from '@app/contracts';
+} from '@app/domains';
 
 @Controller()
 export class CartController {

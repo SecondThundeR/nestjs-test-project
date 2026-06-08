@@ -10,17 +10,19 @@ import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom, of } from 'rxjs';
 import {
   CART_PATTERNS,
-  GlobalRpcExceptionFilter,
   ORDERS_PATTERNS,
   OrderStatus,
   PRODUCT_PATTERNS,
-  rpcValidationExceptionFactory,
-  SERVICE_NAMES,
   type Cart,
   type CartItem,
   type Order,
   type Product,
-} from '@app/contracts';
+} from '@app/domains';
+import { SERVICE_NAMES } from '@app/config';
+import {
+  rpcValidationExceptionFactory,
+  GlobalRpcExceptionFilter,
+} from '@app/filters';
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
 import { OrdersModule } from './../src/orders.module';
 import { OrderEntity } from './../src/entities/order.entity';

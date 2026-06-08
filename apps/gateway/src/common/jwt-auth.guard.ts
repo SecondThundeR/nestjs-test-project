@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
-import type { JwtPayload } from '@app/contracts';
+import type { JwtPayload } from '@app/domains';
 
 export type AuthenticatedRequest = Request & { user: JwtPayload };
 

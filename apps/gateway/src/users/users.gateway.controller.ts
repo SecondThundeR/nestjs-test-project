@@ -2,9 +2,9 @@ import {
   LoginUserDto,
   type PublicUser,
   RegisterUserDto,
-  SERVICE_NAMES,
   USERS_PATTERNS,
-} from '@app/contracts';
+} from '@app/domains';
+import { SERVICE_NAMES } from '@app/config';
 import { Body, Controller, Inject, Post } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import { rpcSend } from '../common/rpc.util';

@@ -2,10 +2,10 @@ import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
 import {
   PRODUCT_PATTERNS,
-  SERVICE_NAMES,
   type CreateProductDto,
   type UpdateProductDto,
-} from '@app/contracts';
+} from '@app/domains';
+import { SERVICE_NAMES } from '@app/config';
 import { ProductsGatewayController } from './products.gateway.controller';
 
 describe('ProductsGatewayController', () => {

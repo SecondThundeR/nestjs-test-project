@@ -3,11 +3,8 @@ import { RpcException } from '@nestjs/microservices';
 import { JwtModule, JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { DataSource } from 'typeorm';
-import {
-  authConfig,
-  type JwtPayload,
-  type RegisterUserDto,
-} from '@app/contracts';
+import { type JwtPayload, type RegisterUserDto } from '@app/domains';
+import { authConfig } from '@app/config';
 import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import { UsersService } from './users.service';
 import { UserEntity } from './entities/user.entity';

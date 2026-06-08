@@ -8,14 +8,12 @@ import {
 } from '@nestjs/microservices';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom, of } from 'rxjs';
+import { CART_PATTERNS, type Cart, type Product } from '@app/domains';
+import { SERVICE_NAMES } from '@app/config';
 import {
-  CART_PATTERNS,
   GlobalRpcExceptionFilter,
   rpcValidationExceptionFactory,
-  SERVICE_NAMES,
-  type Cart,
-  type Product,
-} from '@app/contracts';
+} from '@app/filters';
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
 import { CartModule } from './../src/cart.module';
 import { CartSchema } from '../src/schemas/cart.schema';

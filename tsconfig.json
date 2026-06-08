@@ -23,8 +23,14 @@
     "noFallthroughCasesInSwitch": true,
     "types": ["node", "jest", "supertest"],
     "paths": {
-      "@app/contracts": ["libs/contracts/src"],
-      "@app/contracts/*": ["libs/contracts/src/*"]
+      "@app/config": ["libs/config/src"],
+      "@app/config/*": ["libs/config/src/*"],
+      "@app/domains": ["libs/domains/src"],
+      "@app/domains/*": ["libs/domains/src/*"],
+      "@app/filters": ["libs/filters/src"],
+      "@app/filters/*": ["libs/filters/src/*"],
+      "@app/logger": ["libs/logger/src"],
+      "@app/logger/*": ["libs/logger/src/*"]
     },
     "baseUrl": "./",
     "ignoreDeprecations": "6.0"

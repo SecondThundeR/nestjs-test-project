@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { ExecutionContext } from '@nestjs/common';
-import type { JwtPayload } from '@app/contracts';
+import type { JwtPayload } from '@app/domains';
 import { CurrentUserId } from './current-user.decorator';
 
 type ParamFactory = (data: unknown, ctx: ExecutionContext) => string;

@@ -2,9 +2,9 @@ import {
   CreateProductDto,
   type Product,
   PRODUCT_PATTERNS,
-  SERVICE_NAMES,
   UpdateProductDto,
-} from '@app/contracts';
+} from '@app/domains';
+import { SERVICE_NAMES } from '@app/config';
 import {
   Body,
   Controller,

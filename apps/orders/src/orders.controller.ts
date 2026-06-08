@@ -5,7 +5,7 @@ import {
   type CreateOrderPayload,
   ORDERS_PATTERNS,
   type UpdateOrderStatusPayload,
-} from '@app/contracts';
+} from '@app/domains';
 
 @Controller()
 export class OrdersController {

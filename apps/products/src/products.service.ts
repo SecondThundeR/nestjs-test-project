@@ -1,8 +1,5 @@
-import {
-  type CreateProductDto,
-  RpcErrors,
-  type UpdateProductDto,
-} from '@app/contracts';
+import { type CreateProductDto, type UpdateProductDto } from '@app/domains';
+import { RpcErrors } from '@app/filters';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';

@@ -3,9 +3,9 @@ import {
   type Cart,
   type Product,
   PRODUCT_PATTERNS,
-  RpcErrors,
-  SERVICE_NAMES,
-} from '@app/contracts';
+} from '@app/domains';
+import { SERVICE_NAMES } from '@app/config';
+import { RpcErrors } from '@app/filters';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';

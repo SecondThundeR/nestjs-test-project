@@ -1,6 +1,7 @@
 import { type ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { authConfig, type JwtPayload } from '@app/contracts';
+import type { JwtPayload } from '@app/domains';
+import { authConfig } from '@app/config';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 describe('JwtAuthGuard', () => {

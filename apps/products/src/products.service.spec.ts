@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { DataSource } from 'typeorm';
-import type { CreateProductDto } from '@app/contracts';
+import type { CreateProductDto } from '@app/domains';
 import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import { ProductsService } from './products.service';
 import { ProductEntity } from './entities/product.entity';

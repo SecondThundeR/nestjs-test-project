@@ -2,12 +2,11 @@ import { Test } from '@nestjs/testing';
 import { JwtModule } from '@nestjs/jwt';
 import { of } from 'rxjs';
 import {
-  authConfig,
   CART_PATTERNS,
-  SERVICE_NAMES,
   type AddCartItemDto,
   type UpdateCartItemDto,
-} from '@app/contracts';
+} from '@app/domains';
+import { authConfig, SERVICE_NAMES } from '@app/config';
 import { CartGatewayController } from './cart.gateway.controller';
 
 const USER = 'user-1';

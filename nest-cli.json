@@ -19,13 +19,31 @@
         "tsConfigPath": "apps/cart/tsconfig.app.json"
       }
     },
-    "contracts": {
+    "config": {
       "type": "library",
-      "root": "libs/contracts",
+      "root": "libs/config",
       "entryFile": "index",
-      "sourceRoot": "libs/contracts/src",
+      "sourceRoot": "libs/config/src",
       "compilerOptions": {
-        "tsConfigPath": "libs/contracts/tsconfig.lib.json"
+        "tsConfigPath": "libs/config/tsconfig.lib.json"
+      }
+    },
+    "domains": {
+      "type": "library",
+      "root": "libs/domains",
+      "entryFile": "index",
+      "sourceRoot": "libs/domains/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/domains/tsconfig.lib.json"
+      }
+    },
+    "filters": {
+      "type": "library",
+      "root": "libs/filters",
+      "entryFile": "index",
+      "sourceRoot": "libs/filters/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/filters/tsconfig.lib.json"
       }
     },
     "gateway": {
@@ -35,6 +53,15 @@
       "sourceRoot": "apps/gateway/src",
       "compilerOptions": {
         "tsConfigPath": "apps/gateway/tsconfig.app.json"
+      }
+    },
+    "logger": {
+      "type": "library",
+      "root": "libs/logger",
+      "entryFile": "index",
+      "sourceRoot": "libs/logger/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/logger/tsconfig.lib.json"
       }
     },
     "orders": {

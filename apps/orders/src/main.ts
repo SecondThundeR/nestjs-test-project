@@ -2,12 +2,12 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { OrdersModule } from './orders.module';
 import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { servicesConfig } from '@app/config';
+import { createWinstonLogger } from '@app/logger';
 import {
-  createWinstonLogger,
   GlobalRpcExceptionFilter,
   rpcValidationExceptionFactory,
-  servicesConfig,
-} from '@app/contracts';
+} from '@app/filters';
 import { Logger, ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {

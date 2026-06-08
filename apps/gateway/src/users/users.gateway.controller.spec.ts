@@ -1,11 +1,11 @@
 import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
 import {
-  SERVICE_NAMES,
   USERS_PATTERNS,
   type LoginUserDto,
   type RegisterUserDto,
-} from '@app/contracts';
+} from '@app/domains';
+import { SERVICE_NAMES } from '@app/config';
 import { UsersGatewayController } from './users.gateway.controller';
 
 describe('UsersGatewayController', () => {

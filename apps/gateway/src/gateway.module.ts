@@ -7,7 +7,7 @@ import {
   SERVICE_NAMES,
   servicesConfig,
   validateEnv,
-} from '@app/contracts';
+} from '@app/config';
 import { ProductsGatewayController } from './products/products.gateway.controller';
 import { CartGatewayController } from './cart/cart.gateway.controller';
 import { OrdersGatewayController } from './orders/orders.gateway.controller';

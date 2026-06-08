@@ -8,12 +8,11 @@ import {
 } from '@nestjs/microservices';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
+import { PRODUCT_PATTERNS, type Product } from '@app/domains';
 import {
   GlobalRpcExceptionFilter,
-  PRODUCT_PATTERNS,
-  type Product,
   rpcValidationExceptionFactory,
-} from '@app/contracts';
+} from '@app/filters';
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
 import { ProductsModule } from './../src/products.module';
 import { ProductEntity } from './../src/entities/product.entity';

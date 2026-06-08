@@ -107,9 +107,7 @@
       "/main\\.ts$",
       "\\.interface\\.ts$",
       "\\.dto\\.ts$",
-      "\\.(spec|e2e-spec)\\.ts$",
-      "libs/contracts/src/index.ts",
-      "libs/contracts/src/(patterns|config)/"
+      "\\.(spec|e2e-spec)\\.ts$"
     ],
     "coverageDirectory": "./coverage",
     "testEnvironment": "node",
@@ -118,7 +116,10 @@
       "<rootDir>/libs/"
     ],
     "moduleNameMapper": {
-      "^@app/contracts(|/.*)$": "<rootDir>/libs/contracts/src/$1"
+      "^@app/config(|/.*)$": "<rootDir>/libs/config/src/$1",
+      "^@app/domains(|/.*)$": "<rootDir>/libs/domains/src/$1",
+      "^@app/filters(|/.*)$": "<rootDir>/libs/filters/src/$1",
+      "^@app/logger(|/.*)$": "<rootDir>/libs/logger/src/$1"
     }
   },
   "allowScripts": {

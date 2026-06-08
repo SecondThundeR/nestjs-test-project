@@ -2,9 +2,9 @@ import {
   AddCartItemDto,
   type Cart,
   CART_PATTERNS,
-  SERVICE_NAMES,
   UpdateCartItemDto,
-} from '@app/contracts';
+} from '@app/domains';
+import { SERVICE_NAMES } from '@app/config';
 import {
   Body,
   Controller,

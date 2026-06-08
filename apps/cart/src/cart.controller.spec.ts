@@ -5,7 +5,7 @@ import type {
   AddCartItemPayload,
   RemoveCartItemPayload,
   UpdateCartItemPayload,
-} from '@app/contracts';
+} from '@app/domains';
 
 describe('CartController', () => {
   let cartController: CartController;

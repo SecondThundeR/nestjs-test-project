@@ -1,4 +1,4 @@
-import type { RpcErrorPayload } from '@app/contracts';
+import type { RpcErrorPayload } from '@app/filters';
 import { HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';

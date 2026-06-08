@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, type ConfigType } from '@nestjs/config';
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { authConfig, buildDatabaseOptions, validateEnv } from '@app/contracts';
+import { authConfig, buildDatabaseOptions, validateEnv } from '@app/config';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { UserEntity } from './entities/user.entity';

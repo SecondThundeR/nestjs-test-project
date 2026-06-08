@@ -7,11 +7,11 @@ import {
   CART_PATTERNS,
   OrderStatus,
   PRODUCT_PATTERNS,
-  SERVICE_NAMES,
   type Cart,
   type CartItem,
   type Product,
-} from '@app/contracts';
+} from '@app/domains';
+import { SERVICE_NAMES } from '@app/config';
 import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import { OrdersService } from './orders.service';
 import { OrderEntity } from './entities/order.entity';

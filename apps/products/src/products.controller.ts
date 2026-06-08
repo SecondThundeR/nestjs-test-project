@@ -5,7 +5,7 @@ import {
   CreateProductDto,
   PRODUCT_PATTERNS,
   type UpdateProductPayload,
-} from '@app/contracts';
+} from '@app/domains';
 
 @Controller()
 export class ProductsController {

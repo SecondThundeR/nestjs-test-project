@@ -5,13 +5,12 @@ import { of, throwError } from 'rxjs';
 import request from 'supertest';
 import type { Server } from 'node:http';
 import {
-  authConfig,
   CART_PATTERNS,
   ORDERS_PATTERNS,
   PRODUCT_PATTERNS,
-  SERVICE_NAMES,
   USERS_PATTERNS,
-} from '@app/contracts';
+} from '@app/domains';
+import { authConfig, SERVICE_NAMES } from '@app/config';
 import { GatewayModule } from './../src/gateway.module';
 
 describe('Gateway (e2e)', () => {

@@ -2,9 +2,9 @@ import {
   CreateOrderDto,
   type Order,
   ORDERS_PATTERNS,
-  SERVICE_NAMES,
   UpdateOrderStatusDto,
-} from '@app/contracts';
+} from '@app/domains';
+import { SERVICE_NAMES } from '@app/config';
 import {
   Body,
   Controller,

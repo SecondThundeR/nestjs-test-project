@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { ProductsController } from './products.controller';
 import { ProductsService } from './products.service';
-import type { CreateProductDto, UpdateProductPayload } from '@app/contracts';
+import type { CreateProductDto, UpdateProductPayload } from '@app/domains';
 
 describe('ProductsController', () => {
   let productsController: ProductsController;
