@@ -1,30 +1,49 @@
 import { Test } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
-import { JwtModule, JwtService } from '@nestjs/jwt';
+import { JwtModule, JwtService, type JwtSignOptions } from '@nestjs/jwt';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import type { DataSource } from 'typeorm';
 import {
   authConfig,
   type JwtPayload,
   type RegisterUserDto,
 } from '@app/contracts';
+import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import { UsersService } from './users.service';
+import { UserEntity } from './entities/user.entity';
 
 describe('UsersService', () => {
   let service: UsersService;
   let jwtService: JwtService;
+  let dataSource: DataSource;
 
   beforeEach(async () => {
+    dataSource = await createInMemoryDataSource([UserEntity]);
+
     const moduleRef = await Test.createTestingModule({
       imports: [
         JwtModule.register({
           secret: authConfig().secret,
-          signOptions: { expiresIn: authConfig().expiresIn },
+          signOptions: {
+            expiresIn: authConfig().expiresIn as JwtSignOptions['expiresIn'],
+          },
         }),
       ],
-      providers: [UsersService],
+      providers: [
+        UsersService,
+        {
+          provide: getRepositoryToken(UserEntity),
+          useValue: dataSource.getRepository(UserEntity),
+        },
+      ],
     }).compile();
 
     service = moduleRef.get(UsersService);
     jwtService = moduleRef.get(JwtService);
+  });
+
+  afterEach(async () => {
+    await dataSource.destroy();
   });
 
   function register(overrides: Partial<RegisterUserDto> = {}) {
@@ -121,17 +140,17 @@ describe('UsersService', () => {
     it('returns the public user for a valid token', async () => {
       const { accessToken, user } = await register();
 
-      expect(service.verify(accessToken)).toEqual(user);
+      await expect(service.verify(accessToken)).resolves.toEqual(user);
     });
 
-    it('throws RpcException for a malformed token', () => {
-      expect(() => service.verify('not-a-token')).toThrow(RpcException);
+    it('throws RpcException for a malformed token', async () => {
+      await expect(service.verify('not-a-token')).rejects.toThrow(RpcException);
     });
 
-    it('throws RpcException when the user no longer exists', () => {
+    it('throws RpcException when the user no longer exists', async () => {
       const token = jwtService.sign({ sub: 'missing', email: 'x@example.com' });
 
-      expect(() => service.verify(token)).toThrow(RpcException);
+      await expect(service.verify(token)).rejects.toThrow(RpcException);
     });
   });
 });

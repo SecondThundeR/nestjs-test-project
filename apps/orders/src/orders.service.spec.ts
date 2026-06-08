@@ -1,5 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import type { DataSource } from 'typeorm';
 import { of, throwError } from 'rxjs';
 import {
   CART_PATTERNS,
@@ -10,7 +12,9 @@ import {
   type CartItem,
   type Product,
 } from '@app/contracts';
+import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import { OrdersService } from './orders.service';
+import { OrderEntity } from './entities/order.entity';
 
 const USER = 'user-1';
 const ADDRESS = '1 Test Street';
@@ -53,20 +57,30 @@ describe('OrdersService', () => {
   let service: OrdersService;
   let productsClient: { send: jest.Mock };
   let cartClient: { send: jest.Mock };
+  let dataSource: DataSource;
 
   beforeEach(async () => {
     productsClient = { send: jest.fn() };
     cartClient = { send: jest.fn() };
+    dataSource = await createInMemoryDataSource([OrderEntity]);
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         OrdersService,
+        {
+          provide: getRepositoryToken(OrderEntity),
+          useValue: dataSource.getRepository(OrderEntity),
+        },
         { provide: SERVICE_NAMES.PRODUCTS, useValue: productsClient },
         { provide: SERVICE_NAMES.CART, useValue: cartClient },
       ],
     }).compile();
 
     service = moduleRef.get(OrdersService);
+  });
+
+  afterEach(async () => {
+    await dataSource.destroy();
   });
 
   async function createOrder() {
@@ -135,8 +149,8 @@ describe('OrdersService', () => {
     it('persists the order so it can be retrieved afterwards', async () => {
       const order = await createOrder();
 
-      expect(service.findOne(order.id)).toBe(order);
-      expect(service.findAll(USER)).toContainEqual(order);
+      await expect(service.findOne(order.id)).resolves.toStrictEqual(order);
+      await expect(service.findAll(USER)).resolves.toContainEqual(order);
     });
 
     it('throws RpcException when the cart is empty', async () => {
@@ -169,21 +183,21 @@ describe('OrdersService', () => {
   });
 
   describe('findAll', () => {
-    it('returns an empty list when there are no orders', () => {
-      expect(service.findAll()).toEqual([]);
+    it('returns an empty list when there are no orders', async () => {
+      await expect(service.findAll()).resolves.toEqual([]);
     });
 
     it('filters by userId when one is provided', async () => {
       const order = await createOrder();
 
-      expect(service.findAll(USER)).toEqual([order]);
-      expect(service.findAll('someone-else')).toEqual([]);
+      await expect(service.findAll(USER)).resolves.toEqual([order]);
+      await expect(service.findAll('someone-else')).resolves.toEqual([]);
     });
   });
 
   describe('findOne', () => {
-    it('throws RpcException for an unknown id', () => {
-      expect(() => service.findOne('missing')).toThrow(RpcException);
+    it('throws RpcException for an unknown id', async () => {
+      await expect(service.findOne('missing')).rejects.toThrow(RpcException);
     });
   });
 
@@ -191,25 +205,27 @@ describe('OrdersService', () => {
     it('updates the status of an existing order', async () => {
       const order = await createOrder();
 
-      const updated = service.updateStatus(order.id, OrderStatus.SHIPPED);
+      const updated = await service.updateStatus(order.id, OrderStatus.SHIPPED);
 
       expect(updated.status).toBe(OrderStatus.SHIPPED);
-      expect(service.findOne(order.id).status).toBe(OrderStatus.SHIPPED);
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.SHIPPED,
+      });
     });
 
-    it('throws RpcException for an unknown id', () => {
-      expect(() => service.updateStatus('missing', OrderStatus.PAID)).toThrow(
-        RpcException,
-      );
+    it('throws RpcException for an unknown id', async () => {
+      await expect(
+        service.updateStatus('missing', OrderStatus.PAID),
+      ).rejects.toThrow(RpcException);
     });
 
     it('throws RpcException when the order is cancelled', async () => {
       const order = await createOrder();
       await service.cancel(order.id);
 
-      expect(() => service.updateStatus(order.id, OrderStatus.PAID)).toThrow(
-        RpcException,
-      );
+      await expect(
+        service.updateStatus(order.id, OrderStatus.PAID),
+      ).rejects.toThrow(RpcException);
     });
   });
 
@@ -268,7 +284,7 @@ describe('OrdersService', () => {
 
     it('throws RpcException when the order is already shipped', async () => {
       const order = await createOrder();
-      service.updateStatus(order.id, OrderStatus.SHIPPED);
+      await service.updateStatus(order.id, OrderStatus.SHIPPED);
 
       await expect(service.cancel(order.id)).rejects.toBeInstanceOf(
         RpcException,

@@ -1,8 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { servicesConfig, validateEnv } from '@app/contracts';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import {
+  buildDatabaseOptions,
+  servicesConfig,
+  validateEnv,
+} from '@app/contracts';
 import { ProductsController } from './products.controller';
 import { ProductsService } from './products.service';
+import { ProductEntity } from './entities/product.entity';
 
 @Module({
   imports: [
@@ -11,6 +17,10 @@ import { ProductsService } from './products.service';
       load: [servicesConfig],
       validate: validateEnv,
     }),
+    TypeOrmModule.forRootAsync({
+      useFactory: () => buildDatabaseOptions('PRODUCTS', [ProductEntity]),
+    }),
+    TypeOrmModule.forFeature([ProductEntity]),
   ],
   controllers: [ProductsController],
   providers: [ProductsService],

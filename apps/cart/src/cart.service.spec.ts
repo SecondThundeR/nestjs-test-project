@@ -1,8 +1,12 @@
 import { Test } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import type { DataSource } from 'typeorm';
 import { of, throwError } from 'rxjs';
 import { PRODUCT_PATTERNS, SERVICE_NAMES, type Product } from '@app/contracts';
+import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import { CartService } from './cart.service';
+import { CartEntity } from './entities/cart.entity';
 
 const USER = 'user-1';
 
@@ -23,13 +27,19 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
 describe('CartService', () => {
   let service: CartService;
   let productsClient: { send: jest.Mock };
+  let dataSource: DataSource;
 
   beforeEach(async () => {
     productsClient = { send: jest.fn() };
+    dataSource = await createInMemoryDataSource([CartEntity]);
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         CartService,
+        {
+          provide: getRepositoryToken(CartEntity),
+          useValue: dataSource.getRepository(CartEntity),
+        },
         { provide: SERVICE_NAMES.PRODUCTS, useValue: productsClient },
       ],
     }).compile();
@@ -37,9 +47,13 @@ describe('CartService', () => {
     service = moduleRef.get(CartService);
   });
 
+  afterEach(async () => {
+    await dataSource.destroy();
+  });
+
   describe('get', () => {
-    it('returns an empty cart for an unknown user', () => {
-      const cart = service.get(USER);
+    it('returns an empty cart for an unknown user', async () => {
+      const cart = await service.get(USER);
 
       expect(cart).toMatchObject({ userId: USER, items: [], total: 0 });
       expect(typeof cart.updatedAt).toBe('string');
@@ -52,7 +66,7 @@ describe('CartService', () => {
         quantity: 1,
       });
 
-      expect(service.get(USER)).toBe(added);
+      await expect(service.get(USER)).resolves.toStrictEqual(added);
     });
   });
 
@@ -216,15 +230,17 @@ describe('CartService', () => {
       await service.addItem(USER, { productId: 'p-2', quantity: 1 });
     });
 
-    it('removes only the targeted item and keeps the rest', () => {
-      const cart = service.removeItem(USER, 'p-1');
+    it('removes only the targeted item and keeps the rest', async () => {
+      const cart = await service.removeItem(USER, 'p-1');
 
       expect(cart.items.map((item) => item.productId)).toEqual(['p-2']);
       expect(cart.total).toBe(5);
     });
 
-    it('throws RpcException when the cart does not exist', () => {
-      expect(() => service.removeItem('nobody', 'p-1')).toThrow(RpcException);
+    it('throws RpcException when the cart does not exist', async () => {
+      await expect(service.removeItem('nobody', 'p-1')).rejects.toThrow(
+        RpcException,
+      );
     });
   });
 
@@ -233,11 +249,11 @@ describe('CartService', () => {
       productsClient.send.mockReturnValue(of(makeProduct()));
       await service.addItem(USER, { productId: 'p-1', quantity: 1 });
 
-      const cart = service.clear(USER);
+      const cart = await service.clear(USER);
 
       expect(cart.items).toHaveLength(0);
       expect(cart.total).toBe(0);
-      expect(service.get(USER).items).toHaveLength(0);
+      expect((await service.get(USER)).items).toHaveLength(0);
     });
   });
 });

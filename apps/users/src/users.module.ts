@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, type ConfigType } from '@nestjs/config';
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
-import { authConfig, validateEnv } from '@app/contracts';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { authConfig, buildDatabaseOptions, validateEnv } from '@app/contracts';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+import { UserEntity } from './entities/user.entity';
 
 @Module({
   imports: [
@@ -12,6 +14,10 @@ import { UsersService } from './users.service';
       load: [authConfig],
       validate: validateEnv,
     }),
+    TypeOrmModule.forRootAsync({
+      useFactory: () => buildDatabaseOptions('USERS', [UserEntity]),
+    }),
+    TypeOrmModule.forFeature([UserEntity]),
     JwtModule.registerAsync({
       inject: [authConfig.KEY],
       useFactory: (auth: ConfigType<typeof authConfig>) => ({

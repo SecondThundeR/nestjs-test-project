@@ -6,6 +6,7 @@ import {
   type MicroserviceOptions,
   Transport,
 } from '@nestjs/microservices';
+import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom, of } from 'rxjs';
 import {
   CART_PATTERNS,
@@ -20,7 +21,9 @@ import {
   type Order,
   type Product,
 } from '@app/contracts';
+import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
 import { OrdersModule } from './../src/orders.module';
+import { OrderEntity } from './../src/entities/order.entity';
 
 const HOST = '127.0.0.1';
 const PORT = 4003;
@@ -59,9 +62,13 @@ describe('Orders microservice (e2e)', () => {
   const cartClient = { send: jest.fn(), emit: jest.fn() };
 
   beforeAll(async () => {
+    const dataSource = await createInMemoryDataSource([OrderEntity]);
+
     const moduleFixture = await Test.createTestingModule({
       imports: [OrdersModule],
     })
+      .overrideProvider(getDataSourceToken())
+      .useValue(dataSource)
       .overrideProvider(SERVICE_NAMES.PRODUCTS)
       .useValue(productsClient)
       .overrideProvider(SERVICE_NAMES.CART)

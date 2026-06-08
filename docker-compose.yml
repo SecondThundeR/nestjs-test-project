@@ -1,0 +1,70 @@
+services:
+  products-db:
+    image: postgres:18.4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: products
+    ports:
+      - '5532:5432'
+    volumes:
+      - products-db-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d products']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  cart-db:
+    image: postgres:18.4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cart
+    ports:
+      - '5533:5432'
+    volumes:
+      - cart-db-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d cart']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  orders-db:
+    image: postgres:18.4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: orders
+    ports:
+      - '5534:5432'
+    volumes:
+      - orders-db-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d orders']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  users-db:
+    image: postgres:18.4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: users
+    ports:
+      - '5535:5432'
+    volumes:
+      - users-db-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d users']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  products-db-data:
+  cart-db-data:
+  orders-db-data:
+  users-db-data:

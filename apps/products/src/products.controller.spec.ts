@@ -76,7 +76,7 @@ describe('ProductsController', () => {
   });
 
   it('delegates remove() to the service with the id', () => {
-    const result = { id: 'p-1', deleted: true };
+    const result = Promise.resolve({ id: 'p-1', deleted: true });
     productsService.remove.mockReturnValue(result);
 
     expect(productsController.remove('p-1')).toBe(result);

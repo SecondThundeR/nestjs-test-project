@@ -6,6 +6,7 @@ import {
   type MicroserviceOptions,
   Transport,
 } from '@nestjs/microservices';
+import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 import {
   GlobalRpcExceptionFilter,
@@ -13,7 +14,9 @@ import {
   type Product,
   rpcValidationExceptionFactory,
 } from '@app/contracts';
+import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
 import { ProductsModule } from './../src/products.module';
+import { ProductEntity } from './../src/entities/product.entity';
 
 const HOST = '127.0.0.1';
 const PORT = 4001;
@@ -23,9 +26,17 @@ describe('Products microservice (e2e)', () => {
   let client: ClientProxy;
 
   beforeAll(async () => {
+    // Swap the module's real Postgres DataSource for an in-memory pg-mem one,
+    // so the e2e exercises the full module graph (TCP, pipes, filters, DI)
+    // without needing a live database.
+    const dataSource = await createInMemoryDataSource([ProductEntity]);
+
     const moduleFixture = await Test.createTestingModule({
       imports: [ProductsModule],
-    }).compile();
+    })
+      .overrideProvider(getDataSourceToken())
+      .useValue(dataSource)
+      .compile();
 
     app = moduleFixture.createNestMicroservice<MicroserviceOptions>({
       transport: Transport.TCP,

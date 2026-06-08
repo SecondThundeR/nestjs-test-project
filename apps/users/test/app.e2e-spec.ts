@@ -6,6 +6,7 @@ import {
   type MicroserviceOptions,
   Transport,
 } from '@nestjs/microservices';
+import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 import {
   type AuthResult,
@@ -14,7 +15,9 @@ import {
   rpcValidationExceptionFactory,
   USERS_PATTERNS,
 } from '@app/contracts';
+import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
 import { UsersModule } from './../src/users.module';
+import { UserEntity } from './../src/entities/user.entity';
 
 const HOST = '127.0.0.1';
 const PORT = 4004;
@@ -24,9 +27,14 @@ describe('Users microservice (e2e)', () => {
   let client: ClientProxy;
 
   beforeAll(async () => {
+    const dataSource = await createInMemoryDataSource([UserEntity]);
+
     const moduleFixture = await Test.createTestingModule({
       imports: [UsersModule],
-    }).compile();
+    })
+      .overrideProvider(getDataSourceToken())
+      .useValue(dataSource)
+      .compile();
 
     app = moduleFixture.createNestMicroservice<MicroserviceOptions>({
       transport: Transport.TCP,
