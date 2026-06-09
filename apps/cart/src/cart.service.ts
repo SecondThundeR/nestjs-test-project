@@ -32,7 +32,7 @@ export class CartService {
     return cart ?? this.emptyCart(userId);
   }
 
-  async addItem(userId: string, dto: AddCartItemDto) {
+  async addItem(userId: string, dto: AddCartItemDto): Promise<Cart> {
     this.logger.log(
       `User ${userId} adding ${dto.quantity}x product ${dto.productId} to cart`,
     );
@@ -71,7 +71,11 @@ export class CartService {
     return this.persist(cart);
   }
 
-  async updateItem(userId: string, productId: string, quantity: number) {
+  async updateItem(
+    userId: string,
+    productId: string,
+    quantity: number,
+  ): Promise<Cart> {
     this.logger.log(
       `User ${userId} setting product ${productId} quantity to ${quantity}`,
     );
@@ -103,7 +107,7 @@ export class CartService {
     return this.persist(cart);
   }
 
-  async removeItem(userId: string, productId: string) {
+  async removeItem(userId: string, productId: string): Promise<Cart> {
     this.logger.log(`User ${userId} removing product ${productId} from cart`);
     const cart = await this.carts.findOneBy({ userId });
     if (!cart) {
@@ -119,7 +123,7 @@ export class CartService {
     return this.carts.save(this.newCart(userId));
   }
 
-  private async fetchProduct(productId: string) {
+  private async fetchProduct(productId: string): Promise<Product> {
     const product = await firstValueFrom(
       this.productsClient.send<Product | null>(
         PRODUCT_PATTERNS.FIND_ONE,
@@ -132,7 +136,7 @@ export class CartService {
     return product;
   }
 
-  private async persist(cart: Cart) {
+  private async persist(cart: Cart): Promise<Cart> {
     this.recalculate(cart);
     const saved = await this.carts.save(cart);
     this.logger.debug(
@@ -151,7 +155,7 @@ export class CartService {
     cart.total = Math.round(total * 100) / 100;
   }
 
-  private newCart(userId: string) {
+  private newCart(userId: string): Cart {
     return this.carts.create({ userId, items: [], total: 0 });
   }
 

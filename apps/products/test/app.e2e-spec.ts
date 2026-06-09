@@ -8,7 +8,11 @@ import {
 } from '@nestjs/microservices';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
-import { PRODUCT_PATTERNS, type Product } from '@app/domains';
+import {
+  PRODUCT_PATTERNS,
+  type ProductDeleteResult,
+  type Product,
+} from '@app/domains';
 import {
   GlobalRpcExceptionFilter,
   rpcValidationExceptionFactory,
@@ -96,7 +100,7 @@ describe('Products microservice (e2e)', () => {
     expect(updated.price).toBe(12);
     expect(updated.stock).toBe(5);
 
-    const removed = await send<{ id: string; deleted: boolean }>(
+    const removed = await send<ProductDeleteResult>(
       PRODUCT_PATTERNS.REMOVE,
       created.id,
     );

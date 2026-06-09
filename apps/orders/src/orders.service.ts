@@ -28,7 +28,7 @@ export class OrdersService {
     @Inject(SERVICE_NAMES.CART) private readonly cartClient: ClientProxy,
   ) {}
 
-  async create(userId: string, shippingAddress: string) {
+  async create(userId: string, shippingAddress: string): Promise<OrderEntity> {
     this.logger.log(`Creating order for user ${userId}`);
     const cart = await firstValueFrom(
       this.cartClient.send<Cart>(CART_PATTERNS.GET, userId),
@@ -112,7 +112,7 @@ export class OrdersService {
     return order;
   }
 
-  async findAll(userId?: string) {
+  async findAll(userId?: string): Promise<OrderEntity[]> {
     const orders = await this.orders.find({
       where: userId ? { userId } : {},
     });
@@ -122,7 +122,7 @@ export class OrdersService {
     return orders;
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<OrderEntity> {
     const order = await this.orders.findOneBy({ id });
     if (!order) {
       this.logger.warn(`Order ${id} not found`);
@@ -131,7 +131,7 @@ export class OrdersService {
     return order;
   }
 
-  async updateStatus(id: string, status: OrderStatus) {
+  async updateStatus(id: string, status: OrderStatus): Promise<OrderEntity> {
     const order = await this.findOne(id);
     if (order.status === OrderStatus.CANCELLED) {
       this.logger.warn(`Order ${id} is cancelled and cannot change status`);
@@ -144,7 +144,7 @@ export class OrdersService {
     return saved;
   }
 
-  async cancel(id: string) {
+  async cancel(id: string): Promise<OrderEntity> {
     this.logger.log(`Cancelling order ${id}`);
     const order = await this.findOne(id);
     if (order.status === OrderStatus.CANCELLED) {

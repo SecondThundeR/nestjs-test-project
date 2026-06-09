@@ -1,4 +1,8 @@
-import { type CreateProductDto, type UpdateProductDto } from '@app/domains';
+import {
+  ProductDeleteResult,
+  type CreateProductDto,
+  type UpdateProductDto,
+} from '@app/domains';
 import { RpcErrors } from '@app/filters';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,7 +19,7 @@ export class ProductsService {
     private readonly products: Repository<ProductEntity>,
   ) {}
 
-  async create(dto: CreateProductDto) {
+  async create(dto: CreateProductDto): Promise<ProductEntity> {
     const product = this.products.create({
       id: randomUUID(),
       name: dto.name,
@@ -29,13 +33,13 @@ export class ProductsService {
     return saved;
   }
 
-  async findAll() {
+  async findAll(): Promise<ProductEntity[]> {
     const products = await this.products.find();
     this.logger.debug(`Listing ${products.length} product(s)`);
     return products;
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<ProductEntity> {
     const product = await this.products.findOneBy({ id });
     if (!product) {
       this.logger.warn(`Product ${id} not found`);
@@ -45,7 +49,7 @@ export class ProductsService {
     return product;
   }
 
-  async findMany(ids: string[]) {
+  async findMany(ids: string[]): Promise<ProductEntity[]> {
     if (!ids.length) {
       return [];
     }
@@ -54,7 +58,7 @@ export class ProductsService {
     return products;
   }
 
-  async update(id: string, dto: UpdateProductDto) {
+  async update(id: string, dto: UpdateProductDto): Promise<ProductEntity> {
     const product = await this.findOne(id);
     const newProduct = {
       ...product,
@@ -67,7 +71,7 @@ export class ProductsService {
     return saved;
   }
 
-  async remove(id: string) {
+  async remove(id: string): Promise<ProductDeleteResult> {
     const { affected } = await this.products.delete(id);
     if (!affected) {
       this.logger.warn(`Cannot remove product ${id}: not found`);

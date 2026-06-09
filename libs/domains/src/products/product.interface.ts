@@ -7,3 +7,8 @@ export interface Product {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ProductDeleteResult {
+  id: string;
+  deleted: boolean;
+}
