@@ -1,6 +1,7 @@
 import {
   type Cart,
   CART_PATTERNS,
+  CartItem,
   type OrderItem,
   OrderStatus,
   type Product,
@@ -15,6 +16,7 @@ import { randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
 import { OrderEntity } from './entities/order.entity';
+import { roundPrice } from '@app/utils';
 
 @Injectable()
 export class OrdersService {
@@ -30,10 +32,10 @@ export class OrdersService {
 
   async create(userId: string, shippingAddress: string): Promise<OrderEntity> {
     this.logger.log(`Creating order for user ${userId}`);
+
     const cart = await firstValueFrom(
       this.cartClient.send<Cart>(CART_PATTERNS.GET, userId),
     );
-
     if (!cart.items.length) {
       this.logger.warn(`User ${userId} tried to order with an empty cart`);
       throw RpcErrors.badRequest('Cannot create an order from an empty cart');
@@ -51,46 +53,16 @@ export class OrdersService {
       products.map((product) => [product.id, product]),
     );
 
-    const items: OrderItem[] = cart.items.map((cartItem) => {
-      const product = productsMap.get(cartItem.productId);
-      if (!product) {
-        throw RpcErrors.badRequest(
-          `Product ${cartItem.productId} is no longer available`,
-        );
-      }
-
-      if (product.stock < cartItem.quantity) {
-        throw RpcErrors.badRequest(
-          `Only ${product.stock} units of "${product.name}" are in stock`,
-        );
-      }
-
-      const subtotal = product.price * cartItem.quantity;
-
-      return {
-        productId: product.id,
-        name: product.name,
-        price: product.price,
-        quantity: cartItem.quantity,
-        subtotal: Math.round(subtotal * 100) / 100,
-      };
-    });
+    const cartItemMapper = this.createCartItemMapper(productsMap);
+    const items = cart.items.map(cartItemMapper);
 
     this.logger.debug(
       `Reserving stock for ${items.length} product(s) on user ${userId}'s order`,
     );
-    await Promise.all(
-      items.map((item) => {
-        const product = productsMap.get(item.productId)!;
-        const payload = {
-          id: item.productId,
-          data: { stock: product.stock - item.quantity },
-        };
-        return firstValueFrom(
-          this.productsClient.send(PRODUCT_PATTERNS.UPDATE, payload),
-        );
-      }),
-    );
+
+    const orderItemStockDecreaseMapper =
+      this.createOrderItemStockDecreaseMapper(productsMap);
+    await Promise.all(items.map(orderItemStockDecreaseMapper));
 
     const total = items.reduce((sum, { subtotal }) => sum + subtotal, 0);
     const order = await this.orders.save(
@@ -98,7 +70,7 @@ export class OrdersService {
         id: randomUUID(),
         userId,
         items,
-        total: Math.round(total * 100) / 100,
+        total: roundPrice(total),
         status: OrderStatus.PENDING,
         shippingAddress,
       }),
@@ -137,20 +109,26 @@ export class OrdersService {
       this.logger.warn(`Order ${id} is cancelled and cannot change status`);
       throw RpcErrors.badRequest('A cancelled order cannot change status');
     }
-    const previous = order.status;
+
+    const previousOrderStatus = order.status;
     order.status = status;
     const saved = await this.orders.save(order);
-    this.logger.log(`Order ${id} status ${previous} -> ${status}`);
+
+    this.logger.log(
+      `Order ${id} status ${previousOrderStatus} changed to ${status}`,
+    );
     return saved;
   }
 
   async cancel(id: string): Promise<OrderEntity> {
     this.logger.log(`Cancelling order ${id}`);
+
     const order = await this.findOne(id);
     if (order.status === OrderStatus.CANCELLED) {
       this.logger.debug(`Order ${id} is already cancelled`);
       return order;
     }
+
     if (
       order.status === OrderStatus.SHIPPED ||
       order.status === OrderStatus.DELIVERED
@@ -161,30 +139,75 @@ export class OrdersService {
       );
     }
 
-    await Promise.all(
-      order.items.map(async (item) => {
-        const product = await firstValueFrom(
-          this.productsClient.send<Product | null>(
-            PRODUCT_PATTERNS.FIND_ONE,
-            item.productId,
-          ),
-        ).catch(() => null);
-        if (!product) {
-          return;
-        }
-        const payload = {
-          id: item.productId,
-          data: { stock: product.stock + item.quantity },
-        };
-        return firstValueFrom(
-          this.productsClient.send<Product>(PRODUCT_PATTERNS.UPDATE, payload),
-        );
-      }),
-    );
+    await Promise.all(order.items.map(this.rollbackOrderItemStock.bind(this)));
 
     order.status = OrderStatus.CANCELLED;
     const saved = await this.orders.save(order);
+
     this.logger.log(`Order ${id} cancelled and stock restored`);
     return saved;
+  }
+
+  private createCartItemMapper(productsMap: Map<string, Product>) {
+    return (item: CartItem): OrderItem => {
+      const product = productsMap.get(item.productId);
+      if (!product) {
+        throw RpcErrors.badRequest(
+          `Product ${item.productId} is no longer available`,
+        );
+      }
+
+      if (product.stock < item.quantity) {
+        throw RpcErrors.badRequest(
+          `Only ${product.stock} units of "${product.name}" are in stock`,
+        );
+      }
+
+      return {
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: item.quantity,
+        subtotal: roundPrice(product.price * item.quantity),
+      };
+    };
+  }
+
+  private createOrderItemStockDecreaseMapper(
+    productsMap: Map<string, Product>,
+  ) {
+    return (item: OrderItem): Promise<Product> => {
+      const product = productsMap.get(item.productId)!;
+      const payload = {
+        id: item.productId,
+        data: { stock: product.stock - item.quantity },
+      };
+
+      return firstValueFrom(
+        this.productsClient.send(PRODUCT_PATTERNS.UPDATE, payload),
+      );
+    };
+  }
+
+  private async rollbackOrderItemStock(item: OrderItem) {
+    const product = await firstValueFrom(
+      this.productsClient.send<Product | null>(
+        PRODUCT_PATTERNS.FIND_ONE,
+        item.productId,
+      ),
+    ).catch(() => null);
+
+    if (!product) {
+      return;
+    }
+
+    const payload = {
+      id: item.productId,
+      data: { stock: product.stock + item.quantity },
+    };
+
+    return firstValueFrom(
+      this.productsClient.send<Product>(PRODUCT_PATTERNS.UPDATE, payload),
+    );
   }
 }

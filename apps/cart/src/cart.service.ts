@@ -12,6 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
 import { CartSchema } from './schemas/cart.schema';
+import { roundPrice } from '@app/utils';
 
 @Injectable()
 export class CartService {
@@ -29,17 +30,18 @@ export class CartService {
     this.logger.debug(
       `Cart for user ${userId} has ${cart?.items.length ?? 0} item(s)`,
     );
-    return cart ?? this.emptyCart(userId);
+    return cart ?? this.createEmptyCart(userId);
   }
 
   async addItem(userId: string, dto: AddCartItemDto): Promise<Cart> {
     this.logger.log(
       `User ${userId} adding ${dto.quantity}x product ${dto.productId} to cart`,
     );
-    const product = await this.fetchProduct(dto.productId);
 
+    const product = await this.fetchProduct(dto.productId);
     const cart =
-      (await this.carts.findOneBy({ userId })) ?? this.newCart(userId);
+      (await this.carts.findOneBy({ userId })) ?? this.createNewCart(userId);
+
     const existing = cart.items.find(
       ({ productId }) => productId === product.id,
     );
@@ -68,7 +70,7 @@ export class CartService {
       });
     }
 
-    return this.persist(cart);
+    return this.persistCart(cart);
   }
 
   async updateItem(
@@ -79,6 +81,7 @@ export class CartService {
     this.logger.log(
       `User ${userId} setting product ${productId} quantity to ${quantity}`,
     );
+
     const cart = await this.carts.findOneBy({ userId });
     const item = cart?.items.find((item) => item.productId === productId);
     if (!cart || !item) {
@@ -104,23 +107,25 @@ export class CartService {
 
     item.quantity = quantity;
     item.price = product.price;
-    return this.persist(cart);
+    return this.persistCart(cart);
   }
 
   async removeItem(userId: string, productId: string): Promise<Cart> {
     this.logger.log(`User ${userId} removing product ${productId} from cart`);
+
     const cart = await this.carts.findOneBy({ userId });
     if (!cart) {
       this.logger.warn(`User ${userId} cannot remove item: cart is empty`);
       throw RpcErrors.notFound('Cart is empty');
     }
+
     cart.items = cart.items.filter((item) => item.productId !== productId);
-    return this.persist(cart);
+    return this.persistCart(cart);
   }
 
-  clear(userId: string) {
+  clear(userId: string): Promise<Cart> {
     this.logger.log(`Clearing cart for user ${userId}`);
-    return this.carts.save(this.newCart(userId));
+    return this.carts.save(this.createNewCart(userId));
   }
 
   private async fetchProduct(productId: string): Promise<Product> {
@@ -133,33 +138,35 @@ export class CartService {
     if (!product) {
       throw RpcErrors.notFound(`Product ${productId} not found`);
     }
+
     return product;
   }
 
-  private async persist(cart: Cart): Promise<Cart> {
-    this.recalculate(cart);
+  private async persistCart(cart: Cart): Promise<Cart> {
+    this.recalculateCartPrices(cart);
     const saved = await this.carts.save(cart);
+
     this.logger.debug(
       `Persisted cart for user ${cart.userId}: ${cart.items.length} item(s), total ${cart.total}`,
     );
     return saved;
   }
 
-  private recalculate(cart: Cart) {
+  private recalculateCartPrices(cart: Cart) {
     let total = 0;
     for (const item of cart.items) {
       const subtotal = item.price * item.quantity;
-      item.subtotal = Math.round(subtotal * 100) / 100;
+      item.subtotal = roundPrice(subtotal);
       total += item.subtotal;
     }
-    cart.total = Math.round(total * 100) / 100;
+    cart.total = roundPrice(total);
   }
 
-  private newCart(userId: string): Cart {
+  private createNewCart(userId: string): Cart {
     return this.carts.create({ userId, items: [], total: 0 });
   }
 
-  private emptyCart(userId: string): Cart {
+  private createEmptyCart(userId: string): Cart {
     return {
       userId,
       items: [],
