@@ -297,6 +297,37 @@ describe('UsersService', () => {
     });
   });
 
+  describe('cleanupSessions', () => {
+    it('deletes expired and revoked sessions, keeping active ones', async () => {
+      const active = await register();
+      const revoked = await register({ email: 'revoked@example.com' });
+      const expired = await register({ email: 'expired@example.com' });
+
+      const revokedSid = jwtService.verify<JwtPayload>(revoked.accessToken).sid;
+      await service.logout(revokedSid);
+
+      const expiredSid = jwtService.verify<JwtPayload>(expired.accessToken).sid;
+      await sessions.update(
+        { id: expiredSid },
+        { expiresAt: new Date(Date.now() - 1000).toISOString() },
+      );
+
+      await expect(service.cleanupSessions()).resolves.toBe(2);
+
+      const remaining = await sessions.find();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].id).toBe(
+        jwtService.verify<JwtPayload>(active.accessToken).sid,
+      );
+    });
+
+    it('returns 0 when there is nothing to clean up', async () => {
+      await register();
+
+      await expect(service.cleanupSessions()).resolves.toBe(0);
+    });
+  });
+
   describe('logout', () => {
     it('revokes the session', async () => {
       const { accessToken } = await register();

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, type ConfigType } from '@nestjs/config';
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { authConfig, buildDatabaseOptions, validateEnv } from '@app/config';
 import { UsersController } from './users.controller';
@@ -15,6 +16,7 @@ import { SessionEntity } from './entities/session.entity';
       load: [authConfig],
       validate: validateEnv,
     }),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       useFactory: () =>
         buildDatabaseOptions('USERS', [UserEntity, SessionEntity]),

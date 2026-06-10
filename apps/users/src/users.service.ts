@@ -12,8 +12,9 @@ import { RpcErrors } from '@app/filters';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { Repository } from 'typeorm';
+import { IsNull, LessThan, Not, Repository } from 'typeorm';
 import { hash, compare } from 'bcrypt';
 import { UserEntity } from './entities/user.entity';
 import { SessionEntity } from './entities/session.entity';
@@ -140,6 +141,21 @@ export class UsersService {
     }
 
     return { success: true };
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async cleanupSessions(): Promise<number> {
+    const { affected } = await this.sessions.delete([
+      { expiresAt: LessThan(new Date().toISOString()) },
+      { revokedAt: Not(IsNull()) },
+    ]);
+
+    if (affected) {
+      this.logger.log(`Cleaned up ${affected} dead session(s)`);
+    } else {
+      this.logger.debug('No dead sessions to clean up');
+    }
+    return affected ?? 0;
   }
 
   private async openSession(user: UserEntity): Promise<AuthResult> {
