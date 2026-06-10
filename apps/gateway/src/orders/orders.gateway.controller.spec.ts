@@ -22,7 +22,10 @@ describe('OrdersGatewayController', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [JwtModule.register({ secret: authConfig().secret })],
       controllers: [OrdersGatewayController],
-      providers: [{ provide: SERVICE_NAMES.ORDERS, useValue: orders }],
+      providers: [
+        { provide: SERVICE_NAMES.ORDERS, useValue: orders },
+        { provide: SERVICE_NAMES.USERS, useValue: { send: jest.fn() } },
+      ],
     }).compile();
 
     controller = moduleRef.get(OrdersGatewayController);

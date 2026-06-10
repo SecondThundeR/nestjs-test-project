@@ -1,14 +1,16 @@
 import 'reflect-metadata';
 import { ExecutionContext } from '@nestjs/common';
 import type { JwtPayload } from '@app/domains';
-import { CurrentUserId } from './current-user.decorator';
+import { CurrentSessionId, CurrentUserId } from './current-user.decorator';
 
 type ParamFactory = (data: unknown, ctx: ExecutionContext) => string;
 
-function getCurrentUserIdFactory(): ParamFactory {
+function getDecoratorFactory(
+  decorator: () => ParameterDecorator,
+): ParamFactory {
   class Probe {
-    handler(@CurrentUserId() _userId: string) {
-      void _userId;
+    handler(@decorator() _value: string) {
+      void _value;
     }
   }
 
@@ -26,12 +28,24 @@ function contextWithUser(user: JwtPayload): ExecutionContext {
   } as unknown as ExecutionContext;
 }
 
+const USER: JwtPayload = {
+  sub: 'user-1',
+  email: 'a@example.com',
+  sid: 'session-1',
+};
+
 describe('CurrentUserId decorator', () => {
-  const factory = getCurrentUserIdFactory();
+  const factory = getDecoratorFactory(CurrentUserId);
 
   it('returns the sub claim of the authenticated user', () => {
-    const ctx = contextWithUser({ sub: 'user-1', email: 'a@example.com' });
+    expect(factory(undefined, contextWithUser(USER))).toBe('user-1');
+  });
+});
 
-    expect(factory(undefined, ctx)).toBe('user-1');
+describe('CurrentSessionId decorator', () => {
+  const factory = getDecoratorFactory(CurrentSessionId);
+
+  it('returns the sid claim of the authenticated user', () => {
+    expect(factory(undefined, contextWithUser(USER))).toBe('session-1');
   });
 });

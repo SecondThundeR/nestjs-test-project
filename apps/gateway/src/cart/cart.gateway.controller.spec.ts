@@ -21,7 +21,10 @@ describe('CartGatewayController', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [JwtModule.register({ secret: authConfig().secret })],
       controllers: [CartGatewayController],
-      providers: [{ provide: SERVICE_NAMES.CART, useValue: cart }],
+      providers: [
+        { provide: SERVICE_NAMES.CART, useValue: cart },
+        { provide: SERVICE_NAMES.USERS, useValue: { send: jest.fn() } },
+      ],
     }).compile();
 
     controller = moduleRef.get(CartGatewayController);

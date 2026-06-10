@@ -1,12 +1,16 @@
 import { Test } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
-import type { LoginUserDto, RegisterUserDto } from '@app/domains';
+import type {
+  LoginUserDto,
+  RefreshTokenDto,
+  RegisterUserDto,
+} from '@app/domains';
 
 describe('UsersController', () => {
   let usersController: UsersController;
   let usersService: jest.Mocked<
-    Pick<UsersService, 'register' | 'login' | 'verify'>
+    Pick<UsersService, 'register' | 'login' | 'verify' | 'refresh' | 'logout'>
   >;
 
   beforeEach(async () => {
@@ -14,6 +18,8 @@ describe('UsersController', () => {
       register: jest.fn(),
       login: jest.fn(),
       verify: jest.fn(),
+      refresh: jest.fn(),
+      logout: jest.fn(),
     };
 
     const app = await Test.createTestingModule({
@@ -55,5 +61,22 @@ describe('UsersController', () => {
 
     expect(usersController.verify('a.b.c')).toBe(user);
     expect(usersService.verify).toHaveBeenCalledWith('a.b.c');
+  });
+
+  it('delegates refresh() to the service with the dto', () => {
+    const dto: RefreshTokenDto = { refreshToken: 'refresh-token' };
+    const result = {} as never;
+    usersService.refresh.mockReturnValue(result);
+
+    expect(usersController.refresh(dto)).toBe(result);
+    expect(usersService.refresh).toHaveBeenCalledWith(dto);
+  });
+
+  it('delegates logout() to the service with the session id', () => {
+    const result = {} as never;
+    usersService.logout.mockReturnValue(result);
+
+    expect(usersController.logout('session-1')).toBe(result);
+    expect(usersService.logout).toHaveBeenCalledWith('session-1');
   });
 });
