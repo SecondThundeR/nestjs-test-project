@@ -13,6 +13,7 @@ import { CartGatewayController } from './cart/cart.gateway.controller';
 import { OrdersGatewayController } from './orders/orders.gateway.controller';
 import { HealthController } from './health.controller';
 import { UsersGatewayController } from './users/users.gateway.controller';
+import { AuthGatewayController } from './auth/auth.gateway.controller';
 
 @Module({
   imports: [
@@ -66,6 +67,14 @@ import { UsersGatewayController } from './users/users.gateway.controller';
           options: { host: services.hosts.users, port: services.ports.users },
         }),
       },
+      {
+        name: SERVICE_NAMES.AUTH,
+        inject: [servicesConfig.KEY],
+        useFactory: (services: ConfigType<typeof servicesConfig>) => ({
+          transport: Transport.TCP,
+          options: { host: services.hosts.auth, port: services.ports.auth },
+        }),
+      },
     ]),
   ],
   controllers: [
@@ -74,6 +83,7 @@ import { UsersGatewayController } from './users/users.gateway.controller';
     CartGatewayController,
     OrdersGatewayController,
     UsersGatewayController,
+    AuthGatewayController,
   ],
 })
 export class GatewayModule {}

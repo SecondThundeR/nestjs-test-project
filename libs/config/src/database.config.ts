@@ -1,7 +1,7 @@
 import type { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import type { EntityClassOrSchema } from '@nestjs/typeorm/dist/interfaces/entity-class-or-schema.type';
 
-type ServiceKey = 'PRODUCTS' | 'CART' | 'ORDERS' | 'USERS';
+type ServiceKey = 'PRODUCTS' | 'CART' | 'ORDERS' | 'USERS' | 'AUTH';
 
 export function buildDatabaseOptions(
   service: ServiceKey,

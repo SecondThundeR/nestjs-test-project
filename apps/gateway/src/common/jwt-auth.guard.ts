@@ -8,7 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import type { ClientProxy } from '@nestjs/microservices';
 import type { Request } from 'express';
-import { type JwtPayload, type PublicUser, USERS_PATTERNS } from '@app/domains';
+import { AUTH_PATTERNS, type JwtPayload, type PublicUser } from '@app/domains';
 import { SERVICE_NAMES } from '@app/config';
 import { rpcSend } from './rpc.util';
 
@@ -18,7 +18,7 @@ export type AuthenticatedRequest = Request & { user: JwtPayload };
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
-    @Inject(SERVICE_NAMES.USERS) private readonly users: ClientProxy,
+    @Inject(SERVICE_NAMES.AUTH) private readonly auth: ClientProxy,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -38,7 +38,7 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
-    await rpcSend<PublicUser>(this.users, USERS_PATTERNS.VERIFY, token);
+    await rpcSend<PublicUser>(this.auth, AUTH_PATTERNS.VERIFY, token);
 
     request.user = payload;
     return true;

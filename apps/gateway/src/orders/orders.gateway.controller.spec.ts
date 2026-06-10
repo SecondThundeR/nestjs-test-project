@@ -24,7 +24,7 @@ describe('OrdersGatewayController', () => {
       controllers: [OrdersGatewayController],
       providers: [
         { provide: SERVICE_NAMES.ORDERS, useValue: orders },
-        { provide: SERVICE_NAMES.USERS, useValue: { send: jest.fn() } },
+        { provide: SERVICE_NAMES.AUTH, useValue: { send: jest.fn() } },
       ],
     }).compile();
 

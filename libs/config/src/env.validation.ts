@@ -92,6 +92,18 @@ class EnvironmentVariables {
   USERS_HOST?: string;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(65535)
+  AUTH_PORT?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  AUTH_HOST?: string;
+
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   DB_SYNCHRONIZE?: string;
@@ -203,6 +215,33 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   USERS_DB_NAME?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  AUTH_DB_HOST?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(65535)
+  AUTH_DB_PORT?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  AUTH_DB_USERNAME?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  AUTH_DB_PASSWORD?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  AUTH_DB_NAME?: string;
 }
 
 export function validateEnv(

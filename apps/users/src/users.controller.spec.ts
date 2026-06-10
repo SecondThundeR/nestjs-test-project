@@ -2,24 +2,24 @@ import { Test } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import type {
-  LoginUserDto,
-  RefreshTokenDto,
-  RegisterUserDto,
+  CreateUserDto,
+  PublicUser,
+  ValidateUserByCredentialsDto,
 } from '@app/domains';
+
+const PUBLIC_USER = { id: 'u-1' } as PublicUser;
 
 describe('UsersController', () => {
   let usersController: UsersController;
   let usersService: jest.Mocked<
-    Pick<UsersService, 'register' | 'login' | 'verify' | 'refresh' | 'logout'>
+    Pick<UsersService, 'create' | 'findByCredentials' | 'findById'>
   >;
 
   beforeEach(async () => {
     usersService = {
-      register: jest.fn(),
-      login: jest.fn(),
-      verify: jest.fn(),
-      refresh: jest.fn(),
-      logout: jest.fn(),
+      create: jest.fn(),
+      findByCredentials: jest.fn(),
+      findById: jest.fn(),
     };
 
     const app = await Test.createTestingModule({
@@ -30,53 +30,41 @@ describe('UsersController', () => {
     usersController = app.get<UsersController>(UsersController);
   });
 
-  it('delegates register() to the service with the dto', () => {
-    const dto: RegisterUserDto = {
+  it('delegates create() to the service with the dto', async () => {
+    const dto: CreateUserDto = {
       email: 'jane@example.com',
       name: 'Jane',
       password: 'password123',
     };
-    const user = {} as never;
-    usersService.register.mockReturnValue(user);
+    usersService.create.mockResolvedValue(PUBLIC_USER);
 
-    expect(usersController.register(dto)).toBe(user);
-    expect(usersService.register).toHaveBeenCalledWith(dto);
+    await expect(usersController.create(dto)).resolves.toBe(PUBLIC_USER);
+    expect(usersService.create).toHaveBeenCalledWith(dto);
   });
 
-  it('delegates login() to the service with the dto', () => {
-    const dto: LoginUserDto = {
+  it('delegates validateCredentials() to the service with the dto', async () => {
+    const dto: ValidateUserByCredentialsDto = {
       email: 'jane@example.com',
       password: 'password123',
     };
-    const user = {} as never;
-    usersService.login.mockReturnValue(user);
+    usersService.findByCredentials.mockResolvedValue(PUBLIC_USER);
 
-    expect(usersController.login(dto)).toBe(user);
-    expect(usersService.login).toHaveBeenCalledWith(dto);
+    await expect(usersController.validateCredentials(dto)).resolves.toBe(
+      PUBLIC_USER,
+    );
+    expect(usersService.findByCredentials).toHaveBeenCalledWith(dto);
   });
 
-  it('delegates verify() to the service with the token', () => {
-    const user = {} as never;
-    usersService.verify.mockReturnValue(user);
+  it('delegates findById() to the service with the id', async () => {
+    usersService.findById.mockResolvedValue(PUBLIC_USER);
 
-    expect(usersController.verify('a.b.c')).toBe(user);
-    expect(usersService.verify).toHaveBeenCalledWith('a.b.c');
+    await expect(usersController.findById('u-1')).resolves.toBe(PUBLIC_USER);
+    expect(usersService.findById).toHaveBeenCalledWith('u-1');
   });
 
-  it('delegates refresh() to the service with the dto', () => {
-    const dto: RefreshTokenDto = { refreshToken: 'refresh-token' };
-    const result = {} as never;
-    usersService.refresh.mockReturnValue(result);
+  it('returns null when the user is not found', async () => {
+    usersService.findById.mockResolvedValue(null);
 
-    expect(usersController.refresh(dto)).toBe(result);
-    expect(usersService.refresh).toHaveBeenCalledWith(dto);
-  });
-
-  it('delegates logout() to the service with the session id', () => {
-    const result = {} as never;
-    usersService.logout.mockReturnValue(result);
-
-    expect(usersController.logout('session-1')).toBe(result);
-    expect(usersService.logout).toHaveBeenCalledWith('session-1');
+    await expect(usersController.findById('missing')).resolves.toBeNull();
   });
 });
