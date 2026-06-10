@@ -1,20 +1,27 @@
 import {
   type CanActivate,
   type ExecutionContext,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import type { ClientProxy } from '@nestjs/microservices';
 import type { Request } from 'express';
-import type { JwtPayload } from '@app/domains';
+import { type JwtPayload, type PublicUser, USERS_PATTERNS } from '@app/domains';
+import { SERVICE_NAMES } from '@app/config';
+import { rpcSend } from './rpc.util';
 
 export type AuthenticatedRequest = Request & { user: JwtPayload };
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    @Inject(SERVICE_NAMES.USERS) private readonly users: ClientProxy,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context
       .switchToHttp()
       .getRequest<Request & { user?: JwtPayload }>();
@@ -24,12 +31,16 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing bearer token');
     }
 
+    let payload: JwtPayload;
     try {
-      request.user = this.jwtService.verify<JwtPayload>(token);
+      payload = this.jwtService.verify<JwtPayload>(token);
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
+    await rpcSend<PublicUser>(this.users, USERS_PATTERNS.VERIFY, token);
+
+    request.user = payload;
     return true;
   }
 

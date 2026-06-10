@@ -140,12 +140,31 @@ describe('Gateway (e2e)', () => {
   });
 
   describe('cart (JWT auth)', () => {
-    it('resolves the user from the bearer token', async () => {
+    it('resolves the user from the bearer token after session verification', async () => {
+      users.send.mockReturnValue(of({ id: 'alice' }));
       cart.send.mockReturnValue(of({ userId: 'alice', items: [] }));
 
       await http().get('/api/cart').set('authorization', auth).expect(200);
 
+      expect(users.send).toHaveBeenCalledWith(
+        USERS_PATTERNS.VERIFY,
+        aliceToken,
+      );
       expect(cart.send).toHaveBeenCalledWith(CART_PATTERNS.GET, 'alice');
+    });
+
+    it('rejects a token with a revoked session with 401', async () => {
+      users.send.mockReturnValue(
+        throwError(() => ({
+          statusCode: 401,
+          message: 'Invalid or expired token',
+          error: 'Unauthorized',
+        })),
+      );
+
+      await http().get('/api/cart').set('authorization', auth).expect(401);
+
+      expect(cart.send).not.toHaveBeenCalled();
     });
 
     it('rejects an unauthenticated request with 401', async () => {
@@ -166,6 +185,7 @@ describe('Gateway (e2e)', () => {
 
   describe('orders (JWT auth)', () => {
     it('forwards the token user and shippingAddress', async () => {
+      users.send.mockReturnValue(of({ id: 'alice' }));
       orders.send.mockReturnValue(of({ id: 'o-1' }));
 
       await http()
@@ -259,7 +279,11 @@ describe('Gateway (e2e)', () => {
     });
 
     it('POST /api/users/logout forwards the session id from the token', async () => {
-      users.send.mockReturnValue(of({ success: true }));
+      users.send.mockImplementation((pattern: string) =>
+        pattern === USERS_PATTERNS.VERIFY
+          ? of({ id: 'alice' })
+          : of({ success: true }),
+      );
 
       const res = await http()
         .post('/api/users/logout')
