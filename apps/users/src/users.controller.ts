@@ -1,7 +1,12 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { UsersService } from './users.service';
-import { LoginUserDto, RegisterUserDto, USERS_PATTERNS } from '@app/domains';
+import {
+  LoginUserDto,
+  RefreshTokenDto,
+  RegisterUserDto,
+  USERS_PATTERNS,
+} from '@app/domains';
 
 @Controller()
 export class UsersController {
@@ -20,5 +25,15 @@ export class UsersController {
   @MessagePattern(USERS_PATTERNS.VERIFY)
   verify(@Payload() token: string) {
     return this.usersService.verify(token);
+  }
+
+  @MessagePattern(USERS_PATTERNS.REFRESH)
+  refresh(@Payload() dto: RefreshTokenDto) {
+    return this.usersService.refresh(dto);
+  }
+
+  @MessagePattern(USERS_PATTERNS.LOGOUT)
+  logout(@Payload() sessionId: string) {
+    return this.usersService.logout(sessionId);
   }
 }

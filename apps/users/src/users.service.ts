@@ -1,20 +1,29 @@
 import {
   type AuthResult,
   type JwtPayload,
+  type LogoutResult,
   LoginUserDto,
   type PublicUser,
+  RefreshTokenDto,
   RegisterUserDto,
 } from '@app/domains';
+import { authConfig, type AuthConfig } from '@app/config';
 import { RpcErrors } from '@app/filters';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { hash, compare } from 'bcrypt';
 import { UserEntity } from './entities/user.entity';
+import { SessionEntity } from './entities/session.entity';
 
 const SALT_ROUNDS = 10;
+const REFRESH_TOKEN_BYTES = 48;
+
+function hashRefreshToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
 
 @Injectable()
 export class UsersService {
@@ -23,7 +32,11 @@ export class UsersService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
+    @InjectRepository(SessionEntity)
+    private readonly sessions: Repository<SessionEntity>,
     private readonly jwtService: JwtService,
+    @Inject(authConfig.KEY)
+    private readonly auth: AuthConfig,
   ) {}
 
   async register(dto: RegisterUserDto): Promise<AuthResult> {
@@ -46,7 +59,7 @@ export class UsersService {
     );
 
     this.logger.log(`Registered user ${user.id} (${email})`);
-    return this.toAuthResult(user);
+    return this.openSession(user);
   }
 
   async login(dto: LoginUserDto): Promise<AuthResult> {
@@ -61,7 +74,7 @@ export class UsersService {
     }
 
     this.logger.log(`User ${user.id} (${email}) logged in`);
-    return this.toAuthResult(user);
+    return this.openSession(user);
   }
 
   async verify(token: string): Promise<PublicUser> {
@@ -71,6 +84,12 @@ export class UsersService {
       payload = this.jwtService.verify<JwtPayload>(token);
     } catch {
       this.logger.warn('Token verification failed: invalid or expired token');
+      throw RpcErrors.unauthorized('Invalid or expired token');
+    }
+
+    const session = await this.sessions.findOneBy({ id: payload.sid });
+    if (!session || !this.isSessionActive(session)) {
+      this.logger.warn(`Token valid but session ${payload.sid} is not active`);
       throw RpcErrors.unauthorized('Invalid or expired token');
     }
 
@@ -84,9 +103,89 @@ export class UsersService {
     return this.toPublicUser(user);
   }
 
-  private toAuthResult(user: UserEntity): AuthResult {
+  async refresh(dto: RefreshTokenDto): Promise<AuthResult> {
+    const session = await this.sessions.findOneBy({
+      refreshTokenHash: hashRefreshToken(dto.refreshToken),
+    });
+
+    if (!session || !this.isSessionActive(session)) {
+      this.logger.warn('Refresh rejected: unknown or inactive session');
+      throw RpcErrors.unauthorized('Invalid or expired refresh token');
+    }
+
+    const user = await this.users.findOneBy({ id: session.userId });
+    if (!user) {
+      this.logger.warn(`Session ${session.id} refers to a missing user`);
+      throw RpcErrors.unauthorized('Invalid or expired refresh token');
+    }
+
+    const refreshToken = this.generateRefreshToken();
+    session.refreshTokenHash = hashRefreshToken(refreshToken);
+    session.expiresAt = this.nextExpiresAt();
+    await this.sessions.save(session);
+
+    this.logger.log(`Rotated session ${session.id} for user ${user.id}`);
+    return this.toAuthResult(user, session, refreshToken);
+  }
+
+  async logout(sessionId: string): Promise<LogoutResult> {
+    const session = await this.sessions.findOneBy({ id: sessionId });
+
+    if (session && this.isSessionActive(session)) {
+      session.revokedAt = new Date().toISOString();
+      await this.sessions.save(session);
+      this.logger.log(`Revoked session ${session.id}`);
+    } else {
+      this.logger.debug(`Logout for missing or inactive session ${sessionId}`);
+    }
+
+    return { success: true };
+  }
+
+  private async openSession(user: UserEntity): Promise<AuthResult> {
+    const refreshToken = this.generateRefreshToken();
+    const session = await this.sessions.save(
+      this.sessions.create({
+        id: randomUUID(),
+        userId: user.id,
+        refreshTokenHash: hashRefreshToken(refreshToken),
+        expiresAt: this.nextExpiresAt(),
+        revokedAt: null,
+      }),
+    );
+
+    this.logger.log(`Opened session ${session.id} for user ${user.id}`);
+    return this.toAuthResult(user, session, refreshToken);
+  }
+
+  private nextExpiresAt(): string {
+    return new Date(Date.now() + this.auth.refreshTtlMs).toISOString();
+  }
+
+  private isSessionActive(session: SessionEntity): boolean {
+    return (
+      session.revokedAt === null && new Date(session.expiresAt) > new Date()
+    );
+  }
+
+  private generateRefreshToken(): string {
+    return randomBytes(REFRESH_TOKEN_BYTES).toString('base64url');
+  }
+
+  private toAuthResult(
+    user: UserEntity,
+    session: SessionEntity,
+    refreshToken: string,
+  ): AuthResult {
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      sid: session.id,
+    };
+
     return {
-      accessToken: this.jwtService.sign({ sub: user.id, email: user.email }),
+      accessToken: this.jwtService.sign(payload),
+      refreshToken,
       user: this.toPublicUser(user),
     };
   }

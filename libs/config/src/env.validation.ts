@@ -33,6 +33,12 @@ class EnvironmentVariables {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
+  @Min(1)
+  REFRESH_TTL_DAYS?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   @Min(0)
   @Max(65535)
   GATEWAY_PORT?: number;

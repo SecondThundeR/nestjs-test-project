@@ -6,6 +6,7 @@ import { authConfig, buildDatabaseOptions, validateEnv } from '@app/config';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { UserEntity } from './entities/user.entity';
+import { SessionEntity } from './entities/session.entity';
 
 @Module({
   imports: [
@@ -15,9 +16,10 @@ import { UserEntity } from './entities/user.entity';
       validate: validateEnv,
     }),
     TypeOrmModule.forRootAsync({
-      useFactory: () => buildDatabaseOptions('USERS', [UserEntity]),
+      useFactory: () =>
+        buildDatabaseOptions('USERS', [UserEntity, SessionEntity]),
     }),
-    TypeOrmModule.forFeature([UserEntity]),
+    TypeOrmModule.forFeature([UserEntity, SessionEntity]),
     JwtModule.registerAsync({
       inject: [authConfig.KEY],
       useFactory: (auth: ConfigType<typeof authConfig>) => ({

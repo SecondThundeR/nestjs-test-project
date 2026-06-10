@@ -30,3 +30,8 @@ export const isoTransformer = {
   to: (value: string) => value,
   from: (value: Date) => value.toISOString(),
 };
+
+export const nullableIsoTransformer = {
+  to: (value: string | null) => value,
+  from: (value: Date | null) => (value ? value.toISOString() : null),
+};
