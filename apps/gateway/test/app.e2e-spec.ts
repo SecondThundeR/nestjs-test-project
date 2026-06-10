@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import request from 'supertest';
 import type { Server } from 'node:http';
 import {
+  AUTH_PATTERNS,
   CART_PATTERNS,
   ORDERS_PATTERNS,
   PRODUCT_PATTERNS,
@@ -19,6 +20,7 @@ describe('Gateway (e2e)', () => {
   const cart = { send: jest.fn(), emit: jest.fn() };
   const orders = { send: jest.fn(), emit: jest.fn() };
   const users = { send: jest.fn(), emit: jest.fn() };
+  const auth = { send: jest.fn(), emit: jest.fn() };
 
   const jwtService = new JwtService({ secret: authConfig().secret });
   const aliceToken = jwtService.sign({
@@ -26,7 +28,7 @@ describe('Gateway (e2e)', () => {
     email: 'alice@example.com',
     sid: 'session-1',
   });
-  const auth = `Bearer ${aliceToken}`;
+  const bearer = `Bearer ${aliceToken}`;
 
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
@@ -40,6 +42,8 @@ describe('Gateway (e2e)', () => {
       .useValue(orders)
       .overrideProvider(SERVICE_NAMES.USERS)
       .useValue(users)
+      .overrideProvider(SERVICE_NAMES.AUTH)
+      .useValue(auth)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -63,6 +67,7 @@ describe('Gateway (e2e)', () => {
     cart.send.mockReset();
     orders.send.mockReset();
     users.send.mockReset();
+    auth.send.mockReset();
   });
 
   const http = () => request(app.getHttpServer() as Server);
@@ -141,20 +146,17 @@ describe('Gateway (e2e)', () => {
 
   describe('cart (JWT auth)', () => {
     it('resolves the user from the bearer token after session verification', async () => {
-      users.send.mockReturnValue(of({ id: 'alice' }));
+      auth.send.mockReturnValue(of({ id: 'alice' }));
       cart.send.mockReturnValue(of({ userId: 'alice', items: [] }));
 
-      await http().get('/api/cart').set('authorization', auth).expect(200);
+      await http().get('/api/cart').set('authorization', bearer).expect(200);
 
-      expect(users.send).toHaveBeenCalledWith(
-        USERS_PATTERNS.VERIFY,
-        aliceToken,
-      );
+      expect(auth.send).toHaveBeenCalledWith(AUTH_PATTERNS.VERIFY, aliceToken);
       expect(cart.send).toHaveBeenCalledWith(CART_PATTERNS.GET, 'alice');
     });
 
     it('rejects a token with a revoked session with 401', async () => {
-      users.send.mockReturnValue(
+      auth.send.mockReturnValue(
         throwError(() => ({
           statusCode: 401,
           message: 'Invalid or expired token',
@@ -162,7 +164,7 @@ describe('Gateway (e2e)', () => {
         })),
       );
 
-      await http().get('/api/cart').set('authorization', auth).expect(401);
+      await http().get('/api/cart').set('authorization', bearer).expect(401);
 
       expect(cart.send).not.toHaveBeenCalled();
     });
@@ -185,12 +187,12 @@ describe('Gateway (e2e)', () => {
 
   describe('orders (JWT auth)', () => {
     it('forwards the token user and shippingAddress', async () => {
-      users.send.mockReturnValue(of({ id: 'alice' }));
+      auth.send.mockReturnValue(of({ id: 'alice' }));
       orders.send.mockReturnValue(of({ id: 'o-1' }));
 
       await http()
         .post('/api/orders')
-        .set('authorization', auth)
+        .set('authorization', bearer)
         .send({ shippingAddress: '1 Test Street' })
         .expect(201);
 
@@ -210,16 +212,17 @@ describe('Gateway (e2e)', () => {
     });
   });
 
-  describe('users (public auth routes)', () => {
-    it('POST /api/users/register forwards the body and returns the auth result', async () => {
+  describe('auth (public auth routes)', () => {
+    it('POST /api/auth/register forwards the body and returns the auth result', async () => {
       const result = {
         accessToken: 'jwt-token',
+        refreshToken: 'refresh-token',
         user: { id: 'u-1', email: 'jane@example.com', name: 'Jane' },
       };
-      users.send.mockReturnValue(of(result));
+      auth.send.mockReturnValue(of(result));
 
       const res = await http()
-        .post('/api/users/register')
+        .post('/api/auth/register')
         .send({
           email: 'jane@example.com',
           name: 'Jane',
@@ -228,77 +231,110 @@ describe('Gateway (e2e)', () => {
         .expect(201);
 
       expect(res.body).toEqual(result);
-      expect(users.send).toHaveBeenCalledWith(USERS_PATTERNS.REGISTER, {
+      expect(auth.send).toHaveBeenCalledWith(AUTH_PATTERNS.REGISTER, {
         email: 'jane@example.com',
         name: 'Jane',
         password: 'password123',
       });
     });
 
-    it('POST /api/users/login is reachable without a token', async () => {
+    it('POST /api/auth/login is reachable without a token', async () => {
       const result = {
         accessToken: 'jwt-token',
+        refreshToken: 'refresh-token',
         user: { id: 'u-1', email: 'jane@example.com', name: 'Jane' },
       };
-      users.send.mockReturnValue(of(result));
+      auth.send.mockReturnValue(of(result));
 
       await http()
-        .post('/api/users/login')
+        .post('/api/auth/login')
         .send({ email: 'jane@example.com', password: 'password123' })
         .expect(201);
 
-      expect(users.send).toHaveBeenCalledWith(USERS_PATTERNS.LOGIN, {
+      expect(auth.send).toHaveBeenCalledWith(AUTH_PATTERNS.LOGIN, {
         email: 'jane@example.com',
         password: 'password123',
       });
     });
 
-    it('POST /api/users/refresh is reachable without a token', async () => {
+    it('POST /api/auth/refresh is reachable without a token', async () => {
       const result = {
         accessToken: 'new-jwt-token',
         refreshToken: 'new-refresh-token',
         user: { id: 'u-1', email: 'jane@example.com', name: 'Jane' },
       };
-      users.send.mockReturnValue(of(result));
+      auth.send.mockReturnValue(of(result));
 
       const res = await http()
-        .post('/api/users/refresh')
+        .post('/api/auth/refresh')
         .send({ refreshToken: 'old-refresh-token' })
         .expect(201);
 
       expect(res.body).toEqual(result);
-      expect(users.send).toHaveBeenCalledWith(USERS_PATTERNS.REFRESH, {
+      expect(auth.send).toHaveBeenCalledWith(AUTH_PATTERNS.REFRESH, {
         refreshToken: 'old-refresh-token',
       });
     });
 
-    it('POST /api/users/refresh rejects an empty body with 400', async () => {
-      await http().post('/api/users/refresh').send({}).expect(400);
+    it('POST /api/auth/refresh rejects an empty body with 400', async () => {
+      await http().post('/api/auth/refresh').send({}).expect(400);
 
-      expect(users.send).not.toHaveBeenCalled();
+      expect(auth.send).not.toHaveBeenCalled();
     });
 
-    it('POST /api/users/logout forwards the session id from the token', async () => {
-      users.send.mockImplementation((pattern: string) =>
-        pattern === USERS_PATTERNS.VERIFY
+    it('POST /api/auth/logout forwards the session id from the token', async () => {
+      auth.send.mockImplementation((pattern: string) =>
+        pattern === AUTH_PATTERNS.VERIFY
           ? of({ id: 'alice' })
           : of({ success: true }),
       );
 
       const res = await http()
-        .post('/api/users/logout')
-        .set('authorization', auth)
+        .post('/api/auth/logout')
+        .set('authorization', bearer)
         .expect(201);
 
       expect(res.body).toEqual({ success: true });
+      expect(auth.send).toHaveBeenCalledWith(AUTH_PATTERNS.LOGOUT, 'session-1');
+    });
+
+    it('POST /api/auth/logout rejects an unauthenticated request with 401', async () => {
+      await http().post('/api/auth/logout').expect(401);
+
+      expect(auth.send).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('users (whoami)', () => {
+    it('GET /api/users/me returns the current user', async () => {
+      const user = { id: 'alice', email: 'alice@example.com', name: 'Alice' };
+      auth.send.mockReturnValue(of(user));
+      users.send.mockReturnValue(of(user));
+
+      const res = await http()
+        .get('/api/users/me')
+        .set('authorization', bearer)
+        .expect(200);
+
+      expect(res.body).toEqual(user);
       expect(users.send).toHaveBeenCalledWith(
-        USERS_PATTERNS.LOGOUT,
-        'session-1',
+        USERS_PATTERNS.FIND_BY_ID,
+        'alice',
       );
     });
 
-    it('POST /api/users/logout rejects an unauthenticated request with 401', async () => {
-      await http().post('/api/users/logout').expect(401);
+    it('GET /api/users/me responds 404 when the user no longer exists', async () => {
+      auth.send.mockReturnValue(of({ id: 'alice' }));
+      users.send.mockReturnValue(of(null));
+
+      await http()
+        .get('/api/users/me')
+        .set('authorization', bearer)
+        .expect(404);
+    });
+
+    it('GET /api/users/me rejects an unauthenticated request with 401', async () => {
+      await http().get('/api/users/me').expect(401);
 
       expect(users.send).not.toHaveBeenCalled();
     });

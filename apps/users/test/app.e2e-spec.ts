@@ -12,16 +12,10 @@ import {
   GlobalRpcExceptionFilter,
   rpcValidationExceptionFactory,
 } from '@app/filters';
-import {
-  type AuthResult,
-  type LogoutResult,
-  type PublicUser,
-  USERS_PATTERNS,
-} from '@app/domains';
+import { type PublicUser, USERS_PATTERNS } from '@app/domains';
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
 import { UsersModule } from './../src/users.module';
 import { UserEntity } from './../src/entities/user.entity';
-import { SessionEntity } from './../src/entities/session.entity';
 
 const HOST = '127.0.0.1';
 const PORT = 4004;
@@ -31,10 +25,7 @@ describe('Users microservice (e2e)', () => {
   let client: ClientProxy;
 
   beforeAll(async () => {
-    const dataSource = await createInMemoryDataSource([
-      UserEntity,
-      SessionEntity,
-    ]);
+    const dataSource = await createInMemoryDataSource([UserEntity]);
 
     const moduleFixture = await Test.createTestingModule({
       imports: [UsersModule],
@@ -73,56 +64,46 @@ describe('Users microservice (e2e)', () => {
     return firstValueFrom(client.send<T>(pattern, payload));
   }
 
-  function decodeSessionId(accessToken: string): string {
-    const payload = JSON.parse(
-      Buffer.from(accessToken.split('.')[1], 'base64url').toString(),
-    ) as { sid: string };
-    return payload.sid;
-  }
-
-  it('registers, logs in and verifies a token over TCP', async () => {
-    const registered = await send<AuthResult>(USERS_PATTERNS.REGISTER, {
+  it('creates, validates and finds a user over TCP', async () => {
+    const created = await send<PublicUser>(USERS_PATTERNS.CREATE, {
       email: 'jane@example.com',
       name: 'Jane',
       password: 'password123',
     });
-    expect(registered.user).toMatchObject({
+    expect(created).toMatchObject({
       email: 'jane@example.com',
       name: 'Jane',
     });
-    expect(typeof registered.user.id).toBe('string');
-    expect(typeof registered.accessToken).toBe('string');
-    expect(typeof registered.refreshToken).toBe('string');
-    expect(registered.user).not.toHaveProperty('passwordHash');
+    expect(typeof created.id).toBe('string');
+    expect(created).not.toHaveProperty('passwordHash');
 
-    const loggedIn = await send<AuthResult>(USERS_PATTERNS.LOGIN, {
-      email: 'jane@example.com',
-      password: 'password123',
-    });
-    expect(loggedIn.user.id).toBe(registered.user.id);
-
-    const verified = await send<PublicUser>(
-      USERS_PATTERNS.VERIFY,
-      loggedIn.accessToken,
+    const validated = await send<PublicUser>(
+      USERS_PATTERNS.VALIDATE_CREDENTIALS,
+      { email: 'jane@example.com', password: 'password123' },
     );
-    expect(verified.id).toBe(registered.user.id);
+    expect(validated.id).toBe(created.id);
+    expect(validated).not.toHaveProperty('passwordHash');
+
+    const found = await send<PublicUser>(USERS_PATTERNS.FIND_BY_ID, created.id);
+    expect(found.id).toBe(created.id);
+    expect(found).not.toHaveProperty('passwordHash');
   });
 
-  it('rejects verifying a malformed token', async () => {
+  it('returns null for an unknown user id', async () => {
     await expect(
-      send<PublicUser>(USERS_PATTERNS.VERIFY, 'not-a-token'),
-    ).rejects.toMatchObject({ statusCode: 401 });
+      send<PublicUser | null>(USERS_PATTERNS.FIND_BY_ID, 'missing'),
+    ).resolves.toBeNull();
   });
 
-  it('rejects registering a duplicate email', async () => {
-    await send<PublicUser>(USERS_PATTERNS.REGISTER, {
+  it('rejects creating a duplicate email', async () => {
+    await send<PublicUser>(USERS_PATTERNS.CREATE, {
       email: 'dup@example.com',
       name: 'Dup',
       password: 'password123',
     });
 
     await expect(
-      send<PublicUser>(USERS_PATTERNS.REGISTER, {
+      send<PublicUser>(USERS_PATTERNS.CREATE, {
         email: 'dup@example.com',
         name: 'Dup',
         password: 'password123',
@@ -130,74 +111,24 @@ describe('Users microservice (e2e)', () => {
     ).rejects.toMatchObject({ statusCode: 409 });
   });
 
-  it('rejects login with a wrong password', async () => {
-    await send<PublicUser>(USERS_PATTERNS.REGISTER, {
+  it('rejects validation with a wrong password', async () => {
+    await send<PublicUser>(USERS_PATTERNS.CREATE, {
       email: 'wrong@example.com',
       name: 'Wrong',
       password: 'password123',
     });
 
     await expect(
-      send<PublicUser>(USERS_PATTERNS.LOGIN, {
+      send<PublicUser>(USERS_PATTERNS.VALIDATE_CREDENTIALS, {
         email: 'wrong@example.com',
         password: 'nope',
       }),
     ).rejects.toMatchObject({ statusCode: 401 });
   });
 
-  it('refreshes a session with token rotation', async () => {
-    const registered = await send<AuthResult>(USERS_PATTERNS.REGISTER, {
-      email: 'refresh@example.com',
-      name: 'Refresh',
-      password: 'password123',
-    });
-
-    const refreshed = await send<AuthResult>(USERS_PATTERNS.REFRESH, {
-      refreshToken: registered.refreshToken,
-    });
-    expect(refreshed.user.id).toBe(registered.user.id);
-    expect(refreshed.refreshToken).not.toBe(registered.refreshToken);
-
+  it('rejects an invalid create payload via the validation pipe', async () => {
     await expect(
-      send<AuthResult>(USERS_PATTERNS.REFRESH, {
-        refreshToken: registered.refreshToken,
-      }),
-    ).rejects.toMatchObject({ statusCode: 401 });
-  });
-
-  it('rejects token verification and refresh after logout', async () => {
-    const registered = await send<AuthResult>(USERS_PATTERNS.REGISTER, {
-      email: 'logout@example.com',
-      name: 'Logout',
-      password: 'password123',
-    });
-
-    const verified = await send<PublicUser>(
-      USERS_PATTERNS.VERIFY,
-      registered.accessToken,
-    );
-    expect(verified.id).toBe(registered.user.id);
-
-    const sessionId = decodeSessionId(registered.accessToken);
-    const loggedOut = await send<LogoutResult>(
-      USERS_PATTERNS.LOGOUT,
-      sessionId,
-    );
-    expect(loggedOut).toEqual({ success: true });
-
-    await expect(
-      send<PublicUser>(USERS_PATTERNS.VERIFY, registered.accessToken),
-    ).rejects.toMatchObject({ statusCode: 401 });
-    await expect(
-      send<AuthResult>(USERS_PATTERNS.REFRESH, {
-        refreshToken: registered.refreshToken,
-      }),
-    ).rejects.toMatchObject({ statusCode: 401 });
-  });
-
-  it('rejects an invalid register payload via the validation pipe', async () => {
-    await expect(
-      send<PublicUser>(USERS_PATTERNS.REGISTER, {
+      send<PublicUser>(USERS_PATTERNS.CREATE, {
         email: 'not-an-email',
         name: 'x',
         password: 'short',

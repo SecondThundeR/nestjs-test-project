@@ -23,7 +23,7 @@ describe('CartGatewayController', () => {
       controllers: [CartGatewayController],
       providers: [
         { provide: SERVICE_NAMES.CART, useValue: cart },
-        { provide: SERVICE_NAMES.USERS, useValue: { send: jest.fn() } },
+        { provide: SERVICE_NAMES.AUTH, useValue: { send: jest.fn() } },
       ],
     }).compile();
 
