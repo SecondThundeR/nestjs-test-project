@@ -65,9 +65,9 @@ export class ProductsService {
 
   async update(id: string, dto: UpdateProductDto): Promise<ProductEntity> {
     const product = await this.findOne(id);
-    const newProject = { ...product, ...dto };
+    const newProduct = { ...product, ...dto };
 
-    const saved = await this.products.save(newProject);
+    const saved = await this.products.save(newProduct);
 
     this.logger.log(
       `Updated product ${id} (fields: ${Object.keys(dto).join(', ') || 'none'})`,
