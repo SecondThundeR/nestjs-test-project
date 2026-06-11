@@ -19,6 +19,7 @@ describe('OrdersController', () => {
       | 'cancel'
       | 'pay'
       | 'capturePayment'
+      | 'captureByPaymentId'
     >
   >;
 
@@ -31,6 +32,7 @@ describe('OrdersController', () => {
       cancel: jest.fn(),
       pay: jest.fn(),
       capturePayment: jest.fn(),
+      captureByPaymentId: jest.fn(),
     };
 
     const app = await Test.createTestingModule({
@@ -109,5 +111,13 @@ describe('OrdersController', () => {
 
     expect(ordersController.capturePayment('order-1')).toBe(result);
     expect(ordersService.capturePayment).toHaveBeenCalledWith('order-1');
+  });
+
+  it('delegates captureByPaymentId() to the service with the payment id', () => {
+    const result = Promise.resolve({} as never);
+    ordersService.captureByPaymentId.mockReturnValue(result);
+
+    expect(ordersController.captureByPaymentId('pp-1')).toBe(result);
+    expect(ordersService.captureByPaymentId).toHaveBeenCalledWith('pp-1');
   });
 });

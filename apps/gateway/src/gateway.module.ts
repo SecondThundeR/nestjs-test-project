@@ -11,6 +11,7 @@ import {
 import { ProductsGatewayController } from './products/products.gateway.controller';
 import { CartGatewayController } from './cart/cart.gateway.controller';
 import { OrdersGatewayController } from './orders/orders.gateway.controller';
+import { OrdersPaymentGatewayController } from './orders/orders-payment.gateway.controller';
 import { HealthController } from './health.controller';
 import { UsersGatewayController } from './users/users.gateway.controller';
 import { AuthGatewayController } from './auth/auth.gateway.controller';
@@ -82,6 +83,7 @@ import { AuthGatewayController } from './auth/auth.gateway.controller';
     ProductsGatewayController,
     CartGatewayController,
     OrdersGatewayController,
+    OrdersPaymentGatewayController,
     UsersGatewayController,
     AuthGatewayController,
   ],

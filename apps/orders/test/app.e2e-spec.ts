@@ -207,6 +207,34 @@ describe('Orders microservice (e2e)', () => {
     expect(cancelled.status).toBe(OrderStatus.CANCELLED);
   });
 
+  it('captures a payment by the PayPal return token', async () => {
+    mockHappyPath();
+
+    const order = await send<Order>(ORDERS_PATTERNS.CREATE, {
+      userId: USER,
+      shippingAddress: ADDRESS,
+    });
+
+    paypal.createOrder.mockResolvedValue({
+      id: 'pp-token-1',
+      status: 'PAYER_ACTION_REQUIRED',
+      approveUrl: 'https://paypal.test/checkoutnow',
+    });
+    await send<OrderPayment>(ORDERS_PATTERNS.PAY, order.id);
+
+    paypal.captureOrder.mockResolvedValue({
+      id: 'pp-token-1',
+      status: 'COMPLETED',
+      approveUrl: null,
+    });
+    const paid = await send<Order>(
+      ORDERS_PATTERNS.CAPTURE_BY_PAYMENT_ID,
+      'pp-token-1',
+    );
+    expect(paid.id).toBe(order.id);
+    expect(paid.status).toBe(OrderStatus.PAID);
+  });
+
   it('rejects shipping an order that has not been paid', async () => {
     mockHappyPath();
 

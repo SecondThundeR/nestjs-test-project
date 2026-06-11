@@ -59,6 +59,15 @@ export class PaypalService {
             },
           },
         ],
+        payment_source: {
+          paypal: {
+            experience_context: {
+              user_action: 'PAY_NOW',
+              return_url: this.config.returnUrl,
+              cancel_url: this.config.cancelUrl,
+            },
+          },
+        },
       },
     );
 
@@ -84,7 +93,9 @@ export class PaypalService {
 
   private toPaypalOrder(response: PaypalOrderResponse): PaypalOrder {
     const approveUrl =
-      response.links?.find(({ rel }) => rel === 'approve')?.href ?? null;
+      response.links?.find(
+        ({ rel }) => rel === 'approve' || rel === 'payer-action',
+      )?.href ?? null;
     return { id: response.id, status: response.status, approveUrl };
   }
 

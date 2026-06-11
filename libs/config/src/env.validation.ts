@@ -126,6 +126,16 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  PAYPAL_RETURN_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  PAYPAL_CANCEL_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
   DB_SYNCHRONIZE?: string;
 
   @IsOptional()

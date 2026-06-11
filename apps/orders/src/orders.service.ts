@@ -253,6 +253,16 @@ export class OrdersService {
     return saved;
   }
 
+  async captureByPaymentId(paymentId: string): Promise<OrderEntity> {
+    const order = await this.orders.findOneBy({ paymentId });
+    if (!order) {
+      this.logger.warn(`No order found for PayPal payment ${paymentId}`);
+      throw RpcErrors.notFound(`No order found for payment ${paymentId}`);
+    }
+
+    return this.capturePayment(order.id);
+  }
+
   async cancel(id: string): Promise<OrderEntity> {
     this.logger.log(`Cancelling order ${id}`);
 

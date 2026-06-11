@@ -35,6 +35,8 @@ describe('PaypalService', () => {
             clientId: 'client-id',
             clientSecret: 'client-secret',
             currency: 'USD',
+            returnUrl: 'https://gateway.test/return',
+            cancelUrl: 'https://gateway.test/cancel',
             ...config,
           },
         },
@@ -74,6 +76,15 @@ describe('PaypalService', () => {
             amount: { currency_code: 'USD', value: '20.50' },
           },
         ],
+        payment_source: {
+          paypal: {
+            experience_context: {
+              user_action: 'PAY_NOW',
+              return_url: 'https://gateway.test/return',
+              cancel_url: 'https://gateway.test/cancel',
+            },
+          },
+        },
       });
     });
 
@@ -93,6 +104,23 @@ describe('PaypalService', () => {
         id: 'pp-1',
         status: 'CREATED',
         approveUrl: 'https://paypal.test/approve',
+      });
+    });
+
+    it('returns the payer-action link as the approveUrl', async () => {
+      fetchMock.mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(
+        jsonResponse({
+          id: 'pp-1',
+          status: 'PAYER_ACTION_REQUIRED',
+          links: [
+            { href: 'https://paypal.test/self', rel: 'self' },
+            { href: 'https://paypal.test/checkoutnow', rel: 'payer-action' },
+          ],
+        }),
+      );
+
+      await expect(service.createOrder('order-1', 10)).resolves.toMatchObject({
+        approveUrl: 'https://paypal.test/checkoutnow',
       });
     });
 

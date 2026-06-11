@@ -45,4 +45,9 @@ export class OrdersController {
   capturePayment(@Payload() id: string) {
     return this.ordersService.capturePayment(id);
   }
+
+  @MessagePattern(ORDERS_PATTERNS.CAPTURE_BY_PAYMENT_ID)
+  captureByPaymentId(@Payload() paymentId: string) {
+    return this.ordersService.captureByPaymentId(paymentId);
+  }
 }

@@ -429,6 +429,36 @@ describe('OrdersService', () => {
     });
   });
 
+  describe('captureByPaymentId', () => {
+    it('captures the payment of the order matching the PayPal order id', async () => {
+      const order = await createOrder();
+      paypal.createOrder.mockResolvedValue({
+        id: 'pp-1',
+        status: 'CREATED',
+        approveUrl: 'https://paypal.test/approve',
+      });
+      paypal.captureOrder.mockResolvedValue({
+        id: 'pp-1',
+        status: 'COMPLETED',
+        approveUrl: null,
+      });
+      await service.pay(order.id);
+
+      const paid = await service.captureByPaymentId('pp-1');
+
+      expect(paid.id).toBe(order.id);
+      expect(paid.status).toBe(OrderStatus.PAID);
+      expect(paypal.captureOrder).toHaveBeenCalledWith('pp-1');
+    });
+
+    it('throws RpcException for an unknown payment id', async () => {
+      await expect(service.captureByPaymentId('missing')).rejects.toThrow(
+        RpcException,
+      );
+      expect(paypal.captureOrder).not.toHaveBeenCalled();
+    });
+  });
+
   describe('cancel', () => {
     it('cancels a pending order and restocks the products', async () => {
       const order = await createOrder();
