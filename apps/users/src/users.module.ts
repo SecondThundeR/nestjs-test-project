@@ -19,6 +19,7 @@ import { UserEntity } from './entities/user.entity';
       useFactory: (cache: ConfigType<typeof cacheConfig>) => ({
         namespace: 'users',
         ttl: cache.usersCacheTtl,
+        redis: cache.redis,
       }),
     }),
     TypeOrmModule.forRootAsync({

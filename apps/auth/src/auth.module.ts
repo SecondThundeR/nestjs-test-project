@@ -29,6 +29,7 @@ import { SessionEntity } from './entities/session.entity';
       useFactory: (cache: ConfigType<typeof cacheConfig>) => ({
         namespace: 'auth',
         ttl: cache.authCacheTtl,
+        redis: cache.redis,
       }),
     }),
     ScheduleModule.forRoot(),

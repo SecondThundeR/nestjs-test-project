@@ -1,15 +1,20 @@
-import { DEFAULT_CACHE_TTL_MS } from '@app/cache';
 import { registerAs } from '@nestjs/config';
 import type { ConfigType } from '@nestjs/config';
 
+function optionalNumber(value: string | undefined): number | undefined {
+  return value ? Number(value) : undefined;
+}
+
 export const cacheConfig = registerAs('cache', () => ({
-  authCacheTtl: Number(process.env.AUTH_CACHE_TTL ?? DEFAULT_CACHE_TTL_MS),
-  productsCacheTtl: Number(
-    process.env.PRODUCTS_CACHE_TTL ?? DEFAULT_CACHE_TTL_MS,
-  ),
-  ordersCacheTtl: Number(process.env.ORDERS_CACHE_TTL ?? DEFAULT_CACHE_TTL_MS),
-  cartCacheTtl: Number(process.env.CART_CACHE_TTL ?? DEFAULT_CACHE_TTL_MS),
-  usersCacheTtl: Number(process.env.USERS_CACHE_TTL ?? DEFAULT_CACHE_TTL_MS),
+  redis: {
+    host: process.env.REDIS_HOST,
+    port: optionalNumber(process.env.REDIS_PORT),
+    password: process.env.REDIS_PASSWORD,
+  },
+  productsCacheTtl: optionalNumber(process.env.PRODUCTS_CACHE_TTL),
+  usersCacheTtl: optionalNumber(process.env.USERS_CACHE_TTL),
+  authCacheTtl: optionalNumber(process.env.AUTH_CACHE_TTL),
+  ordersCacheTtl: optionalNumber(process.env.ORDERS_CACHE_TTL),
 }));
 
 export type CacheConfig = ConfigType<typeof cacheConfig>;
