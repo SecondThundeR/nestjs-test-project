@@ -1,3 +1,4 @@
+import { CacheService } from '@app/cache';
 import {
   ProductDeleteResult,
   type CreateProductDto,
@@ -10,6 +11,12 @@ import { randomUUID } from 'node:crypto';
 import { In, Repository } from 'typeorm';
 import { ProductEntity } from './entities/product.entity';
 
+const LIST_CACHE_KEY = 'products:all';
+
+function productCacheKey(id: string): string {
+  return `product:${id}`;
+}
+
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
@@ -17,6 +24,7 @@ export class ProductsService {
   constructor(
     @InjectRepository(ProductEntity)
     private readonly products: Repository<ProductEntity>,
+    private readonly cache: CacheService,
   ) {}
 
   async create(dto: CreateProductDto): Promise<ProductEntity> {
@@ -29,27 +37,33 @@ export class ProductsService {
     });
     const saved = await this.products.save(product);
 
+    await this.cache.del(LIST_CACHE_KEY);
+
     this.logger.log(`Created product ${saved.id} ("${saved.name}")`);
     return saved;
   }
 
   async findAll(): Promise<ProductEntity[]> {
-    const products = await this.products.find();
+    return this.cache.wrap(LIST_CACHE_KEY, async () => {
+      const products = await this.products.find();
 
-    this.logger.debug(`Listing ${products.length} product(s)`);
-    return products;
+      this.logger.debug(`Listing ${products.length} product(s)`);
+      return products;
+    });
   }
 
   async findOne(id: string): Promise<ProductEntity> {
-    const product = await this.products.findOneBy({ id });
+    return this.cache.wrap(productCacheKey(id), async () => {
+      const product = await this.products.findOneBy({ id });
 
-    if (!product) {
-      this.logger.warn(`Product ${id} not found`);
-      throw RpcErrors.notFound(`Product ${id} not found`);
-    }
+      if (!product) {
+        this.logger.warn(`Product ${id} not found`);
+        throw RpcErrors.notFound(`Product ${id} not found`);
+      }
 
-    this.logger.debug(`Fetched product ${id}`);
-    return product;
+      this.logger.debug(`Fetched product ${id}`);
+      return product;
+    });
   }
 
   async findMany(ids: string[]): Promise<ProductEntity[]> {
@@ -69,6 +83,8 @@ export class ProductsService {
 
     const saved = await this.products.save(newProduct);
 
+    await this.invalidate(id);
+
     this.logger.log(
       `Updated product ${id} (fields: ${Object.keys(dto).join(', ') || 'none'})`,
     );
@@ -83,7 +99,13 @@ export class ProductsService {
       throw RpcErrors.notFound(`Product ${id} not found`);
     }
 
+    await this.invalidate(id);
+
     this.logger.log(`Removed product ${id}`);
     return { id, deleted: true };
+  }
+
+  private invalidate(id: string): Promise<void> {
+    return this.cache.del([productCacheKey(id), LIST_CACHE_KEY]);
   }
 }

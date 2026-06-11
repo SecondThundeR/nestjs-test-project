@@ -29,9 +29,6 @@ describe('Products microservice (e2e)', () => {
   let client: ClientProxy;
 
   beforeAll(async () => {
-    // Swap the module's real Postgres DataSource for an in-memory pg-mem one,
-    // so the e2e exercises the full module graph (TCP, pipes, filters, DI)
-    // without needing a live database.
     const dataSource = await createInMemoryDataSource([ProductEntity]);
 
     const moduleFixture = await Test.createTestingModule({

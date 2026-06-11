@@ -1,18 +1,23 @@
+import { CacheService } from '@app/cache';
 import { Test } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { DataSource } from 'typeorm';
 import { type CreateUserDto } from '@app/domains';
 import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
+import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
 import { UsersService } from './users.service';
 import { UserEntity } from './entities/user.entity';
 
 describe('UsersService', () => {
   let service: UsersService;
   let dataSource: DataSource;
+  let cacheStore: Map<string, unknown>;
 
   beforeEach(async () => {
     dataSource = await createInMemoryDataSource([UserEntity]);
+    const { service: cacheService, store } = createInMemoryCache();
+    cacheStore = store;
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -21,6 +26,7 @@ describe('UsersService', () => {
           provide: getRepositoryToken(UserEntity),
           useValue: dataSource.getRepository(UserEntity),
         },
+        { provide: CacheService, useValue: cacheService },
       ],
     }).compile();
 
@@ -120,6 +126,17 @@ describe('UsersService', () => {
 
     it('returns null for an unknown id', async () => {
       await expect(service.findById('missing')).resolves.toBeNull();
+    });
+
+    it('serves a repeated lookup from the cache', async () => {
+      const created = await create();
+      const spy = jest.spyOn(dataSource.getRepository(UserEntity), 'findOneBy');
+
+      await service.findById(created.id);
+      await service.findById(created.id);
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(cacheStore.has(`user:${created.id}`)).toBe(true);
     });
   });
 });

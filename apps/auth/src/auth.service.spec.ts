@@ -6,7 +6,9 @@ import type { DataSource, Repository } from 'typeorm';
 import { of, throwError } from 'rxjs';
 import { USERS_PATTERNS, type JwtPayload, type PublicUser } from '@app/domains';
 import { authConfig, SERVICE_NAMES } from '@app/config';
+import { CacheService } from '@app/cache';
 import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
+import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
 import { AuthService } from './auth.service';
 import { SessionEntity } from './entities/session.entity';
 
@@ -24,11 +26,14 @@ describe('AuthService', () => {
   let dataSource: DataSource;
   let sessions: Repository<SessionEntity>;
   let users: { send: jest.Mock };
+  let cacheStore: Map<string, unknown>;
 
   beforeEach(async () => {
     dataSource = await createInMemoryDataSource([SessionEntity]);
     sessions = dataSource.getRepository(SessionEntity);
     users = { send: jest.fn().mockReturnValue(of(USER)) };
+    const { service: cacheService, store } = createInMemoryCache();
+    cacheStore = store;
 
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -47,6 +52,7 @@ describe('AuthService', () => {
         },
         { provide: SERVICE_NAMES.USERS, useValue: users },
         { provide: authConfig.KEY, useValue: authConfig() },
+        { provide: CacheService, useValue: cacheService },
       ],
     }).compile();
 
@@ -196,6 +202,31 @@ describe('AuthService', () => {
 
       users.send.mockReturnValue(of(null));
 
+      await expect(service.verify(accessToken)).rejects.toThrow(RpcException);
+    });
+
+    it('caches the active session so repeated verifies skip the DB lookup', async () => {
+      const { accessToken } = await register();
+      const { sid } = jwtService.verify<JwtPayload>(accessToken);
+      const spy = jest.spyOn(sessions, 'findOneBy');
+
+      await service.verify(accessToken);
+      await service.verify(accessToken);
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(cacheStore.has(`session:${sid}`)).toBe(true);
+    });
+
+    it('rejects a cached session once it is revoked by logout', async () => {
+      const { accessToken } = await register();
+      const { sid } = jwtService.verify<JwtPayload>(accessToken);
+
+      await service.verify(accessToken);
+      expect(cacheStore.has(`session:${sid}`)).toBe(true);
+
+      await service.logout(sid);
+
+      expect(cacheStore.has(`session:${sid}`)).toBe(false);
       await expect(service.verify(accessToken)).rejects.toThrow(RpcException);
     });
   });

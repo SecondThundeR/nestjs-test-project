@@ -1,3 +1,4 @@
+import { CacheService } from '@app/cache';
 import {
   ValidateUserByCredentialsDto,
   type PublicUser,
@@ -13,6 +14,10 @@ import { UserEntity } from './entities/user.entity';
 
 const SALT_ROUNDS = 10;
 
+function userCacheKey(id: string): string {
+  return `user:${id}`;
+}
+
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
@@ -20,6 +25,7 @@ export class UsersService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
+    private readonly cache: CacheService,
   ) {}
 
   async create(dto: CreateUserDto): Promise<PublicUser> {
@@ -62,15 +68,17 @@ export class UsersService {
   }
 
   async findById(id: string): Promise<PublicUser | null> {
-    this.logger.log(`Trying to get user with ID ${id}`);
-    const user = await this.users.findOneBy({ id });
+    return this.cache.wrap(userCacheKey(id), async () => {
+      this.logger.log(`Trying to get user with ID ${id}`);
+      const user = await this.users.findOneBy({ id });
 
-    if (!user) {
-      this.logger.warn(`User with ID ${id} not found`);
-      return null;
-    }
+      if (!user) {
+        this.logger.warn(`User with ID ${id} not found`);
+        return null;
+      }
 
-    return this.toPublicUser(user);
+      return this.toPublicUser(user);
+    });
   }
 
   private toPublicUser(user: UserEntity): PublicUser {

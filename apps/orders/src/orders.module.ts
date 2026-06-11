@@ -2,8 +2,10 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, type ConfigType } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AppCacheModule } from '@app/cache';
 import {
   buildDatabaseOptions,
+  cacheConfig,
   SERVICE_NAMES,
   servicesConfig,
   validateEnv,
@@ -16,8 +18,16 @@ import { OrderEntity } from './entities/order.entity';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [servicesConfig],
+      load: [servicesConfig, cacheConfig],
       validate: validateEnv,
+    }),
+    AppCacheModule.registerAsync({
+      inject: [cacheConfig.KEY],
+      useFactory: (cache: ConfigType<typeof cacheConfig>) => ({
+        namespace: 'orders',
+        ttl: cache.ordersCacheTtl,
+        redis: cache.redis,
+      }),
     }),
     TypeOrmModule.forRootAsync({
       useFactory: () => buildDatabaseOptions('ORDERS', [OrderEntity]),

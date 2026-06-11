@@ -11,7 +11,7 @@
   },
   "scripts": {
     "docker:up": "docker compose up -d --build",
-    "docker:db": "docker compose up -d products-db cart-db orders-db users-db auth-db",
+    "docker:db": "docker compose up -d products-db cache cart-db orders-db users-db auth-db",
     "docker:down": "docker compose down",
     "build": "nest build gateway && nest build products && nest build cart && nest build orders && nest build users && nest build auth",
     "build:gateway": "nest build gateway",
@@ -39,6 +39,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@keyv/redis": "5.1.6",
+    "@nestjs/cache-manager": "3.1.3",
     "@nestjs/common": "11.1.24",
     "@nestjs/config": "4.0.4",
     "@nestjs/core": "11.1.24",
@@ -49,9 +51,11 @@
     "@nestjs/schedule": "6.1.3",
     "@nestjs/typeorm": "11.0.1",
     "bcrypt": "6.0.0",
+    "cache-manager": "7.2.8",
     "class-transformer": "0.5.1",
     "class-validator": "0.15.1",
     "dotenv": "17.4.2",
+    "keyv": "5.6.0",
     "nest-winston": "1.10.2",
     "passport": "0.7.0",
     "pg": "8.21.0",
@@ -119,6 +123,7 @@
       "<rootDir>/libs/"
     ],
     "moduleNameMapper": {
+      "^@app/cache(|/.*)$": "<rootDir>/libs/cache/src/$1",
       "^@app/config(|/.*)$": "<rootDir>/libs/config/src/$1",
       "^@app/domains(|/.*)$": "<rootDir>/libs/domains/src/$1",
       "^@app/filters(|/.*)$": "<rootDir>/libs/filters/src/$1",
