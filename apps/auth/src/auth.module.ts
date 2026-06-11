@@ -4,9 +4,11 @@ import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AppCacheModule } from '@app/cache';
 import {
   authConfig,
   buildDatabaseOptions,
+  cacheConfig,
   SERVICE_NAMES,
   servicesConfig,
   validateEnv,
@@ -19,8 +21,15 @@ import { SessionEntity } from './entities/session.entity';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [authConfig, servicesConfig],
+      load: [authConfig, servicesConfig, cacheConfig],
       validate: validateEnv,
+    }),
+    AppCacheModule.registerAsync({
+      inject: [cacheConfig.KEY],
+      useFactory: (cache: ConfigType<typeof cacheConfig>) => ({
+        namespace: 'auth',
+        ttl: cache.authCacheTtl,
+      }),
     }),
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({

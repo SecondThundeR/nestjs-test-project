@@ -111,6 +111,47 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  REDIS_HOST?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(65535)
+  REDIS_PORT?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  REDIS_PASSWORD?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  PRODUCTS_CACHE_TTL?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  USERS_CACHE_TTL?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  AUTH_CACHE_TTL?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  ORDERS_CACHE_TTL?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
   PRODUCTS_DB_HOST?: string;
 
   @IsOptional()

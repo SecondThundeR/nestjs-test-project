@@ -31,8 +31,12 @@ services:
     environment:
       PRODUCTS_DB_HOST: products-db
       PRODUCTS_DB_PORT: 5432
+      REDIS_HOST: cache
+      REDIS_PORT: 6379
     depends_on:
       products-db:
+        condition: service_healthy
+      cache:
         condition: service_healthy
 
   cart:
@@ -51,8 +55,12 @@ services:
     environment:
       ORDERS_DB_HOST: orders-db
       ORDERS_DB_PORT: 5432
+      REDIS_HOST: cache
+      REDIS_PORT: 6379
     depends_on:
       orders-db:
+        condition: service_healthy
+      cache:
         condition: service_healthy
 
   users:
@@ -61,8 +69,12 @@ services:
     environment:
       USERS_DB_HOST: users-db
       USERS_DB_PORT: 5432
+      REDIS_HOST: cache
+      REDIS_PORT: 6379
     depends_on:
       users-db:
+        condition: service_healthy
+      cache:
         condition: service_healthy
 
   auth:
@@ -72,11 +84,15 @@ services:
       AUTH_DB_HOST: auth-db
       AUTH_DB_PORT: 5432
       USERS_HOST: users
+      REDIS_HOST: cache
+      REDIS_PORT: 6379
     depends_on:
       auth-db:
         condition: service_healthy
       users:
         condition: service_started
+      cache:
+        condition: service_healthy
 
   products-db:
     image: postgres:18.4
@@ -90,6 +106,19 @@ services:
       - products-db-data:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${PRODUCTS_DB_USERNAME:-postgres} -d ${PRODUCTS_DB_NAME:-products}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  cache:
+    image: redis:8.8.0-alpine
+    command: ['redis-server', '--save', '60', '1']
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - cache-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -160,6 +189,7 @@ services:
 
 volumes:
   products-db-data:
+  cache-data:
   cart-db-data:
   orders-db-data:
   users-db-data:

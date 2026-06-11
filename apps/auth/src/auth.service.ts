@@ -8,6 +8,7 @@ import {
   CreateUserDto,
   USERS_PATTERNS,
 } from '@app/domains';
+import { CacheService } from '@app/cache';
 import { authConfig, type AuthConfig, SERVICE_NAMES } from '@app/config';
 import { RpcErrors } from '@app/filters';
 import { Inject, Injectable, Logger } from '@nestjs/common';
@@ -26,6 +27,10 @@ function hashRefreshToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
+function sessionCacheKey(sessionId: string): string {
+  return `session:${sessionId}`;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -38,6 +43,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     @Inject(authConfig.KEY)
     private readonly auth: AuthConfig,
+    private readonly cache: CacheService,
   ) {}
 
   async register(dto: CreateUserDto): Promise<AuthResult> {
@@ -65,8 +71,8 @@ export class AuthService {
       throw RpcErrors.unauthorized('Invalid or expired token');
     }
 
-    const session = await this.sessions.findOneBy({ id: payload.sid });
-    if (!session || !this.isSessionActive(session)) {
+    const session = await this.loadActiveSession(payload.sid);
+    if (!session) {
       this.logger.warn(`Token valid but session ${payload.sid} is not active`);
       throw RpcErrors.unauthorized('Invalid or expired token');
     }
@@ -107,6 +113,7 @@ export class AuthService {
     session.refreshTokenHash = hashRefreshToken(refreshToken);
     session.expiresAt = this.nextExpiresAt();
     await this.sessions.save(session);
+    await this.cache.del(sessionCacheKey(session.id));
 
     this.logger.log(`Rotated session ${session.id} for user ${user.id}`);
     return this.toAuthResult(user, session, refreshToken);
@@ -122,6 +129,8 @@ export class AuthService {
     } else {
       this.logger.debug(`Logout for missing or inactive session ${sessionId}`);
     }
+
+    await this.cache.del(sessionCacheKey(sessionId));
 
     return { success: true };
   }
@@ -173,6 +182,25 @@ export class AuthService {
     return (
       session.revokedAt === null && new Date(session.expiresAt) > new Date()
     );
+  }
+
+  private async loadActiveSession(
+    sessionId: string,
+  ): Promise<SessionEntity | null> {
+    const key = sessionCacheKey(sessionId);
+
+    const cached = await this.cache.get<SessionEntity>(key);
+    if (cached) {
+      return this.isSessionActive(cached) ? cached : null;
+    }
+
+    const session = await this.sessions.findOneBy({ id: sessionId });
+    if (!session || !this.isSessionActive(session)) {
+      return null;
+    }
+
+    await this.cache.set(key, session);
+    return session;
   }
 
   private generateRefreshToken(): string {

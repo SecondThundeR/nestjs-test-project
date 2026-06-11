@@ -12,7 +12,9 @@ import {
   type Product,
 } from '@app/domains';
 import { SERVICE_NAMES } from '@app/config';
+import { CacheService } from '@app/cache';
 import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
+import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
 import { OrdersService } from './orders.service';
 import { OrderEntity } from './entities/order.entity';
 
@@ -58,11 +60,14 @@ describe('OrdersService', () => {
   let productsClient: { send: jest.Mock };
   let cartClient: { send: jest.Mock };
   let dataSource: DataSource;
+  let cacheStore: Map<string, unknown>;
 
   beforeEach(async () => {
     productsClient = { send: jest.fn() };
     cartClient = { send: jest.fn() };
     dataSource = await createInMemoryDataSource([OrderEntity]);
+    const { service: cacheService, store } = createInMemoryCache();
+    cacheStore = store;
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -73,6 +78,7 @@ describe('OrdersService', () => {
         },
         { provide: SERVICE_NAMES.PRODUCTS, useValue: productsClient },
         { provide: SERVICE_NAMES.CART, useValue: cartClient },
+        { provide: CacheService, useValue: cacheService },
       ],
     }).compile();
 
@@ -295,6 +301,61 @@ describe('OrdersService', () => {
       await expect(service.cancel('missing')).rejects.toBeInstanceOf(
         RpcException,
       );
+    });
+  });
+
+  describe('caching', () => {
+    it('serves a repeated findOne from the cache', async () => {
+      const order = await createOrder();
+      const spy = jest.spyOn(
+        dataSource.getRepository(OrderEntity),
+        'findOneBy',
+      );
+
+      await service.findOne(order.id);
+      await service.findOne(order.id);
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(cacheStore.has(`order:${order.id}`)).toBe(true);
+    });
+
+    it('serves a repeated findAll from the cache', async () => {
+      await createOrder();
+      const spy = jest.spyOn(dataSource.getRepository(OrderEntity), 'find');
+
+      await service.findAll(USER);
+      await service.findAll(USER);
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(cacheStore.has(`orders:user:${USER}`)).toBe(true);
+    });
+
+    it('evicts the user listing cache when an order is created', async () => {
+      await service.findAll(USER);
+      expect(cacheStore.has(`orders:user:${USER}`)).toBe(true);
+
+      await createOrder();
+
+      expect(cacheStore.has(`orders:user:${USER}`)).toBe(false);
+    });
+
+    it('evicts the order cache when its status changes', async () => {
+      const order = await createOrder();
+      await service.findOne(order.id);
+
+      await service.updateStatus(order.id, OrderStatus.SHIPPED);
+
+      expect(cacheStore.has(`order:${order.id}`)).toBe(false);
+    });
+
+    it('evicts the order cache when it is cancelled', async () => {
+      const order = await createOrder();
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+      await service.findOne(order.id);
+
+      await service.cancel(order.id);
+
+      expect(cacheStore.has(`order:${order.id}`)).toBe(false);
     });
   });
 });

@@ -1,18 +1,23 @@
+import { CacheService } from '@app/cache';
 import { Test } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { DataSource } from 'typeorm';
 import type { CreateProductDto } from '@app/domains';
 import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
+import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
 import { ProductsService } from './products.service';
 import { ProductEntity } from './entities/product.entity';
 
 describe('ProductsService', () => {
   let service: ProductsService;
   let dataSource: DataSource;
+  let cacheStore: Map<string, unknown>;
 
   beforeEach(async () => {
     dataSource = await createInMemoryDataSource([ProductEntity]);
+    const { service: cacheService, store } = createInMemoryCache();
+    cacheStore = store;
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -21,6 +26,7 @@ describe('ProductsService', () => {
           provide: getRepositoryToken(ProductEntity),
           useValue: dataSource.getRepository(ProductEntity),
         },
+        { provide: CacheService, useValue: cacheService },
       ],
     }).compile();
 
@@ -141,6 +147,63 @@ describe('ProductsService', () => {
 
     it('throws RpcException for an unknown id', async () => {
       await expect(service.remove('missing')).rejects.toThrow(RpcException);
+    });
+  });
+
+  describe('caching', () => {
+    it('serves a repeated findOne from the cache', async () => {
+      const product = await create();
+      const spy = jest.spyOn(
+        dataSource.getRepository(ProductEntity),
+        'findOneBy',
+      );
+
+      await service.findOne(product.id);
+      await service.findOne(product.id);
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(cacheStore.has(`product:${product.id}`)).toBe(true);
+    });
+
+    it('serves a repeated findAll from the cache', async () => {
+      await create();
+      const spy = jest.spyOn(dataSource.getRepository(ProductEntity), 'find');
+
+      await service.findAll();
+      await service.findAll();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(cacheStore.has('products:all')).toBe(true);
+    });
+
+    it('evicts the listing cache when a product is created', async () => {
+      await service.findAll();
+      expect(cacheStore.has('products:all')).toBe(true);
+
+      await create();
+
+      expect(cacheStore.has('products:all')).toBe(false);
+    });
+
+    it('evicts the product cache when it is updated', async () => {
+      const product = await create({ price: 10 });
+      await service.findOne(product.id);
+
+      await service.update(product.id, { price: 99 });
+
+      expect(cacheStore.has(`product:${product.id}`)).toBe(false);
+      await expect(service.findOne(product.id)).resolves.toMatchObject({
+        price: 99,
+      });
+    });
+
+    it('evicts the product cache when it is removed', async () => {
+      const product = await create();
+      await service.findOne(product.id);
+
+      await service.remove(product.id);
+
+      expect(cacheStore.has(`product:${product.id}`)).toBe(false);
     });
   });
 });

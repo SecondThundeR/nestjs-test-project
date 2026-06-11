@@ -7,6 +7,7 @@ import {
   type Product,
   PRODUCT_PATTERNS,
 } from '@app/domains';
+import { CacheService } from '@app/cache';
 import { SERVICE_NAMES } from '@app/config';
 import { RpcErrors } from '@app/filters';
 import { Inject, Injectable, Logger } from '@nestjs/common';
@@ -18,6 +19,16 @@ import { firstValueFrom } from 'rxjs';
 import { OrderEntity } from './entities/order.entity';
 import { roundPrice } from '@app/utils';
 
+const ALL_ORDERS_CACHE_KEY = 'orders:all';
+
+function orderCacheKey(id: string): string {
+  return `order:${id}`;
+}
+
+function userOrdersCacheKey(userId: string): string {
+  return `orders:user:${userId}`;
+}
+
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
@@ -28,6 +39,7 @@ export class OrdersService {
     @Inject(SERVICE_NAMES.PRODUCTS)
     private readonly productsClient: ClientProxy,
     @Inject(SERVICE_NAMES.CART) private readonly cartClient: ClientProxy,
+    private readonly cache: CacheService,
   ) {}
 
   async create(userId: string, shippingAddress: string): Promise<OrderEntity> {
@@ -76,6 +88,8 @@ export class OrdersService {
       }),
     );
 
+    await this.invalidate(order);
+
     await firstValueFrom(this.cartClient.send(CART_PATTERNS.CLEAR, userId));
 
     this.logger.log(
@@ -85,22 +99,28 @@ export class OrdersService {
   }
 
   async findAll(userId?: string): Promise<OrderEntity[]> {
-    const orders = await this.orders.find({
-      where: userId ? { userId } : {},
+    const key = userId ? userOrdersCacheKey(userId) : ALL_ORDERS_CACHE_KEY;
+
+    return this.cache.wrap(key, async () => {
+      const orders = await this.orders.find({
+        where: userId ? { userId } : {},
+      });
+      this.logger.debug(
+        `Listing ${orders.length} order(s)${userId ? ` for user ${userId}` : ''}`,
+      );
+      return orders;
     });
-    this.logger.debug(
-      `Listing ${orders.length} order(s)${userId ? ` for user ${userId}` : ''}`,
-    );
-    return orders;
   }
 
   async findOne(id: string): Promise<OrderEntity> {
-    const order = await this.orders.findOneBy({ id });
-    if (!order) {
-      this.logger.warn(`Order ${id} not found`);
-      throw RpcErrors.notFound(`Order ${id} not found`);
-    }
-    return order;
+    return this.cache.wrap(orderCacheKey(id), async () => {
+      const order = await this.orders.findOneBy({ id });
+      if (!order) {
+        this.logger.warn(`Order ${id} not found`);
+        throw RpcErrors.notFound(`Order ${id} not found`);
+      }
+      return order;
+    });
   }
 
   async updateStatus(id: string, status: OrderStatus): Promise<OrderEntity> {
@@ -113,6 +133,8 @@ export class OrdersService {
     const previousOrderStatus = order.status;
     order.status = status;
     const saved = await this.orders.save(order);
+
+    await this.invalidate(saved);
 
     this.logger.log(
       `Order ${id} status ${previousOrderStatus} changed to ${status}`,
@@ -144,8 +166,18 @@ export class OrdersService {
     order.status = OrderStatus.CANCELLED;
     const saved = await this.orders.save(order);
 
+    await this.invalidate(saved);
+
     this.logger.log(`Order ${id} cancelled and stock restored`);
     return saved;
+  }
+
+  private invalidate(order: OrderEntity): Promise<void> {
+    return this.cache.del([
+      orderCacheKey(order.id),
+      userOrdersCacheKey(order.userId),
+      ALL_ORDERS_CACHE_KEY,
+    ]);
   }
 
   private createCartItemMapper(productsMap: Map<string, Product>) {
