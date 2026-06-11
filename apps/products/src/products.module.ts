@@ -6,6 +6,7 @@ import { buildDatabaseOptions, cacheConfig, validateEnv } from '@app/config';
 import { ProductsController } from './products.controller';
 import { ProductsService } from './products.service';
 import { ProductEntity } from './entities/product.entity';
+import { productsMigrations } from './migrations';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { ProductEntity } from './entities/product.entity';
       }),
     }),
     TypeOrmModule.forRootAsync({
-      useFactory: () => buildDatabaseOptions('PRODUCTS', [ProductEntity]),
+      useFactory: () =>
+        buildDatabaseOptions('PRODUCTS', [ProductEntity], productsMigrations),
     }),
     TypeOrmModule.forFeature([ProductEntity]),
   ],

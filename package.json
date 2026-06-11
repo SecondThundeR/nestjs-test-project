@@ -36,7 +36,19 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "typeorm": "node --require ts-node/register --require tsconfig-paths/register ./node_modules/typeorm/cli.js",
+    "migration:run:products": "npm run typeorm -- migration:run -d apps/products/src/data-source.ts",
+    "migration:run:cart": "npm run typeorm -- migration:run -d apps/cart/src/data-source.ts",
+    "migration:run:orders": "npm run typeorm -- migration:run -d apps/orders/src/data-source.ts",
+    "migration:run:users": "npm run typeorm -- migration:run -d apps/users/src/data-source.ts",
+    "migration:run:auth": "npm run typeorm -- migration:run -d apps/auth/src/data-source.ts",
+    "migration:run:all": "npm run migration:run:products && npm run migration:run:cart && npm run migration:run:orders && npm run migration:run:users && npm run migration:run:auth",
+    "migration:revert:products": "npm run typeorm -- migration:revert -d apps/products/src/data-source.ts",
+    "migration:revert:cart": "npm run typeorm -- migration:revert -d apps/cart/src/data-source.ts",
+    "migration:revert:orders": "npm run typeorm -- migration:revert -d apps/orders/src/data-source.ts",
+    "migration:revert:users": "npm run typeorm -- migration:revert -d apps/users/src/data-source.ts",
+    "migration:revert:auth": "npm run typeorm -- migration:revert -d apps/auth/src/data-source.ts"
   },
   "dependencies": {
     "@keyv/redis": "5.1.6",

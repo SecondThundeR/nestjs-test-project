@@ -6,6 +6,7 @@ import { buildDatabaseOptions, cacheConfig, validateEnv } from '@app/config';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { UserEntity } from './entities/user.entity';
+import { usersMigrations } from './migrations';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { UserEntity } from './entities/user.entity';
       }),
     }),
     TypeOrmModule.forRootAsync({
-      useFactory: () => buildDatabaseOptions('USERS', [UserEntity]),
+      useFactory: () =>
+        buildDatabaseOptions('USERS', [UserEntity], usersMigrations),
     }),
     TypeOrmModule.forFeature([UserEntity]),
   ],

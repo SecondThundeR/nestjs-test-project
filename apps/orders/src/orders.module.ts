@@ -13,6 +13,7 @@ import {
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { OrderEntity } from './entities/order.entity';
+import { ordersMigrations } from './migrations';
 
 @Module({
   imports: [
@@ -30,7 +31,8 @@ import { OrderEntity } from './entities/order.entity';
       }),
     }),
     TypeOrmModule.forRootAsync({
-      useFactory: () => buildDatabaseOptions('ORDERS', [OrderEntity]),
+      useFactory: () =>
+        buildDatabaseOptions('ORDERS', [OrderEntity], ordersMigrations),
     }),
     TypeOrmModule.forFeature([OrderEntity]),
     ClientsModule.registerAsync([
