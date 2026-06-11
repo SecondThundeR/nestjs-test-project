@@ -23,6 +23,13 @@ import { roundPrice } from '@app/utils';
 
 const PAYPAL_COMPLETED_STATUS = 'COMPLETED';
 
+const MANUAL_STATUS_TRANSITIONS: Partial<
+  Record<OrderStatus, readonly OrderStatus[]>
+> = {
+  [OrderStatus.PAID]: [OrderStatus.SHIPPED],
+  [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED],
+};
+
 const ALL_ORDERS_CACHE_KEY = 'orders:all';
 
 function orderCacheKey(id: string): string {
@@ -130,9 +137,31 @@ export class OrdersService {
 
   async updateStatus(id: string, status: OrderStatus): Promise<OrderEntity> {
     const order = await this.findOne(id);
-    if (order.status === OrderStatus.CANCELLED) {
-      this.logger.warn(`Order ${id} is cancelled and cannot change status`);
-      throw RpcErrors.badRequest('A cancelled order cannot change status');
+    if (order.status === status) {
+      this.logger.debug(`Order ${id} is already ${status}`);
+      return order;
+    }
+
+    if (status === OrderStatus.PAID) {
+      this.logger.warn(`Order ${id} cannot be marked ${status} manually`);
+      throw RpcErrors.badRequest(
+        `An order becomes ${OrderStatus.PAID} only by capturing its payment`,
+      );
+    }
+
+    if (status === OrderStatus.CANCELLED) {
+      this.logger.warn(`Order ${id} cannot be cancelled via a status update`);
+      throw RpcErrors.badRequest('Use the cancel operation to cancel an order');
+    }
+
+    const allowedStatuses = MANUAL_STATUS_TRANSITIONS[order.status] ?? [];
+    if (!allowedStatuses.includes(status)) {
+      this.logger.warn(
+        `Order ${id} cannot change status ${order.status} to ${status}`,
+      );
+      throw RpcErrors.badRequest(
+        `Order status cannot change from ${order.status} to ${status}`,
+      );
     }
 
     const previousOrderStatus = order.status;

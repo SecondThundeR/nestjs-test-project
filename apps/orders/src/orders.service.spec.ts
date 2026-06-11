@@ -110,6 +110,21 @@ describe('OrdersService', () => {
     return service.create(USER, ADDRESS);
   }
 
+  async function payAndCapture(orderId: string) {
+    paypal.createOrder.mockResolvedValue({
+      id: 'pp-1',
+      status: 'CREATED',
+      approveUrl: 'https://paypal.test/approve',
+    });
+    paypal.captureOrder.mockResolvedValue({
+      id: 'pp-1',
+      status: 'COMPLETED',
+      approveUrl: null,
+    });
+    await service.pay(orderId);
+    await service.capturePayment(orderId);
+  }
+
   describe('create', () => {
     it('builds a PENDING order from the cart and products', async () => {
       const order = await createOrder();
@@ -212,20 +227,69 @@ describe('OrdersService', () => {
   });
 
   describe('updateStatus', () => {
-    it('updates the status of an existing order', async () => {
+    it('moves a paid order to SHIPPED and then DELIVERED', async () => {
+      const order = await createOrder();
+      await payAndCapture(order.id);
+
+      const shipped = await service.updateStatus(order.id, OrderStatus.SHIPPED);
+      expect(shipped.status).toBe(OrderStatus.SHIPPED);
+
+      const delivered = await service.updateStatus(
+        order.id,
+        OrderStatus.DELIVERED,
+      );
+      expect(delivered.status).toBe(OrderStatus.DELIVERED);
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.DELIVERED,
+      });
+    });
+
+    it('returns the order unchanged when the status is the same', async () => {
       const order = await createOrder();
 
-      const updated = await service.updateStatus(order.id, OrderStatus.SHIPPED);
+      const result = await service.updateStatus(order.id, OrderStatus.PENDING);
 
-      expect(updated.status).toBe(OrderStatus.SHIPPED);
-      await expect(service.findOne(order.id)).resolves.toMatchObject({
-        status: OrderStatus.SHIPPED,
-      });
+      expect(result.status).toBe(OrderStatus.PENDING);
+    });
+
+    it('throws RpcException when shipping an unpaid order', async () => {
+      const order = await createOrder();
+
+      await expect(
+        service.updateStatus(order.id, OrderStatus.SHIPPED),
+      ).rejects.toThrow(RpcException);
+    });
+
+    it('throws RpcException when marking an order PAID manually', async () => {
+      const order = await createOrder();
+
+      await expect(
+        service.updateStatus(order.id, OrderStatus.PAID),
+      ).rejects.toThrow(RpcException);
+    });
+
+    it('throws RpcException when cancelling via a status update', async () => {
+      const order = await createOrder();
+
+      await expect(
+        service.updateStatus(order.id, OrderStatus.CANCELLED),
+      ).rejects.toThrow(RpcException);
+    });
+
+    it('throws RpcException when moving a delivered order backwards', async () => {
+      const order = await createOrder();
+      await payAndCapture(order.id);
+      await service.updateStatus(order.id, OrderStatus.SHIPPED);
+      await service.updateStatus(order.id, OrderStatus.DELIVERED);
+
+      await expect(
+        service.updateStatus(order.id, OrderStatus.SHIPPED),
+      ).rejects.toThrow(RpcException);
     });
 
     it('throws RpcException for an unknown id', async () => {
       await expect(
-        service.updateStatus('missing', OrderStatus.PAID),
+        service.updateStatus('missing', OrderStatus.SHIPPED),
       ).rejects.toThrow(RpcException);
     });
 
@@ -234,7 +298,7 @@ describe('OrdersService', () => {
       await service.cancel(order.id);
 
       await expect(
-        service.updateStatus(order.id, OrderStatus.PAID),
+        service.updateStatus(order.id, OrderStatus.SHIPPED),
       ).rejects.toThrow(RpcException);
     });
   });
@@ -265,7 +329,8 @@ describe('OrdersService', () => {
 
     it('throws RpcException when the order is not pending', async () => {
       const order = await createOrder();
-      await service.updateStatus(order.id, OrderStatus.SHIPPED);
+      await payAndCapture(order.id);
+      paypal.createOrder.mockClear();
 
       await expect(service.pay(order.id)).rejects.toBeInstanceOf(RpcException);
       expect(paypal.createOrder).not.toHaveBeenCalled();
@@ -419,6 +484,7 @@ describe('OrdersService', () => {
 
     it('throws RpcException when the order is already shipped', async () => {
       const order = await createOrder();
+      await payAndCapture(order.id);
       await service.updateStatus(order.id, OrderStatus.SHIPPED);
 
       await expect(service.cancel(order.id)).rejects.toBeInstanceOf(
@@ -470,6 +536,7 @@ describe('OrdersService', () => {
 
     it('evicts the order cache when its status changes', async () => {
       const order = await createOrder();
+      await payAndCapture(order.id);
       await service.findOne(order.id);
 
       await service.updateStatus(order.id, OrderStatus.SHIPPED);
