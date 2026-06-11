@@ -17,6 +17,7 @@ import { createInMemoryDataSource } from '../../../test/utils/in-memory-database
 import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
 import { OrdersService } from './orders.service';
 import { OrderEntity } from './entities/order.entity';
+import { PaypalService } from './paypal/paypal.service';
 
 const USER = 'user-1';
 const ADDRESS = '1 Test Street';
@@ -59,12 +60,14 @@ describe('OrdersService', () => {
   let service: OrdersService;
   let productsClient: { send: jest.Mock };
   let cartClient: { send: jest.Mock };
+  let paypal: { createOrder: jest.Mock; captureOrder: jest.Mock };
   let dataSource: DataSource;
   let cacheStore: Map<string, unknown>;
 
   beforeEach(async () => {
     productsClient = { send: jest.fn() };
     cartClient = { send: jest.fn() };
+    paypal = { createOrder: jest.fn(), captureOrder: jest.fn() };
     dataSource = await createInMemoryDataSource([OrderEntity]);
     const { service: cacheService, store } = createInMemoryCache();
     cacheStore = store;
@@ -79,6 +82,7 @@ describe('OrdersService', () => {
         { provide: SERVICE_NAMES.PRODUCTS, useValue: productsClient },
         { provide: SERVICE_NAMES.CART, useValue: cartClient },
         { provide: CacheService, useValue: cacheService },
+        { provide: PaypalService, useValue: paypal },
       ],
     }).compile();
 
@@ -232,6 +236,131 @@ describe('OrdersService', () => {
       await expect(
         service.updateStatus(order.id, OrderStatus.PAID),
       ).rejects.toThrow(RpcException);
+    });
+  });
+
+  describe('pay', () => {
+    it('creates a PayPal order and stores its id on the order', async () => {
+      const order = await createOrder();
+      paypal.createOrder.mockResolvedValue({
+        id: 'pp-1',
+        status: 'CREATED',
+        approveUrl: 'https://paypal.test/approve',
+      });
+
+      const payment = await service.pay(order.id);
+
+      expect(paypal.createOrder).toHaveBeenCalledWith(order.id, order.total);
+      expect(payment).toEqual({
+        orderId: order.id,
+        paymentId: 'pp-1',
+        paymentStatus: 'CREATED',
+        approveUrl: 'https://paypal.test/approve',
+      });
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        paymentId: 'pp-1',
+        status: OrderStatus.PENDING,
+      });
+    });
+
+    it('throws RpcException when the order is not pending', async () => {
+      const order = await createOrder();
+      await service.updateStatus(order.id, OrderStatus.SHIPPED);
+
+      await expect(service.pay(order.id)).rejects.toBeInstanceOf(RpcException);
+      expect(paypal.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('throws RpcException for an unknown id', async () => {
+      await expect(service.pay('missing')).rejects.toBeInstanceOf(RpcException);
+    });
+  });
+
+  describe('capturePayment', () => {
+    async function createPaidForOrder() {
+      const order = await createOrder();
+      paypal.createOrder.mockResolvedValue({
+        id: 'pp-1',
+        status: 'CREATED',
+        approveUrl: 'https://paypal.test/approve',
+      });
+      await service.pay(order.id);
+      return order;
+    }
+
+    it('captures the payment and marks the order as PAID', async () => {
+      const order = await createPaidForOrder();
+      paypal.captureOrder.mockResolvedValue({
+        id: 'pp-1',
+        status: 'COMPLETED',
+        approveUrl: null,
+      });
+
+      const paid = await service.capturePayment(order.id);
+
+      expect(paypal.captureOrder).toHaveBeenCalledWith('pp-1');
+      expect(paid.status).toBe(OrderStatus.PAID);
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.PAID,
+      });
+    });
+
+    it('is idempotent for an already paid order', async () => {
+      const order = await createPaidForOrder();
+      paypal.captureOrder.mockResolvedValue({
+        id: 'pp-1',
+        status: 'COMPLETED',
+        approveUrl: null,
+      });
+      await service.capturePayment(order.id);
+      paypal.captureOrder.mockClear();
+
+      const paid = await service.capturePayment(order.id);
+
+      expect(paid.status).toBe(OrderStatus.PAID);
+      expect(paypal.captureOrder).not.toHaveBeenCalled();
+    });
+
+    it('throws RpcException when the capture is not completed', async () => {
+      const order = await createPaidForOrder();
+      paypal.captureOrder.mockResolvedValue({
+        id: 'pp-1',
+        status: 'DECLINED',
+        approveUrl: null,
+      });
+
+      await expect(service.capturePayment(order.id)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.PENDING,
+      });
+    });
+
+    it('throws RpcException when the order has no payment to capture', async () => {
+      const order = await createOrder();
+
+      await expect(service.capturePayment(order.id)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+      expect(paypal.captureOrder).not.toHaveBeenCalled();
+    });
+
+    it('throws RpcException when the order is cancelled', async () => {
+      const order = await createPaidForOrder();
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+      await service.cancel(order.id);
+
+      await expect(service.capturePayment(order.id)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+      expect(paypal.captureOrder).not.toHaveBeenCalled();
+    });
+
+    it('throws RpcException for an unknown id', async () => {
+      await expect(service.capturePayment('missing')).rejects.toBeInstanceOf(
+        RpcException,
+      );
     });
   });
 

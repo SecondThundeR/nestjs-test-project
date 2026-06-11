@@ -33,6 +33,9 @@ export class OrderEntity implements Order {
   @Column()
   shippingAddress!: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  paymentId!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz', transformer: isoTransformer })
   createdAt!: string;
 

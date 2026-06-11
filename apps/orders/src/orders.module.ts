@@ -6,6 +6,7 @@ import { AppCacheModule } from '@app/cache';
 import {
   buildDatabaseOptions,
   cacheConfig,
+  paypalConfig,
   SERVICE_NAMES,
   servicesConfig,
   validateEnv,
@@ -14,12 +15,13 @@ import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { OrderEntity } from './entities/order.entity';
 import { ordersMigrations } from './migrations';
+import { PaypalService } from './paypal/paypal.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [servicesConfig, cacheConfig],
+      load: [servicesConfig, cacheConfig, paypalConfig],
       validate: validateEnv,
     }),
     AppCacheModule.registerAsync({
@@ -58,6 +60,6 @@ import { ordersMigrations } from './migrations';
     ]),
   ],
   controllers: [OrdersController],
-  providers: [OrdersService],
+  providers: [OrdersService, PaypalService],
 })
 export class OrdersModule {}

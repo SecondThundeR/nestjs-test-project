@@ -3,6 +3,7 @@ import {
   CART_PATTERNS,
   CartItem,
   type OrderItem,
+  type OrderPayment,
   OrderStatus,
   type Product,
   PRODUCT_PATTERNS,
@@ -17,7 +18,10 @@ import { randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
 import { OrderEntity } from './entities/order.entity';
+import { PaypalService } from './paypal/paypal.service';
 import { roundPrice } from '@app/utils';
+
+const PAYPAL_COMPLETED_STATUS = 'COMPLETED';
 
 const ALL_ORDERS_CACHE_KEY = 'orders:all';
 
@@ -40,6 +44,7 @@ export class OrdersService {
     private readonly productsClient: ClientProxy,
     @Inject(SERVICE_NAMES.CART) private readonly cartClient: ClientProxy,
     private readonly cache: CacheService,
+    private readonly paypal: PaypalService,
   ) {}
 
   async create(userId: string, shippingAddress: string): Promise<OrderEntity> {
@@ -138,6 +143,83 @@ export class OrdersService {
 
     this.logger.log(
       `Order ${id} status ${previousOrderStatus} changed to ${status}`,
+    );
+    return saved;
+  }
+
+  async pay(id: string): Promise<OrderPayment> {
+    this.logger.log(`Starting PayPal payment for order ${id}`);
+
+    const order = await this.findOne(id);
+    if (order.status !== OrderStatus.PENDING) {
+      this.logger.warn(
+        `Order ${id} is ${order.status} and cannot start a payment`,
+      );
+      throw RpcErrors.badRequest(
+        `Only a ${OrderStatus.PENDING} order can be paid, order ${id} is ${order.status}`,
+      );
+    }
+
+    const payment = await this.paypal.createOrder(order.id, order.total);
+
+    order.paymentId = payment.id;
+    const saved = await this.orders.save(order);
+
+    await this.invalidate(saved);
+
+    this.logger.log(
+      `Order ${id} is awaiting approval of PayPal payment ${payment.id}`,
+    );
+    return {
+      orderId: saved.id,
+      paymentId: payment.id,
+      paymentStatus: payment.status,
+      approveUrl: payment.approveUrl,
+    };
+  }
+
+  async capturePayment(id: string): Promise<OrderEntity> {
+    this.logger.log(`Capturing PayPal payment for order ${id}`);
+
+    const order = await this.findOne(id);
+    if (order.status === OrderStatus.PAID) {
+      this.logger.debug(`Order ${id} is already paid`);
+      return order;
+    }
+
+    if (order.status !== OrderStatus.PENDING) {
+      this.logger.warn(
+        `Order ${id} is ${order.status} and cannot capture a payment`,
+      );
+      throw RpcErrors.badRequest(
+        `Only a ${OrderStatus.PENDING} order can capture a payment, order ${id} is ${order.status}`,
+      );
+    }
+
+    if (!order.paymentId) {
+      this.logger.warn(`Order ${id} has no PayPal payment to capture`);
+      throw RpcErrors.badRequest(
+        `Order ${id} has no payment to capture, start a payment first`,
+      );
+    }
+
+    const payment = await this.paypal.captureOrder(order.paymentId);
+    if (payment.status !== PAYPAL_COMPLETED_STATUS) {
+      this.logger.warn(
+        `PayPal payment ${order.paymentId} for order ${id} is not completed: ${payment.status}`,
+      );
+      throw RpcErrors.badRequest(
+        `PayPal payment is not completed, its status is ${payment.status}`,
+      );
+    }
+
+    order.status = OrderStatus.PAID;
+    const saved = await this.orders.save(order);
+
+    await this.invalidate(saved);
+
+    this.logger.log(
+      `Order ${id} paid with PayPal payment ${order.paymentId} (total ${order.total})`,
     );
     return saved;
   }

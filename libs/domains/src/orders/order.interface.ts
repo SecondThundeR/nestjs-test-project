@@ -21,6 +21,14 @@ export interface Order {
   total: number;
   status: OrderStatus;
   shippingAddress: string;
+  paymentId: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface OrderPayment {
+  orderId: string;
+  paymentId: string;
+  paymentStatus: string;
+  approveUrl: string | null;
 }

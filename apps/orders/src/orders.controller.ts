@@ -35,4 +35,14 @@ export class OrdersController {
   cancel(@Payload() id: string) {
     return this.ordersService.cancel(id);
   }
+
+  @MessagePattern(ORDERS_PATTERNS.PAY)
+  pay(@Payload() id: string) {
+    return this.ordersService.pay(id);
+  }
+
+  @MessagePattern(ORDERS_PATTERNS.CAPTURE_PAYMENT)
+  capturePayment(@Payload() id: string) {
+    return this.ordersService.capturePayment(id);
+  }
 }
