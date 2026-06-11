@@ -11,6 +11,7 @@ import {
 import { CartController } from './cart.controller';
 import { CartService } from './cart.service';
 import { CartSchema } from './schemas/cart.schema';
+import { cartMigrations } from './migrations';
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { CartSchema } from './schemas/cart.schema';
       validate: validateEnv,
     }),
     TypeOrmModule.forRootAsync({
-      useFactory: () => buildDatabaseOptions('CART', [CartSchema]),
+      useFactory: () =>
+        buildDatabaseOptions('CART', [CartSchema], cartMigrations),
     }),
     TypeOrmModule.forFeature([CartSchema]),
     ClientsModule.registerAsync([

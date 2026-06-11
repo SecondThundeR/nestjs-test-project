@@ -16,6 +16,7 @@ import {
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { SessionEntity } from './entities/session.entity';
+import { authMigrations } from './migrations';
 
 @Module({
   imports: [
@@ -34,7 +35,8 @@ import { SessionEntity } from './entities/session.entity';
     }),
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
-      useFactory: () => buildDatabaseOptions('AUTH', [SessionEntity]),
+      useFactory: () =>
+        buildDatabaseOptions('AUTH', [SessionEntity], authMigrations),
     }),
     TypeOrmModule.forFeature([SessionEntity]),
     JwtModule.registerAsync({

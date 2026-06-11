@@ -111,6 +111,11 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  DB_MIGRATIONS_RUN?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
   REDIS_HOST?: string;
 
   @IsOptional()

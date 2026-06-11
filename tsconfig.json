@@ -38,5 +38,13 @@
     },
     "baseUrl": "./",
     "ignoreDeprecations": "6.0"
+  },
+  "ts-node": {
+    "transpileOnly": true,
+    "compilerOptions": {
+      "module": "commonjs",
+      "moduleResolution": "node",
+      "resolvePackageJsonExports": false
+    }
   }
 }

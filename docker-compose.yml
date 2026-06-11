@@ -29,6 +29,8 @@ services:
     <<: *app-base
     command: ['node', 'dist/apps/products/main']
     environment:
+      DB_SYNCHRONIZE: 'false'
+      DB_MIGRATIONS_RUN: 'true'
       PRODUCTS_DB_HOST: products-db
       PRODUCTS_DB_PORT: 5432
       REDIS_HOST: cache
@@ -43,6 +45,8 @@ services:
     <<: *app-base
     command: ['node', 'dist/apps/cart/main']
     environment:
+      DB_SYNCHRONIZE: 'false'
+      DB_MIGRATIONS_RUN: 'true'
       CART_DB_HOST: cart-db
       CART_DB_PORT: 5432
     depends_on:
@@ -53,6 +57,8 @@ services:
     <<: *app-base
     command: ['node', 'dist/apps/orders/main']
     environment:
+      DB_SYNCHRONIZE: 'false'
+      DB_MIGRATIONS_RUN: 'true'
       ORDERS_DB_HOST: orders-db
       ORDERS_DB_PORT: 5432
       REDIS_HOST: cache
@@ -67,6 +73,8 @@ services:
     <<: *app-base
     command: ['node', 'dist/apps/users/main']
     environment:
+      DB_SYNCHRONIZE: 'false'
+      DB_MIGRATIONS_RUN: 'true'
       USERS_DB_HOST: users-db
       USERS_DB_PORT: 5432
       REDIS_HOST: cache
@@ -81,6 +89,8 @@ services:
     <<: *app-base
     command: ['node', 'dist/apps/auth/main']
     environment:
+      DB_SYNCHRONIZE: 'false'
+      DB_MIGRATIONS_RUN: 'true'
       AUTH_DB_HOST: auth-db
       AUTH_DB_PORT: 5432
       USERS_HOST: users
