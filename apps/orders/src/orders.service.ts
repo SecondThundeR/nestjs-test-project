@@ -243,6 +243,7 @@ export class OrdersService {
     }
 
     order.status = OrderStatus.PAID;
+    order.captureId = payment.captureId ?? null;
     const saved = await this.orders.save(order);
 
     await this.invalidate(saved);
@@ -282,6 +283,10 @@ export class OrdersService {
       );
     }
 
+    if (order.status === OrderStatus.PAID) {
+      await this.refundPayment(order);
+    }
+
     await Promise.all(order.items.map(this.rollbackOrderItemStock.bind(this)));
 
     order.status = OrderStatus.CANCELLED;
@@ -291,6 +296,31 @@ export class OrdersService {
 
     this.logger.log(`Order ${id} cancelled and stock restored`);
     return saved;
+  }
+
+  private async refundPayment(order: OrderEntity): Promise<void> {
+    if (!order.captureId) {
+      this.logger.warn(
+        `Order ${order.id} is paid but has no PayPal capture to refund`,
+      );
+      throw RpcErrors.badRequest(
+        `Order ${order.id} payment cannot be refunded automatically`,
+      );
+    }
+
+    const refund = await this.paypal.refundCapture(order.captureId);
+    if (refund.status !== PAYPAL_COMPLETED_STATUS) {
+      this.logger.warn(
+        `PayPal refund ${refund.id} for order ${order.id} is not completed: ${refund.status}`,
+      );
+      throw RpcErrors.badRequest(
+        `PayPal refund is not completed, its status is ${refund.status}`,
+      );
+    }
+
+    this.logger.log(
+      `Refunded PayPal capture ${order.captureId} for order ${order.id} (total ${order.total})`,
+    );
   }
 
   private invalidate(order: OrderEntity): Promise<void> {

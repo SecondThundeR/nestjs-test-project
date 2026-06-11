@@ -64,7 +64,11 @@ describe('Orders microservice (e2e)', () => {
   let client: ClientProxy;
   const productsClient = { send: jest.fn(), emit: jest.fn() };
   const cartClient = { send: jest.fn(), emit: jest.fn() };
-  const paypal = { createOrder: jest.fn(), captureOrder: jest.fn() };
+  const paypal = {
+    createOrder: jest.fn(),
+    captureOrder: jest.fn(),
+    refundCapture: jest.fn(),
+  };
 
   beforeAll(async () => {
     const dataSource = await createInMemoryDataSource([OrderEntity]);
@@ -113,6 +117,7 @@ describe('Orders microservice (e2e)', () => {
     cartClient.send.mockReset();
     paypal.createOrder.mockReset();
     paypal.captureOrder.mockReset();
+    paypal.refundCapture.mockReset();
   });
 
   function send<T>(pattern: string, payload: unknown): Promise<T> {
@@ -205,6 +210,44 @@ describe('Orders microservice (e2e)', () => {
     );
     const cancelled = await send<Order>(ORDERS_PATTERNS.CANCEL, order.id);
     expect(cancelled.status).toBe(OrderStatus.CANCELLED);
+  });
+
+  it('refunds the payment when cancelling a paid order', async () => {
+    mockHappyPath();
+
+    const order = await send<Order>(ORDERS_PATTERNS.CREATE, {
+      userId: USER,
+      shippingAddress: ADDRESS,
+    });
+
+    paypal.createOrder.mockResolvedValue({
+      id: 'pp-refund-1',
+      status: 'PAYER_ACTION_REQUIRED',
+      approveUrl: 'https://paypal.test/checkoutnow',
+    });
+    await send<OrderPayment>(ORDERS_PATTERNS.PAY, order.id);
+
+    paypal.captureOrder.mockResolvedValue({
+      id: 'pp-refund-1',
+      status: 'COMPLETED',
+      approveUrl: null,
+      captureId: 'cap-refund-1',
+    });
+    await send<Order>(ORDERS_PATTERNS.CAPTURE_PAYMENT, order.id);
+
+    paypal.refundCapture.mockResolvedValue({
+      id: 'ref-1',
+      status: 'COMPLETED',
+    });
+    productsClient.send.mockImplementation((pattern: string) =>
+      pattern === PRODUCT_PATTERNS.FIND_ONE
+        ? of(makeProduct({ stock: 3 }))
+        : of(makeProduct()),
+    );
+    const cancelled = await send<Order>(ORDERS_PATTERNS.CANCEL, order.id);
+
+    expect(cancelled.status).toBe(OrderStatus.CANCELLED);
+    expect(paypal.refundCapture).toHaveBeenCalledWith('cap-refund-1');
   });
 
   it('captures a payment by the PayPal return token', async () => {

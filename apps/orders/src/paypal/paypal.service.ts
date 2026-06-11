@@ -14,16 +14,30 @@ interface PaypalLink {
   method?: string;
 }
 
+interface PaypalCaptureResponse {
+  id: string;
+  status: string;
+}
+
 interface PaypalOrderResponse {
   id: string;
   status: string;
   links?: PaypalLink[];
+  purchase_units?: {
+    payments?: { captures?: PaypalCaptureResponse[] };
+  }[];
 }
 
 export interface PaypalOrder {
   id: string;
   status: string;
   approveUrl: string | null;
+  captureId: string | null;
+}
+
+export interface PaypalRefund {
+  id: string;
+  status: string;
 }
 
 const TOKEN_EXPIRY_MARGIN_MS = 60_000;
@@ -91,12 +105,29 @@ export class PaypalService {
     return this.toPaypalOrder(response);
   }
 
+  async refundCapture(captureId: string): Promise<PaypalRefund> {
+    this.logger.log(`Refunding PayPal capture ${captureId}`);
+
+    const response = await this.request<PaypalRefund>(
+      'POST',
+      `/v2/payments/captures/${captureId}/refund`,
+      {},
+    );
+
+    this.logger.log(
+      `PayPal capture ${captureId} refund ${response.id} finished with status ${response.status}`,
+    );
+    return { id: response.id, status: response.status };
+  }
+
   private toPaypalOrder(response: PaypalOrderResponse): PaypalOrder {
     const approveUrl =
       response.links?.find(
         ({ rel }) => rel === 'approve' || rel === 'payer-action',
       )?.href ?? null;
-    return { id: response.id, status: response.status, approveUrl };
+    const captureId =
+      response.purchase_units?.[0]?.payments?.captures?.[0]?.id ?? null;
+    return { id: response.id, status: response.status, approveUrl, captureId };
   }
 
   private async request<T>(

@@ -60,14 +60,22 @@ describe('OrdersService', () => {
   let service: OrdersService;
   let productsClient: { send: jest.Mock };
   let cartClient: { send: jest.Mock };
-  let paypal: { createOrder: jest.Mock; captureOrder: jest.Mock };
+  let paypal: {
+    createOrder: jest.Mock;
+    captureOrder: jest.Mock;
+    refundCapture: jest.Mock;
+  };
   let dataSource: DataSource;
   let cacheStore: Map<string, unknown>;
 
   beforeEach(async () => {
     productsClient = { send: jest.fn() };
     cartClient = { send: jest.fn() };
-    paypal = { createOrder: jest.fn(), captureOrder: jest.fn() };
+    paypal = {
+      createOrder: jest.fn(),
+      captureOrder: jest.fn(),
+      refundCapture: jest.fn(),
+    };
     dataSource = await createInMemoryDataSource([OrderEntity]);
     const { service: cacheService, store } = createInMemoryCache();
     cacheStore = store;
@@ -120,6 +128,7 @@ describe('OrdersService', () => {
       id: 'pp-1',
       status: 'COMPLETED',
       approveUrl: null,
+      captureId: 'cap-1',
     });
     await service.pay(orderId);
     await service.capturePayment(orderId);
@@ -359,6 +368,7 @@ describe('OrdersService', () => {
         id: 'pp-1',
         status: 'COMPLETED',
         approveUrl: null,
+        captureId: 'cap-1',
       });
 
       const paid = await service.capturePayment(order.id);
@@ -367,6 +377,7 @@ describe('OrdersService', () => {
       expect(paid.status).toBe(OrderStatus.PAID);
       await expect(service.findOne(order.id)).resolves.toMatchObject({
         status: OrderStatus.PAID,
+        captureId: 'cap-1',
       });
     });
 
@@ -376,6 +387,7 @@ describe('OrdersService', () => {
         id: 'pp-1',
         status: 'COMPLETED',
         approveUrl: null,
+        captureId: 'cap-1',
       });
       await service.capturePayment(order.id);
       paypal.captureOrder.mockClear();
@@ -392,6 +404,7 @@ describe('OrdersService', () => {
         id: 'pp-1',
         status: 'DECLINED',
         approveUrl: null,
+        captureId: null,
       });
 
       await expect(service.capturePayment(order.id)).rejects.toBeInstanceOf(
@@ -498,6 +511,69 @@ describe('OrdersService', () => {
         PRODUCT_PATTERNS.UPDATE,
         expect.anything(),
       );
+    });
+
+    it('does not refund when cancelling an unpaid order', async () => {
+      const order = await createOrder();
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+
+      const cancelled = await service.cancel(order.id);
+
+      expect(cancelled.status).toBe(OrderStatus.CANCELLED);
+      expect(paypal.refundCapture).not.toHaveBeenCalled();
+    });
+
+    it('refunds the payment when cancelling a paid order', async () => {
+      const order = await createOrder();
+      await payAndCapture(order.id);
+      paypal.refundCapture.mockResolvedValue({
+        id: 'ref-1',
+        status: 'COMPLETED',
+      });
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+
+      const cancelled = await service.cancel(order.id);
+
+      expect(paypal.refundCapture).toHaveBeenCalledWith('cap-1');
+      expect(cancelled.status).toBe(OrderStatus.CANCELLED);
+    });
+
+    it('keeps the order PAID when the refund is not completed', async () => {
+      const order = await createOrder();
+      await payAndCapture(order.id);
+      paypal.refundCapture.mockResolvedValue({
+        id: 'ref-1',
+        status: 'PENDING',
+      });
+
+      await expect(service.cancel(order.id)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.PAID,
+      });
+    });
+
+    it('throws RpcException when a paid order has no capture to refund', async () => {
+      const order = await createOrder();
+      paypal.createOrder.mockResolvedValue({
+        id: 'pp-1',
+        status: 'CREATED',
+        approveUrl: null,
+      });
+      paypal.captureOrder.mockResolvedValue({
+        id: 'pp-1',
+        status: 'COMPLETED',
+        approveUrl: null,
+        captureId: null,
+      });
+      await service.pay(order.id);
+      await service.capturePayment(order.id);
+
+      await expect(service.cancel(order.id)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+      expect(paypal.refundCapture).not.toHaveBeenCalled();
     });
 
     it('is idempotent for an already cancelled order', async () => {

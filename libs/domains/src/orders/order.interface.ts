@@ -22,6 +22,7 @@ export interface Order {
   status: OrderStatus;
   shippingAddress: string;
   paymentId: string | null;
+  captureId: string | null;
   createdAt: string;
   updatedAt: string;
 }

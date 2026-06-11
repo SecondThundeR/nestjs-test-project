@@ -104,6 +104,7 @@ describe('PaypalService', () => {
         id: 'pp-1',
         status: 'CREATED',
         approveUrl: 'https://paypal.test/approve',
+        captureId: null,
       });
     });
 
@@ -184,22 +185,39 @@ describe('PaypalService', () => {
   });
 
   describe('captureOrder', () => {
-    it('captures the PayPal order and returns its status', async () => {
+    it('captures the PayPal order and returns its status and capture id', async () => {
+      fetchMock.mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(
+        jsonResponse({
+          id: 'pp-1',
+          status: 'COMPLETED',
+          purchase_units: [
+            { payments: { captures: [{ id: 'cap-1', status: 'COMPLETED' }] } },
+          ],
+        }),
+      );
+
+      await expect(service.captureOrder('pp-1')).resolves.toEqual({
+        id: 'pp-1',
+        status: 'COMPLETED',
+        approveUrl: null,
+        captureId: 'cap-1',
+      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        `${API_URL}/v2/checkout/orders/pp-1/capture`,
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    it('returns a null captureId when the response has no captures', async () => {
       fetchMock
         .mockResolvedValueOnce(tokenResponse())
         .mockResolvedValueOnce(
           jsonResponse({ id: 'pp-1', status: 'COMPLETED' }),
         );
 
-      await expect(service.captureOrder('pp-1')).resolves.toEqual({
-        id: 'pp-1',
-        status: 'COMPLETED',
-        approveUrl: null,
+      await expect(service.captureOrder('pp-1')).resolves.toMatchObject({
+        captureId: null,
       });
-      expect(fetchMock).toHaveBeenCalledWith(
-        `${API_URL}/v2/checkout/orders/pp-1/capture`,
-        expect.objectContaining({ method: 'POST' }),
-      );
     });
 
     it('throws RpcException when the capture request fails', async () => {
@@ -210,6 +228,37 @@ describe('PaypalService', () => {
         );
 
       await expect(service.captureOrder('pp-1')).rejects.toBeInstanceOf(
+        RpcException,
+      );
+    });
+  });
+
+  describe('refundCapture', () => {
+    it('refunds the capture and returns the refund status', async () => {
+      fetchMock
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(
+          jsonResponse({ id: 'ref-1', status: 'COMPLETED' }),
+        );
+
+      await expect(service.refundCapture('cap-1')).resolves.toEqual({
+        id: 'ref-1',
+        status: 'COMPLETED',
+      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        `${API_URL}/v2/payments/captures/cap-1/refund`,
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    it('throws RpcException when the refund request fails', async () => {
+      fetchMock
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(
+          jsonResponse({ name: 'CAPTURE_FULLY_REFUNDED' }, 422),
+        );
+
+      await expect(service.refundCapture('cap-1')).rejects.toBeInstanceOf(
         RpcException,
       );
     });
