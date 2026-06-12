@@ -18,6 +18,15 @@ function tokenResponse(accessToken = 'token-1'): Response {
   return jsonResponse({ access_token: accessToken, expires_in: 3600 });
 }
 
+function unreadableErrorResponse(status: number): Response {
+  return {
+    ok: false,
+    status,
+    json: () => Promise.reject(new Error('read failed')),
+    text: () => Promise.reject(new Error('read failed')),
+  } as Response;
+}
+
 describe('PaypalService', () => {
   let service: PaypalService;
   let fetchMock: jest.Mock;
@@ -183,6 +192,16 @@ describe('PaypalService', () => {
       );
     });
 
+    it('throws RpcException when the error body cannot be read', async () => {
+      fetchMock
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(unreadableErrorResponse(422));
+
+      await expect(service.createOrder('order-1', 10)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+    });
+
     it('maps a PayPal server error to a 502 Bad Gateway', async () => {
       fetchMock
         .mockResolvedValueOnce(tokenResponse())
@@ -301,6 +320,16 @@ describe('PaypalService', () => {
         id: 'cap-1',
         status: 'ALREADY_REFUNDED',
       });
+    });
+
+    it('throws RpcException when the 422 error body cannot be read', async () => {
+      fetchMock
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(unreadableErrorResponse(422));
+
+      await expect(service.refundCapture('cap-1')).rejects.toBeInstanceOf(
+        RpcException,
+      );
     });
 
     it('throws RpcException when the refund request fails', async () => {

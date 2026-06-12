@@ -306,6 +306,41 @@ describe('OrdersService', () => {
         service.updateStatus(order.id, OrderStatus.SHIPPED),
       ).rejects.toThrow(RpcException);
     });
+
+    it('throws a conflict when the order is modified concurrently', async () => {
+      const order = await createOrder();
+      await payAndCapture(order.id);
+      jest
+        .spyOn(dataSource.getRepository(OrderEntity), 'update')
+        .mockResolvedValue({ affected: 0, raw: [], generatedMaps: [] });
+
+      const error: unknown = await service
+        .updateStatus(order.id, OrderStatus.SHIPPED)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(RpcException);
+      expect((error as RpcException).getError()).toMatchObject({
+        statusCode: 409,
+      });
+    });
+
+    it('throws not found when the order disappears mid-transition', async () => {
+      const order = await createOrder();
+      await payAndCapture(order.id);
+      await service.findOne(order.id);
+      jest
+        .spyOn(dataSource.getRepository(OrderEntity), 'findOneBy')
+        .mockResolvedValue(null);
+
+      const error: unknown = await service
+        .updateStatus(order.id, OrderStatus.SHIPPED)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(RpcException);
+      expect((error as RpcException).getError()).toMatchObject({
+        statusCode: 404,
+      });
+    });
   });
 
   describe('pay', () => {
@@ -447,6 +482,20 @@ describe('OrdersService', () => {
       await expect(service.findOne(order.id)).resolves.toMatchObject({
         status: OrderStatus.CANCELLED,
       });
+    });
+
+    it('does not refund a conflicting capture that has no capture id', async () => {
+      const order = await createPaidForOrder();
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+      paypal.captureOrder.mockImplementation(async () => {
+        await service.cancel(order.id);
+        return makePaypalCapture({ captureId: null });
+      });
+
+      await expect(service.capturePayment(order.id)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+      expect(paypal.refundCapture).not.toHaveBeenCalled();
     });
   });
 
@@ -605,6 +654,26 @@ describe('OrdersService', () => {
     it('throws RpcException for an unknown id', async () => {
       await expect(service.cancel('missing')).rejects.toBeInstanceOf(
         RpcException,
+      );
+    });
+
+    it('throws a conflict when the order is modified concurrently', async () => {
+      const order = await createOrder();
+      jest
+        .spyOn(dataSource.getRepository(OrderEntity), 'update')
+        .mockResolvedValue({ affected: 0, raw: [], generatedMaps: [] });
+
+      const error: unknown = await service
+        .cancel(order.id)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(RpcException);
+      expect((error as RpcException).getError()).toMatchObject({
+        statusCode: 409,
+      });
+      expect(productsClient.send).not.toHaveBeenCalledWith(
+        PRODUCT_PATTERNS.FIND_ONE,
+        expect.anything(),
       );
     });
   });
