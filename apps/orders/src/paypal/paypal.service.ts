@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
+import type { RpcException } from '@nestjs/microservices';
 import { paypalConfig } from '@app/config';
 import { RpcErrors } from '@app/filters';
 
@@ -42,12 +43,15 @@ export interface PaypalRefund {
 
 const TOKEN_EXPIRY_MARGIN_MS = 60_000;
 
+export const PAYPAL_ALREADY_REFUNDED_STATUS = 'ALREADY_REFUNDED';
+
 @Injectable()
 export class PaypalService {
   private readonly logger = new Logger(PaypalService.name);
 
   private accessToken: string | null = null;
   private accessTokenExpiresAt = 0;
+  private accessTokenRequest: Promise<string> | null = null;
 
   constructor(
     @Inject(paypalConfig.KEY)
@@ -108,16 +112,26 @@ export class PaypalService {
   async refundCapture(captureId: string): Promise<PaypalRefund> {
     this.logger.log(`Refunding PayPal capture ${captureId}`);
 
-    const response = await this.request<PaypalRefund>(
-      'POST',
-      `/v2/payments/captures/${captureId}/refund`,
-      {},
-    );
+    const path = `/v2/payments/captures/${captureId}/refund`;
+    const response = await this.fetchWithAuth('POST', path, {});
 
+    if (!response.ok) {
+      const details = await response.text().catch(() => '');
+      if (
+        response.status === 422 &&
+        details.includes('CAPTURE_FULLY_REFUNDED')
+      ) {
+        this.logger.warn(`PayPal capture ${captureId} is already refunded`);
+        return { id: captureId, status: PAYPAL_ALREADY_REFUNDED_STATUS };
+      }
+      throw this.toRpcError('POST', path, response.status, details);
+    }
+
+    const refund = (await response.json()) as PaypalRefund;
     this.logger.log(
-      `PayPal capture ${captureId} refund ${response.id} finished with status ${response.status}`,
+      `PayPal capture ${captureId} refund ${refund.id} finished with status ${refund.status}`,
     );
-    return { id: response.id, status: response.status };
+    return { id: refund.id, status: refund.status };
   }
 
   private toPaypalOrder(response: PaypalOrderResponse): PaypalOrder {
@@ -135,13 +149,28 @@ export class PaypalService {
     path: string,
     body?: unknown,
   ): Promise<T> {
+    const response = await this.fetchWithAuth(method, path, body);
+
+    if (!response.ok) {
+      const details = await response.text().catch(() => '');
+      throw this.toRpcError(method, path, response.status, details);
+    }
+
+    return (await response.json()) as T;
+  }
+
+  private async fetchWithAuth(
+    method: string,
+    path: string,
+    body?: unknown,
+  ): Promise<Response> {
     if (!this.config.clientId || !this.config.clientSecret) {
       this.logger.error('PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET is not set');
       throw RpcErrors.badRequest('PayPal payments are not configured');
     }
 
     const accessToken = await this.getAccessToken();
-    const response = await fetch(`${this.config.apiUrl}${path}`, {
+    return fetch(`${this.config.apiUrl}${path}`, {
       method,
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -149,25 +178,38 @@ export class PaypalService {
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-
-    if (!response.ok) {
-      const details = await response.text().catch(() => '');
-      this.logger.error(
-        `PayPal ${method} ${path} failed with status ${response.status}: ${details}`,
-      );
-      throw RpcErrors.badRequest(
-        `PayPal request failed with status ${response.status}`,
-      );
-    }
-
-    return (await response.json()) as T;
   }
 
-  private async getAccessToken(): Promise<string> {
+  private toRpcError(
+    method: string,
+    path: string,
+    status: number,
+    details: string,
+  ): RpcException {
+    this.logger.error(
+      `PayPal ${method} ${path} failed with status ${status}: ${details}`,
+    );
+
+    if (status === 401 || status === 403 || status >= 500) {
+      return RpcErrors.badGateway(
+        `PayPal request failed with status ${status}`,
+      );
+    }
+    return RpcErrors.badRequest(`PayPal request failed with status ${status}`);
+  }
+
+  private getAccessToken(): Promise<string> {
     if (this.accessToken && Date.now() < this.accessTokenExpiresAt) {
-      return this.accessToken;
+      return Promise.resolve(this.accessToken);
     }
 
+    this.accessTokenRequest ??= this.fetchAccessToken().finally(() => {
+      this.accessTokenRequest = null;
+    });
+    return this.accessTokenRequest;
+  }
+
+  private async fetchAccessToken(): Promise<string> {
     const credentials = Buffer.from(
       `${this.config.clientId}:${this.config.clientSecret}`,
     ).toString('base64');
@@ -185,7 +227,7 @@ export class PaypalService {
       this.logger.error(
         `PayPal authentication failed with status ${response.status}`,
       );
-      throw RpcErrors.badRequest('Failed to authenticate with PayPal');
+      throw RpcErrors.badGateway('Failed to authenticate with PayPal');
     }
 
     const token = (await response.json()) as PaypalTokenResponse;

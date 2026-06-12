@@ -15,6 +15,11 @@ import { SERVICE_NAMES } from '@app/config';
 import { CacheService } from '@app/cache';
 import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
+import {
+  makePaypalCapture,
+  makePaypalOrder,
+  makePaypalRefund,
+} from '../../../test/utils/paypal';
 import { OrdersService } from './orders.service';
 import { OrderEntity } from './entities/order.entity';
 import { PaypalService } from './paypal/paypal.service';
@@ -119,17 +124,8 @@ describe('OrdersService', () => {
   }
 
   async function payAndCapture(orderId: string) {
-    paypal.createOrder.mockResolvedValue({
-      id: 'pp-1',
-      status: 'CREATED',
-      approveUrl: 'https://paypal.test/approve',
-    });
-    paypal.captureOrder.mockResolvedValue({
-      id: 'pp-1',
-      status: 'COMPLETED',
-      approveUrl: null,
-      captureId: 'cap-1',
-    });
+    paypal.createOrder.mockResolvedValue(makePaypalOrder());
+    paypal.captureOrder.mockResolvedValue(makePaypalCapture());
     await service.pay(orderId);
     await service.capturePayment(orderId);
   }
@@ -315,11 +311,7 @@ describe('OrdersService', () => {
   describe('pay', () => {
     it('creates a PayPal order and stores its id on the order', async () => {
       const order = await createOrder();
-      paypal.createOrder.mockResolvedValue({
-        id: 'pp-1',
-        status: 'CREATED',
-        approveUrl: 'https://paypal.test/approve',
-      });
+      paypal.createOrder.mockResolvedValue(makePaypalOrder());
 
       const payment = await service.pay(order.id);
 
@@ -348,28 +340,34 @@ describe('OrdersService', () => {
     it('throws RpcException for an unknown id', async () => {
       await expect(service.pay('missing')).rejects.toBeInstanceOf(RpcException);
     });
+
+    it('does not attach the payment when the order changes mid-flight', async () => {
+      const order = await createOrder();
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+      paypal.createOrder.mockImplementation(async () => {
+        await service.cancel(order.id);
+        return makePaypalOrder();
+      });
+
+      await expect(service.pay(order.id)).rejects.toBeInstanceOf(RpcException);
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.CANCELLED,
+        paymentId: null,
+      });
+    });
   });
 
   describe('capturePayment', () => {
     async function createPaidForOrder() {
       const order = await createOrder();
-      paypal.createOrder.mockResolvedValue({
-        id: 'pp-1',
-        status: 'CREATED',
-        approveUrl: 'https://paypal.test/approve',
-      });
+      paypal.createOrder.mockResolvedValue(makePaypalOrder());
       await service.pay(order.id);
       return order;
     }
 
     it('captures the payment and marks the order as PAID', async () => {
       const order = await createPaidForOrder();
-      paypal.captureOrder.mockResolvedValue({
-        id: 'pp-1',
-        status: 'COMPLETED',
-        approveUrl: null,
-        captureId: 'cap-1',
-      });
+      paypal.captureOrder.mockResolvedValue(makePaypalCapture());
 
       const paid = await service.capturePayment(order.id);
 
@@ -383,12 +381,7 @@ describe('OrdersService', () => {
 
     it('is idempotent for an already paid order', async () => {
       const order = await createPaidForOrder();
-      paypal.captureOrder.mockResolvedValue({
-        id: 'pp-1',
-        status: 'COMPLETED',
-        approveUrl: null,
-        captureId: 'cap-1',
-      });
+      paypal.captureOrder.mockResolvedValue(makePaypalCapture());
       await service.capturePayment(order.id);
       paypal.captureOrder.mockClear();
 
@@ -400,12 +393,9 @@ describe('OrdersService', () => {
 
     it('throws RpcException when the capture is not completed', async () => {
       const order = await createPaidForOrder();
-      paypal.captureOrder.mockResolvedValue({
-        id: 'pp-1',
-        status: 'DECLINED',
-        approveUrl: null,
-        captureId: null,
-      });
+      paypal.captureOrder.mockResolvedValue(
+        makePaypalCapture({ status: 'DECLINED', captureId: null }),
+      );
 
       await expect(service.capturePayment(order.id)).rejects.toBeInstanceOf(
         RpcException,
@@ -440,21 +430,31 @@ describe('OrdersService', () => {
         RpcException,
       );
     });
+
+    it('refunds the charge when the order changes mid-capture', async () => {
+      const order = await createPaidForOrder();
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+      paypal.captureOrder.mockImplementation(async () => {
+        await service.cancel(order.id);
+        return makePaypalCapture();
+      });
+      paypal.refundCapture.mockResolvedValue(makePaypalRefund());
+
+      await expect(service.capturePayment(order.id)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+      expect(paypal.refundCapture).toHaveBeenCalledWith('cap-1');
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.CANCELLED,
+      });
+    });
   });
 
   describe('captureByPaymentId', () => {
     it('captures the payment of the order matching the PayPal order id', async () => {
       const order = await createOrder();
-      paypal.createOrder.mockResolvedValue({
-        id: 'pp-1',
-        status: 'CREATED',
-        approveUrl: 'https://paypal.test/approve',
-      });
-      paypal.captureOrder.mockResolvedValue({
-        id: 'pp-1',
-        status: 'COMPLETED',
-        approveUrl: null,
-      });
+      paypal.createOrder.mockResolvedValue(makePaypalOrder());
+      paypal.captureOrder.mockResolvedValue(makePaypalCapture());
       await service.pay(order.id);
 
       const paid = await service.captureByPaymentId('pp-1');
@@ -526,10 +526,7 @@ describe('OrdersService', () => {
     it('refunds the payment when cancelling a paid order', async () => {
       const order = await createOrder();
       await payAndCapture(order.id);
-      paypal.refundCapture.mockResolvedValue({
-        id: 'ref-1',
-        status: 'COMPLETED',
-      });
+      paypal.refundCapture.mockResolvedValue(makePaypalRefund());
       productsClient.send.mockImplementation(() => of(makeProduct()));
 
       const cancelled = await service.cancel(order.id);
@@ -538,13 +535,25 @@ describe('OrdersService', () => {
       expect(cancelled.status).toBe(OrderStatus.CANCELLED);
     });
 
-    it('keeps the order PAID when the refund is not completed', async () => {
+    it('cancels the order when the refund is still pending', async () => {
       const order = await createOrder();
       await payAndCapture(order.id);
-      paypal.refundCapture.mockResolvedValue({
-        id: 'ref-1',
-        status: 'PENDING',
-      });
+      paypal.refundCapture.mockResolvedValue(
+        makePaypalRefund({ status: 'PENDING' }),
+      );
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+
+      const cancelled = await service.cancel(order.id);
+
+      expect(cancelled.status).toBe(OrderStatus.CANCELLED);
+    });
+
+    it('keeps the order PAID when the refund fails', async () => {
+      const order = await createOrder();
+      await payAndCapture(order.id);
+      paypal.refundCapture.mockResolvedValue(
+        makePaypalRefund({ status: 'FAILED' }),
+      );
 
       await expect(service.cancel(order.id)).rejects.toBeInstanceOf(
         RpcException,
@@ -556,17 +565,12 @@ describe('OrdersService', () => {
 
     it('throws RpcException when a paid order has no capture to refund', async () => {
       const order = await createOrder();
-      paypal.createOrder.mockResolvedValue({
-        id: 'pp-1',
-        status: 'CREATED',
-        approveUrl: null,
-      });
-      paypal.captureOrder.mockResolvedValue({
-        id: 'pp-1',
-        status: 'COMPLETED',
-        approveUrl: null,
-        captureId: null,
-      });
+      paypal.createOrder.mockResolvedValue(
+        makePaypalOrder({ approveUrl: null }),
+      );
+      paypal.captureOrder.mockResolvedValue(
+        makePaypalCapture({ captureId: null }),
+      );
       await service.pay(order.id);
       await service.capturePayment(order.id);
 

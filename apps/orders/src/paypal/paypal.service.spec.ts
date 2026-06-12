@@ -182,6 +182,41 @@ describe('PaypalService', () => {
         RpcException,
       );
     });
+
+    it('maps a PayPal server error to a 502 Bad Gateway', async () => {
+      fetchMock
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(jsonResponse({ name: 'INTERNAL_ERROR' }, 500));
+
+      const error: unknown = await service
+        .createOrder('order-1', 10)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(RpcException);
+      expect((error as RpcException).getError()).toMatchObject({
+        statusCode: 502,
+      });
+    });
+
+    it('requests the token only once for concurrent calls', async () => {
+      fetchMock.mockImplementation((url: string) =>
+        Promise.resolve(
+          url.endsWith('/v1/oauth2/token')
+            ? tokenResponse()
+            : jsonResponse({ id: 'pp-1', status: 'CREATED' }),
+        ),
+      );
+
+      await Promise.all([
+        service.createOrder('order-1', 10),
+        service.createOrder('order-2', 15),
+      ]);
+
+      const tokenCalls = (fetchMock.mock.calls as [string][]).filter(([url]) =>
+        url.endsWith('/v1/oauth2/token'),
+      );
+      expect(tokenCalls).toHaveLength(1);
+    });
   });
 
   describe('captureOrder', () => {
@@ -251,12 +286,27 @@ describe('PaypalService', () => {
       );
     });
 
+    it('treats an already refunded capture as a successful refund', async () => {
+      fetchMock.mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(
+        jsonResponse(
+          {
+            name: 'UNPROCESSABLE_ENTITY',
+            details: [{ issue: 'CAPTURE_FULLY_REFUNDED' }],
+          },
+          422,
+        ),
+      );
+
+      await expect(service.refundCapture('cap-1')).resolves.toEqual({
+        id: 'cap-1',
+        status: 'ALREADY_REFUNDED',
+      });
+    });
+
     it('throws RpcException when the refund request fails', async () => {
       fetchMock
         .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(
-          jsonResponse({ name: 'CAPTURE_FULLY_REFUNDED' }, 422),
-        );
+        .mockResolvedValueOnce(jsonResponse({ name: 'INVALID_REQUEST' }, 422));
 
       await expect(service.refundCapture('cap-1')).rejects.toBeInstanceOf(
         RpcException,

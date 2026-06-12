@@ -25,6 +25,11 @@ import {
   GlobalRpcExceptionFilter,
 } from '@app/filters';
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
+import {
+  makePaypalCapture,
+  makePaypalOrder,
+  makePaypalRefund,
+} from './../../../test/utils/paypal';
 import { OrdersModule } from './../src/orders.module';
 import { OrderEntity } from './../src/entities/order.entity';
 import { PaypalService } from './../src/paypal/paypal.service';
@@ -161,11 +166,7 @@ describe('Orders microservice (e2e)', () => {
     const all = await send<Order[]>(ORDERS_PATTERNS.FIND_ALL, USER);
     expect(all.map((o) => o.id)).toContain(order.id);
 
-    paypal.createOrder.mockResolvedValue({
-      id: 'pp-1',
-      status: 'CREATED',
-      approveUrl: 'https://paypal.test/approve',
-    });
+    paypal.createOrder.mockResolvedValue(makePaypalOrder());
     const payment = await send<OrderPayment>(ORDERS_PATTERNS.PAY, order.id);
     expect(payment).toEqual({
       orderId: order.id,
@@ -174,11 +175,7 @@ describe('Orders microservice (e2e)', () => {
       approveUrl: 'https://paypal.test/approve',
     });
 
-    paypal.captureOrder.mockResolvedValue({
-      id: 'pp-1',
-      status: 'COMPLETED',
-      approveUrl: null,
-    });
+    paypal.captureOrder.mockResolvedValue(makePaypalCapture());
     const paid = await send<Order>(ORDERS_PATTERNS.CAPTURE_PAYMENT, order.id);
     expect(paid.status).toBe(OrderStatus.PAID);
 
@@ -220,25 +217,17 @@ describe('Orders microservice (e2e)', () => {
       shippingAddress: ADDRESS,
     });
 
-    paypal.createOrder.mockResolvedValue({
-      id: 'pp-refund-1',
-      status: 'PAYER_ACTION_REQUIRED',
-      approveUrl: 'https://paypal.test/checkoutnow',
-    });
+    paypal.createOrder.mockResolvedValue(
+      makePaypalOrder({ id: 'pp-refund-1', status: 'PAYER_ACTION_REQUIRED' }),
+    );
     await send<OrderPayment>(ORDERS_PATTERNS.PAY, order.id);
 
-    paypal.captureOrder.mockResolvedValue({
-      id: 'pp-refund-1',
-      status: 'COMPLETED',
-      approveUrl: null,
-      captureId: 'cap-refund-1',
-    });
+    paypal.captureOrder.mockResolvedValue(
+      makePaypalCapture({ id: 'pp-refund-1', captureId: 'cap-refund-1' }),
+    );
     await send<Order>(ORDERS_PATTERNS.CAPTURE_PAYMENT, order.id);
 
-    paypal.refundCapture.mockResolvedValue({
-      id: 'ref-1',
-      status: 'COMPLETED',
-    });
+    paypal.refundCapture.mockResolvedValue(makePaypalRefund());
     productsClient.send.mockImplementation((pattern: string) =>
       pattern === PRODUCT_PATTERNS.FIND_ONE
         ? of(makeProduct({ stock: 3 }))
@@ -258,18 +247,14 @@ describe('Orders microservice (e2e)', () => {
       shippingAddress: ADDRESS,
     });
 
-    paypal.createOrder.mockResolvedValue({
-      id: 'pp-token-1',
-      status: 'PAYER_ACTION_REQUIRED',
-      approveUrl: 'https://paypal.test/checkoutnow',
-    });
+    paypal.createOrder.mockResolvedValue(
+      makePaypalOrder({ id: 'pp-token-1', status: 'PAYER_ACTION_REQUIRED' }),
+    );
     await send<OrderPayment>(ORDERS_PATTERNS.PAY, order.id);
 
-    paypal.captureOrder.mockResolvedValue({
-      id: 'pp-token-1',
-      status: 'COMPLETED',
-      approveUrl: null,
-    });
+    paypal.captureOrder.mockResolvedValue(
+      makePaypalCapture({ id: 'pp-token-1' }),
+    );
     const paid = await send<Order>(
       ORDERS_PATTERNS.CAPTURE_BY_PAYMENT_ID,
       'pp-token-1',
