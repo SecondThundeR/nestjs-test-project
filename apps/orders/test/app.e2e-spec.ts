@@ -16,6 +16,7 @@ import {
   type Cart,
   type CartItem,
   type Order,
+  type OrderPayment,
   type Product,
 } from '@app/domains';
 import { SERVICE_NAMES } from '@app/config';
@@ -24,8 +25,14 @@ import {
   GlobalRpcExceptionFilter,
 } from '@app/filters';
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
+import {
+  makePaypalCapture,
+  makePaypalOrder,
+  makePaypalRefund,
+} from './../../../test/utils/paypal';
 import { OrdersModule } from './../src/orders.module';
 import { OrderEntity } from './../src/entities/order.entity';
+import { PaypalService } from './../src/paypal/paypal.service';
 
 const HOST = '127.0.0.1';
 const PORT = 4003;
@@ -62,6 +69,11 @@ describe('Orders microservice (e2e)', () => {
   let client: ClientProxy;
   const productsClient = { send: jest.fn(), emit: jest.fn() };
   const cartClient = { send: jest.fn(), emit: jest.fn() };
+  const paypal = {
+    createOrder: jest.fn(),
+    captureOrder: jest.fn(),
+    refundCapture: jest.fn(),
+  };
 
   beforeAll(async () => {
     const dataSource = await createInMemoryDataSource([OrderEntity]);
@@ -75,6 +87,8 @@ describe('Orders microservice (e2e)', () => {
       .useValue(productsClient)
       .overrideProvider(SERVICE_NAMES.CART)
       .useValue(cartClient)
+      .overrideProvider(PaypalService)
+      .useValue(paypal)
       .compile();
 
     app = moduleFixture.createNestMicroservice<MicroserviceOptions>({
@@ -106,6 +120,9 @@ describe('Orders microservice (e2e)', () => {
   beforeEach(() => {
     productsClient.send.mockReset();
     cartClient.send.mockReset();
+    paypal.createOrder.mockReset();
+    paypal.captureOrder.mockReset();
+    paypal.refundCapture.mockReset();
   });
 
   function send<T>(pattern: string, payload: unknown): Promise<T> {
@@ -149,11 +166,39 @@ describe('Orders microservice (e2e)', () => {
     const all = await send<Order[]>(ORDERS_PATTERNS.FIND_ALL, USER);
     expect(all.map((o) => o.id)).toContain(order.id);
 
-    const updated = await send<Order>(ORDERS_PATTERNS.UPDATE_STATUS, {
-      id: order.id,
-      status: OrderStatus.PAID,
+    paypal.createOrder.mockResolvedValue(makePaypalOrder());
+    const payment = await send<OrderPayment>(ORDERS_PATTERNS.PAY, order.id);
+    expect(payment).toEqual({
+      orderId: order.id,
+      paymentId: 'pp-1',
+      paymentStatus: 'CREATED',
+      approveUrl: 'https://paypal.test/approve',
     });
-    expect(updated.status).toBe(OrderStatus.PAID);
+
+    paypal.captureOrder.mockResolvedValue(makePaypalCapture());
+    const paid = await send<Order>(ORDERS_PATTERNS.CAPTURE_PAYMENT, order.id);
+    expect(paid.status).toBe(OrderStatus.PAID);
+
+    const shipped = await send<Order>(ORDERS_PATTERNS.UPDATE_STATUS, {
+      id: order.id,
+      status: OrderStatus.SHIPPED,
+    });
+    expect(shipped.status).toBe(OrderStatus.SHIPPED);
+
+    const delivered = await send<Order>(ORDERS_PATTERNS.UPDATE_STATUS, {
+      id: order.id,
+      status: OrderStatus.DELIVERED,
+    });
+    expect(delivered.status).toBe(OrderStatus.DELIVERED);
+  });
+
+  it('cancels a pending order and restores the stock', async () => {
+    mockHappyPath();
+
+    const order = await send<Order>(ORDERS_PATTERNS.CREATE, {
+      userId: USER,
+      shippingAddress: ADDRESS,
+    });
 
     productsClient.send.mockImplementation((pattern: string) =>
       pattern === PRODUCT_PATTERNS.FIND_ONE
@@ -162,6 +207,76 @@ describe('Orders microservice (e2e)', () => {
     );
     const cancelled = await send<Order>(ORDERS_PATTERNS.CANCEL, order.id);
     expect(cancelled.status).toBe(OrderStatus.CANCELLED);
+  });
+
+  it('refunds the payment when cancelling a paid order', async () => {
+    mockHappyPath();
+
+    const order = await send<Order>(ORDERS_PATTERNS.CREATE, {
+      userId: USER,
+      shippingAddress: ADDRESS,
+    });
+
+    paypal.createOrder.mockResolvedValue(
+      makePaypalOrder({ id: 'pp-refund-1', status: 'PAYER_ACTION_REQUIRED' }),
+    );
+    await send<OrderPayment>(ORDERS_PATTERNS.PAY, order.id);
+
+    paypal.captureOrder.mockResolvedValue(
+      makePaypalCapture({ id: 'pp-refund-1', captureId: 'cap-refund-1' }),
+    );
+    await send<Order>(ORDERS_PATTERNS.CAPTURE_PAYMENT, order.id);
+
+    paypal.refundCapture.mockResolvedValue(makePaypalRefund());
+    productsClient.send.mockImplementation((pattern: string) =>
+      pattern === PRODUCT_PATTERNS.FIND_ONE
+        ? of(makeProduct({ stock: 3 }))
+        : of(makeProduct()),
+    );
+    const cancelled = await send<Order>(ORDERS_PATTERNS.CANCEL, order.id);
+
+    expect(cancelled.status).toBe(OrderStatus.CANCELLED);
+    expect(paypal.refundCapture).toHaveBeenCalledWith('cap-refund-1');
+  });
+
+  it('captures a payment by the PayPal return token', async () => {
+    mockHappyPath();
+
+    const order = await send<Order>(ORDERS_PATTERNS.CREATE, {
+      userId: USER,
+      shippingAddress: ADDRESS,
+    });
+
+    paypal.createOrder.mockResolvedValue(
+      makePaypalOrder({ id: 'pp-token-1', status: 'PAYER_ACTION_REQUIRED' }),
+    );
+    await send<OrderPayment>(ORDERS_PATTERNS.PAY, order.id);
+
+    paypal.captureOrder.mockResolvedValue(
+      makePaypalCapture({ id: 'pp-token-1' }),
+    );
+    const paid = await send<Order>(
+      ORDERS_PATTERNS.CAPTURE_BY_PAYMENT_ID,
+      'pp-token-1',
+    );
+    expect(paid.id).toBe(order.id);
+    expect(paid.status).toBe(OrderStatus.PAID);
+  });
+
+  it('rejects shipping an order that has not been paid', async () => {
+    mockHappyPath();
+
+    const order = await send<Order>(ORDERS_PATTERNS.CREATE, {
+      userId: USER,
+      shippingAddress: ADDRESS,
+    });
+
+    await expect(
+      send<Order>(ORDERS_PATTERNS.UPDATE_STATUS, {
+        id: order.id,
+        status: OrderStatus.SHIPPED,
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 
   it('rejects creating an order from an empty cart', async () => {

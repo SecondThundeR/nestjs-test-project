@@ -78,4 +78,28 @@ describe('OrdersGatewayController', () => {
     await expect(controller.cancel('o-1')).resolves.toBe(result);
     expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.CANCEL, 'o-1');
   });
+
+  it('forwards pay() as a PAY message with the id', async () => {
+    const result = {
+      orderId: 'o-1',
+      paymentId: 'pp-1',
+      paymentStatus: 'CREATED',
+      approveUrl: 'https://paypal.test/approve',
+    };
+    orders.send.mockReturnValue(of(result));
+
+    await expect(controller.pay('o-1')).resolves.toBe(result);
+    expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.PAY, 'o-1');
+  });
+
+  it('forwards capturePayment() as a CAPTURE_PAYMENT message with the id', async () => {
+    const result = { id: 'o-1', status: OrderStatus.PAID };
+    orders.send.mockReturnValue(of(result));
+
+    await expect(controller.capturePayment('o-1')).resolves.toBe(result);
+    expect(orders.send).toHaveBeenCalledWith(
+      ORDERS_PATTERNS.CAPTURE_PAYMENT,
+      'o-1',
+    );
+  });
 });

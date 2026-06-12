@@ -106,6 +106,36 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  PAYPAL_API_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  PAYPAL_CLIENT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  PAYPAL_CLIENT_SECRET?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  PAYPAL_CURRENCY?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  PAYPAL_RETURN_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  PAYPAL_CANCEL_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
   DB_SYNCHRONIZE?: string;
 
   @IsOptional()

@@ -3,6 +3,7 @@ import {
   CART_PATTERNS,
   CartItem,
   type OrderItem,
+  type OrderPayment,
   OrderStatus,
   type Product,
   PRODUCT_PATTERNS,
@@ -17,7 +18,27 @@ import { randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
 import { OrderEntity } from './entities/order.entity';
+import {
+  PAYPAL_ALREADY_REFUNDED_STATUS,
+  PaypalService,
+} from './paypal/paypal.service';
 import { roundPrice } from '@app/utils';
+
+const PAYPAL_COMPLETED_STATUS = 'COMPLETED';
+
+// PENDING in PayPal means an asynchronous refund (e.g. eCheck) that completes later.
+const REFUND_ACCEPTED_STATUSES: readonly string[] = [
+  PAYPAL_COMPLETED_STATUS,
+  'PENDING',
+  PAYPAL_ALREADY_REFUNDED_STATUS,
+];
+
+const MANUAL_STATUS_TRANSITIONS: Partial<
+  Record<OrderStatus, readonly OrderStatus[]>
+> = {
+  [OrderStatus.PAID]: [OrderStatus.SHIPPED],
+  [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED],
+};
 
 const ALL_ORDERS_CACHE_KEY = 'orders:all';
 
@@ -40,6 +61,7 @@ export class OrdersService {
     private readonly productsClient: ClientProxy,
     @Inject(SERVICE_NAMES.CART) private readonly cartClient: ClientProxy,
     private readonly cache: CacheService,
+    private readonly paypal: PaypalService,
   ) {}
 
   async create(userId: string, shippingAddress: string): Promise<OrderEntity> {
@@ -125,21 +147,148 @@ export class OrdersService {
 
   async updateStatus(id: string, status: OrderStatus): Promise<OrderEntity> {
     const order = await this.findOne(id);
-    if (order.status === OrderStatus.CANCELLED) {
-      this.logger.warn(`Order ${id} is cancelled and cannot change status`);
-      throw RpcErrors.badRequest('A cancelled order cannot change status');
+    if (order.status === status) {
+      this.logger.debug(`Order ${id} is already ${status}`);
+      return order;
     }
 
-    const previousOrderStatus = order.status;
-    order.status = status;
-    const saved = await this.orders.save(order);
+    if (status === OrderStatus.PAID) {
+      this.logger.warn(`Order ${id} cannot be marked ${status} manually`);
+      throw RpcErrors.badRequest(
+        `An order becomes ${OrderStatus.PAID} only by capturing its payment`,
+      );
+    }
 
-    await this.invalidate(saved);
+    if (status === OrderStatus.CANCELLED) {
+      this.logger.warn(`Order ${id} cannot be cancelled via a status update`);
+      throw RpcErrors.badRequest('Use the cancel operation to cancel an order');
+    }
+
+    const allowedStatuses = MANUAL_STATUS_TRANSITIONS[order.status] ?? [];
+    if (!allowedStatuses.includes(status)) {
+      this.logger.warn(
+        `Order ${id} cannot change status ${order.status} to ${status}`,
+      );
+      throw RpcErrors.badRequest(
+        `Order status cannot change from ${order.status} to ${status}`,
+      );
+    }
+
+    const updated = await this.transition(id, order.status, { status });
+    if (!updated) {
+      this.logger.warn(`Order ${id} was modified concurrently`);
+      throw RpcErrors.conflict(
+        `Order ${id} was modified concurrently, try again`,
+      );
+    }
+
+    this.logger.log(`Order ${id} status ${order.status} changed to ${status}`);
+    return updated;
+  }
+
+  async pay(id: string): Promise<OrderPayment> {
+    this.logger.log(`Starting PayPal payment for order ${id}`);
+
+    const order = await this.findOne(id);
+    if (order.status !== OrderStatus.PENDING) {
+      this.logger.warn(
+        `Order ${id} is ${order.status} and cannot start a payment`,
+      );
+      throw RpcErrors.badRequest(
+        `Only a ${OrderStatus.PENDING} order can be paid, order ${id} is ${order.status}`,
+      );
+    }
+
+    const payment = await this.paypal.createOrder(order.id, order.total);
+
+    const updated = await this.transition(id, OrderStatus.PENDING, {
+      paymentId: payment.id,
+    });
+    if (!updated) {
+      this.logger.warn(
+        `Order ${id} changed while its payment was being created`,
+      );
+      throw RpcErrors.conflict(
+        `Order ${id} is no longer ${OrderStatus.PENDING}, the payment was not started`,
+      );
+    }
 
     this.logger.log(
-      `Order ${id} status ${previousOrderStatus} changed to ${status}`,
+      `Order ${id} is awaiting approval of PayPal payment ${payment.id}`,
     );
-    return saved;
+    return {
+      orderId: updated.id,
+      paymentId: payment.id,
+      paymentStatus: payment.status,
+      approveUrl: payment.approveUrl,
+    };
+  }
+
+  async capturePayment(id: string): Promise<OrderEntity> {
+    this.logger.log(`Capturing PayPal payment for order ${id}`);
+
+    const order = await this.findOne(id);
+    if (order.status === OrderStatus.PAID) {
+      this.logger.debug(`Order ${id} is already paid`);
+      return order;
+    }
+
+    if (order.status !== OrderStatus.PENDING) {
+      this.logger.warn(
+        `Order ${id} is ${order.status} and cannot capture a payment`,
+      );
+      throw RpcErrors.badRequest(
+        `Only a ${OrderStatus.PENDING} order can capture a payment, order ${id} is ${order.status}`,
+      );
+    }
+
+    if (!order.paymentId) {
+      this.logger.warn(`Order ${id} has no PayPal payment to capture`);
+      throw RpcErrors.badRequest(
+        `Order ${id} has no payment to capture, start a payment first`,
+      );
+    }
+
+    const payment = await this.paypal.captureOrder(order.paymentId);
+    if (payment.status !== PAYPAL_COMPLETED_STATUS) {
+      this.logger.warn(
+        `PayPal payment ${order.paymentId} for order ${id} is not completed: ${payment.status}`,
+      );
+      throw RpcErrors.badRequest(
+        `PayPal payment is not completed, its status is ${payment.status}`,
+      );
+    }
+
+    const updated = await this.transition(id, OrderStatus.PENDING, {
+      status: OrderStatus.PAID,
+      captureId: payment.captureId ?? null,
+    });
+    if (!updated) {
+      this.logger.warn(
+        `Order ${id} changed while its payment was captured, refunding`,
+      );
+      if (payment.captureId) {
+        await this.paypal.refundCapture(payment.captureId);
+      }
+      throw RpcErrors.conflict(
+        `Order ${id} changed while capturing the payment, the charge was refunded`,
+      );
+    }
+
+    this.logger.log(
+      `Order ${id} paid with PayPal payment ${order.paymentId} (total ${order.total})`,
+    );
+    return updated;
+  }
+
+  async captureByPaymentId(paymentId: string): Promise<OrderEntity> {
+    const order = await this.orders.findOneBy({ paymentId });
+    if (!order) {
+      this.logger.warn(`No order found for PayPal payment ${paymentId}`);
+      throw RpcErrors.notFound(`No order found for payment ${paymentId}`);
+    }
+
+    return this.capturePayment(order.id);
   }
 
   async cancel(id: string): Promise<OrderEntity> {
@@ -161,15 +310,70 @@ export class OrdersService {
       );
     }
 
+    if (order.status === OrderStatus.PAID) {
+      await this.refundPayment(order);
+    }
+
+    const updated = await this.transition(id, order.status, {
+      status: OrderStatus.CANCELLED,
+    });
+    if (!updated) {
+      this.logger.warn(`Order ${id} changed while it was being cancelled`);
+      throw RpcErrors.conflict(
+        `Order ${id} changed while it was being cancelled, try again`,
+      );
+    }
+
     await Promise.all(order.items.map(this.rollbackOrderItemStock.bind(this)));
 
-    order.status = OrderStatus.CANCELLED;
-    const saved = await this.orders.save(order);
-
-    await this.invalidate(saved);
-
     this.logger.log(`Order ${id} cancelled and stock restored`);
-    return saved;
+    return updated;
+  }
+
+  private async refundPayment(order: OrderEntity): Promise<void> {
+    if (!order.captureId) {
+      this.logger.warn(
+        `Order ${order.id} is paid but has no PayPal capture to refund`,
+      );
+      throw RpcErrors.badRequest(
+        `Order ${order.id} payment cannot be refunded automatically`,
+      );
+    }
+
+    const refund = await this.paypal.refundCapture(order.captureId);
+    if (!REFUND_ACCEPTED_STATUSES.includes(refund.status)) {
+      this.logger.warn(
+        `PayPal refund ${refund.id} for order ${order.id} failed: ${refund.status}`,
+      );
+      throw RpcErrors.badRequest(
+        `PayPal refund failed with status ${refund.status}`,
+      );
+    }
+
+    this.logger.log(
+      `Refunded PayPal capture ${order.captureId} for order ${order.id} (total ${order.total})`,
+    );
+  }
+
+  private async transition(
+    id: string,
+    from: OrderStatus,
+    patch: Partial<OrderEntity>,
+  ): Promise<OrderEntity | null> {
+    // Updates order by criteria (id, status) with partial patch object
+    // If affected is 0, it means that that order was changed concurrently
+    const result = await this.orders.update({ id, status: from }, patch);
+    if (!result.affected) {
+      return null;
+    }
+
+    const updated = await this.orders.findOneBy({ id });
+    if (!updated) {
+      throw RpcErrors.notFound(`Order ${id} not found`);
+    }
+
+    await this.invalidate(updated);
+    return updated;
   }
 
   private invalidate(order: OrderEntity): Promise<void> {

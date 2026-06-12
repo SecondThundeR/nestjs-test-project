@@ -12,7 +12,14 @@ describe('OrdersController', () => {
   let ordersService: jest.Mocked<
     Pick<
       OrdersService,
-      'create' | 'findAll' | 'findOne' | 'updateStatus' | 'cancel'
+      | 'create'
+      | 'findAll'
+      | 'findOne'
+      | 'updateStatus'
+      | 'cancel'
+      | 'pay'
+      | 'capturePayment'
+      | 'captureByPaymentId'
     >
   >;
 
@@ -23,6 +30,9 @@ describe('OrdersController', () => {
       findOne: jest.fn(),
       updateStatus: jest.fn(),
       cancel: jest.fn(),
+      pay: jest.fn(),
+      capturePayment: jest.fn(),
+      captureByPaymentId: jest.fn(),
     };
 
     const app = await Test.createTestingModule({
@@ -85,5 +95,29 @@ describe('OrdersController', () => {
 
     expect(ordersController.cancel('order-1')).toBe(result);
     expect(ordersService.cancel).toHaveBeenCalledWith('order-1');
+  });
+
+  it('delegates pay() to the service with the id', () => {
+    const result = Promise.resolve({} as never);
+    ordersService.pay.mockReturnValue(result);
+
+    expect(ordersController.pay('order-1')).toBe(result);
+    expect(ordersService.pay).toHaveBeenCalledWith('order-1');
+  });
+
+  it('delegates capturePayment() to the service with the id', () => {
+    const result = Promise.resolve({} as never);
+    ordersService.capturePayment.mockReturnValue(result);
+
+    expect(ordersController.capturePayment('order-1')).toBe(result);
+    expect(ordersService.capturePayment).toHaveBeenCalledWith('order-1');
+  });
+
+  it('delegates captureByPaymentId() to the service with the payment id', () => {
+    const result = Promise.resolve({} as never);
+    ordersService.captureByPaymentId.mockReturnValue(result);
+
+    expect(ordersController.captureByPaymentId('pp-1')).toBe(result);
+    expect(ordersService.captureByPaymentId).toHaveBeenCalledWith('pp-1');
   });
 });

@@ -15,8 +15,14 @@ import { SERVICE_NAMES } from '@app/config';
 import { CacheService } from '@app/cache';
 import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
+import {
+  makePaypalCapture,
+  makePaypalOrder,
+  makePaypalRefund,
+} from '../../../test/utils/paypal';
 import { OrdersService } from './orders.service';
 import { OrderEntity } from './entities/order.entity';
+import { PaypalService } from './paypal/paypal.service';
 
 const USER = 'user-1';
 const ADDRESS = '1 Test Street';
@@ -59,12 +65,22 @@ describe('OrdersService', () => {
   let service: OrdersService;
   let productsClient: { send: jest.Mock };
   let cartClient: { send: jest.Mock };
+  let paypal: {
+    createOrder: jest.Mock;
+    captureOrder: jest.Mock;
+    refundCapture: jest.Mock;
+  };
   let dataSource: DataSource;
   let cacheStore: Map<string, unknown>;
 
   beforeEach(async () => {
     productsClient = { send: jest.fn() };
     cartClient = { send: jest.fn() };
+    paypal = {
+      createOrder: jest.fn(),
+      captureOrder: jest.fn(),
+      refundCapture: jest.fn(),
+    };
     dataSource = await createInMemoryDataSource([OrderEntity]);
     const { service: cacheService, store } = createInMemoryCache();
     cacheStore = store;
@@ -79,6 +95,7 @@ describe('OrdersService', () => {
         { provide: SERVICE_NAMES.PRODUCTS, useValue: productsClient },
         { provide: SERVICE_NAMES.CART, useValue: cartClient },
         { provide: CacheService, useValue: cacheService },
+        { provide: PaypalService, useValue: paypal },
       ],
     }).compile();
 
@@ -104,6 +121,13 @@ describe('OrdersService', () => {
     });
 
     return service.create(USER, ADDRESS);
+  }
+
+  async function payAndCapture(orderId: string) {
+    paypal.createOrder.mockResolvedValue(makePaypalOrder());
+    paypal.captureOrder.mockResolvedValue(makePaypalCapture());
+    await service.pay(orderId);
+    await service.capturePayment(orderId);
   }
 
   describe('create', () => {
@@ -208,20 +232,69 @@ describe('OrdersService', () => {
   });
 
   describe('updateStatus', () => {
-    it('updates the status of an existing order', async () => {
+    it('moves a paid order to SHIPPED and then DELIVERED', async () => {
+      const order = await createOrder();
+      await payAndCapture(order.id);
+
+      const shipped = await service.updateStatus(order.id, OrderStatus.SHIPPED);
+      expect(shipped.status).toBe(OrderStatus.SHIPPED);
+
+      const delivered = await service.updateStatus(
+        order.id,
+        OrderStatus.DELIVERED,
+      );
+      expect(delivered.status).toBe(OrderStatus.DELIVERED);
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.DELIVERED,
+      });
+    });
+
+    it('returns the order unchanged when the status is the same', async () => {
       const order = await createOrder();
 
-      const updated = await service.updateStatus(order.id, OrderStatus.SHIPPED);
+      const result = await service.updateStatus(order.id, OrderStatus.PENDING);
 
-      expect(updated.status).toBe(OrderStatus.SHIPPED);
-      await expect(service.findOne(order.id)).resolves.toMatchObject({
-        status: OrderStatus.SHIPPED,
-      });
+      expect(result.status).toBe(OrderStatus.PENDING);
+    });
+
+    it('throws RpcException when shipping an unpaid order', async () => {
+      const order = await createOrder();
+
+      await expect(
+        service.updateStatus(order.id, OrderStatus.SHIPPED),
+      ).rejects.toThrow(RpcException);
+    });
+
+    it('throws RpcException when marking an order PAID manually', async () => {
+      const order = await createOrder();
+
+      await expect(
+        service.updateStatus(order.id, OrderStatus.PAID),
+      ).rejects.toThrow(RpcException);
+    });
+
+    it('throws RpcException when cancelling via a status update', async () => {
+      const order = await createOrder();
+
+      await expect(
+        service.updateStatus(order.id, OrderStatus.CANCELLED),
+      ).rejects.toThrow(RpcException);
+    });
+
+    it('throws RpcException when moving a delivered order backwards', async () => {
+      const order = await createOrder();
+      await payAndCapture(order.id);
+      await service.updateStatus(order.id, OrderStatus.SHIPPED);
+      await service.updateStatus(order.id, OrderStatus.DELIVERED);
+
+      await expect(
+        service.updateStatus(order.id, OrderStatus.SHIPPED),
+      ).rejects.toThrow(RpcException);
     });
 
     it('throws RpcException for an unknown id', async () => {
       await expect(
-        service.updateStatus('missing', OrderStatus.PAID),
+        service.updateStatus('missing', OrderStatus.SHIPPED),
       ).rejects.toThrow(RpcException);
     });
 
@@ -230,8 +303,172 @@ describe('OrdersService', () => {
       await service.cancel(order.id);
 
       await expect(
-        service.updateStatus(order.id, OrderStatus.PAID),
+        service.updateStatus(order.id, OrderStatus.SHIPPED),
       ).rejects.toThrow(RpcException);
+    });
+  });
+
+  describe('pay', () => {
+    it('creates a PayPal order and stores its id on the order', async () => {
+      const order = await createOrder();
+      paypal.createOrder.mockResolvedValue(makePaypalOrder());
+
+      const payment = await service.pay(order.id);
+
+      expect(paypal.createOrder).toHaveBeenCalledWith(order.id, order.total);
+      expect(payment).toEqual({
+        orderId: order.id,
+        paymentId: 'pp-1',
+        paymentStatus: 'CREATED',
+        approveUrl: 'https://paypal.test/approve',
+      });
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        paymentId: 'pp-1',
+        status: OrderStatus.PENDING,
+      });
+    });
+
+    it('throws RpcException when the order is not pending', async () => {
+      const order = await createOrder();
+      await payAndCapture(order.id);
+      paypal.createOrder.mockClear();
+
+      await expect(service.pay(order.id)).rejects.toBeInstanceOf(RpcException);
+      expect(paypal.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('throws RpcException for an unknown id', async () => {
+      await expect(service.pay('missing')).rejects.toBeInstanceOf(RpcException);
+    });
+
+    it('does not attach the payment when the order changes mid-flight', async () => {
+      const order = await createOrder();
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+      paypal.createOrder.mockImplementation(async () => {
+        await service.cancel(order.id);
+        return makePaypalOrder();
+      });
+
+      await expect(service.pay(order.id)).rejects.toBeInstanceOf(RpcException);
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.CANCELLED,
+        paymentId: null,
+      });
+    });
+  });
+
+  describe('capturePayment', () => {
+    async function createPaidForOrder() {
+      const order = await createOrder();
+      paypal.createOrder.mockResolvedValue(makePaypalOrder());
+      await service.pay(order.id);
+      return order;
+    }
+
+    it('captures the payment and marks the order as PAID', async () => {
+      const order = await createPaidForOrder();
+      paypal.captureOrder.mockResolvedValue(makePaypalCapture());
+
+      const paid = await service.capturePayment(order.id);
+
+      expect(paypal.captureOrder).toHaveBeenCalledWith('pp-1');
+      expect(paid.status).toBe(OrderStatus.PAID);
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.PAID,
+        captureId: 'cap-1',
+      });
+    });
+
+    it('is idempotent for an already paid order', async () => {
+      const order = await createPaidForOrder();
+      paypal.captureOrder.mockResolvedValue(makePaypalCapture());
+      await service.capturePayment(order.id);
+      paypal.captureOrder.mockClear();
+
+      const paid = await service.capturePayment(order.id);
+
+      expect(paid.status).toBe(OrderStatus.PAID);
+      expect(paypal.captureOrder).not.toHaveBeenCalled();
+    });
+
+    it('throws RpcException when the capture is not completed', async () => {
+      const order = await createPaidForOrder();
+      paypal.captureOrder.mockResolvedValue(
+        makePaypalCapture({ status: 'DECLINED', captureId: null }),
+      );
+
+      await expect(service.capturePayment(order.id)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.PENDING,
+      });
+    });
+
+    it('throws RpcException when the order has no payment to capture', async () => {
+      const order = await createOrder();
+
+      await expect(service.capturePayment(order.id)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+      expect(paypal.captureOrder).not.toHaveBeenCalled();
+    });
+
+    it('throws RpcException when the order is cancelled', async () => {
+      const order = await createPaidForOrder();
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+      await service.cancel(order.id);
+
+      await expect(service.capturePayment(order.id)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+      expect(paypal.captureOrder).not.toHaveBeenCalled();
+    });
+
+    it('throws RpcException for an unknown id', async () => {
+      await expect(service.capturePayment('missing')).rejects.toBeInstanceOf(
+        RpcException,
+      );
+    });
+
+    it('refunds the charge when the order changes mid-capture', async () => {
+      const order = await createPaidForOrder();
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+      paypal.captureOrder.mockImplementation(async () => {
+        await service.cancel(order.id);
+        return makePaypalCapture();
+      });
+      paypal.refundCapture.mockResolvedValue(makePaypalRefund());
+
+      await expect(service.capturePayment(order.id)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+      expect(paypal.refundCapture).toHaveBeenCalledWith('cap-1');
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.CANCELLED,
+      });
+    });
+  });
+
+  describe('captureByPaymentId', () => {
+    it('captures the payment of the order matching the PayPal order id', async () => {
+      const order = await createOrder();
+      paypal.createOrder.mockResolvedValue(makePaypalOrder());
+      paypal.captureOrder.mockResolvedValue(makePaypalCapture());
+      await service.pay(order.id);
+
+      const paid = await service.captureByPaymentId('pp-1');
+
+      expect(paid.id).toBe(order.id);
+      expect(paid.status).toBe(OrderStatus.PAID);
+      expect(paypal.captureOrder).toHaveBeenCalledWith('pp-1');
+    });
+
+    it('throws RpcException for an unknown payment id', async () => {
+      await expect(service.captureByPaymentId('missing')).rejects.toThrow(
+        RpcException,
+      );
+      expect(paypal.captureOrder).not.toHaveBeenCalled();
     });
   });
 
@@ -276,6 +513,73 @@ describe('OrdersService', () => {
       );
     });
 
+    it('does not refund when cancelling an unpaid order', async () => {
+      const order = await createOrder();
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+
+      const cancelled = await service.cancel(order.id);
+
+      expect(cancelled.status).toBe(OrderStatus.CANCELLED);
+      expect(paypal.refundCapture).not.toHaveBeenCalled();
+    });
+
+    it('refunds the payment when cancelling a paid order', async () => {
+      const order = await createOrder();
+      await payAndCapture(order.id);
+      paypal.refundCapture.mockResolvedValue(makePaypalRefund());
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+
+      const cancelled = await service.cancel(order.id);
+
+      expect(paypal.refundCapture).toHaveBeenCalledWith('cap-1');
+      expect(cancelled.status).toBe(OrderStatus.CANCELLED);
+    });
+
+    it('cancels the order when the refund is still pending', async () => {
+      const order = await createOrder();
+      await payAndCapture(order.id);
+      paypal.refundCapture.mockResolvedValue(
+        makePaypalRefund({ status: 'PENDING' }),
+      );
+      productsClient.send.mockImplementation(() => of(makeProduct()));
+
+      const cancelled = await service.cancel(order.id);
+
+      expect(cancelled.status).toBe(OrderStatus.CANCELLED);
+    });
+
+    it('keeps the order PAID when the refund fails', async () => {
+      const order = await createOrder();
+      await payAndCapture(order.id);
+      paypal.refundCapture.mockResolvedValue(
+        makePaypalRefund({ status: 'FAILED' }),
+      );
+
+      await expect(service.cancel(order.id)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.PAID,
+      });
+    });
+
+    it('throws RpcException when a paid order has no capture to refund', async () => {
+      const order = await createOrder();
+      paypal.createOrder.mockResolvedValue(
+        makePaypalOrder({ approveUrl: null }),
+      );
+      paypal.captureOrder.mockResolvedValue(
+        makePaypalCapture({ captureId: null }),
+      );
+      await service.pay(order.id);
+      await service.capturePayment(order.id);
+
+      await expect(service.cancel(order.id)).rejects.toBeInstanceOf(
+        RpcException,
+      );
+      expect(paypal.refundCapture).not.toHaveBeenCalled();
+    });
+
     it('is idempotent for an already cancelled order', async () => {
       const order = await createOrder();
       productsClient.send.mockImplementation(() => of(makeProduct()));
@@ -290,6 +594,7 @@ describe('OrdersService', () => {
 
     it('throws RpcException when the order is already shipped', async () => {
       const order = await createOrder();
+      await payAndCapture(order.id);
       await service.updateStatus(order.id, OrderStatus.SHIPPED);
 
       await expect(service.cancel(order.id)).rejects.toBeInstanceOf(
@@ -341,6 +646,7 @@ describe('OrdersService', () => {
 
     it('evicts the order cache when its status changes', async () => {
       const order = await createOrder();
+      await payAndCapture(order.id);
       await service.findOne(order.id);
 
       await service.updateStatus(order.id, OrderStatus.SHIPPED);

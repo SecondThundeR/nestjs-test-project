@@ -1,6 +1,7 @@
 import {
   CreateOrderDto,
   type Order,
+  type OrderPayment,
   ORDERS_PATTERNS,
   UpdateOrderStatusDto,
 } from '@app/domains';
@@ -56,5 +57,15 @@ export class OrdersGatewayController {
   @Patch(':id/cancel')
   cancel(@Param('id') id: string) {
     return rpcSend<Order>(this.orders, ORDERS_PATTERNS.CANCEL, id);
+  }
+
+  @Post(':id/pay')
+  pay(@Param('id') id: string) {
+    return rpcSend<OrderPayment>(this.orders, ORDERS_PATTERNS.PAY, id);
+  }
+
+  @Post(':id/capture')
+  capturePayment(@Param('id') id: string) {
+    return rpcSend<Order>(this.orders, ORDERS_PATTERNS.CAPTURE_PAYMENT, id);
   }
 }

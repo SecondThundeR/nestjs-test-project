@@ -24,6 +24,8 @@ export const RpcErrors = {
     rpcException(HttpStatus.NOT_FOUND, 'Not Found', message),
   conflict: (message: string) =>
     rpcException(HttpStatus.CONFLICT, 'Conflict', message),
+  badGateway: (message: string) =>
+    rpcException(HttpStatus.BAD_GATEWAY, 'Bad Gateway', message),
 };
 
 export function rpcValidationExceptionFactory(

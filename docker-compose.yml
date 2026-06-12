@@ -49,6 +49,7 @@ services:
       DB_MIGRATIONS_RUN: 'true'
       CART_DB_HOST: cart-db
       CART_DB_PORT: 5432
+      PRODUCTS_HOST: products
     depends_on:
       cart-db:
         condition: service_healthy
@@ -61,6 +62,8 @@ services:
       DB_MIGRATIONS_RUN: 'true'
       ORDERS_DB_HOST: orders-db
       ORDERS_DB_PORT: 5432
+      PRODUCTS_HOST: products
+      CART_HOST: cart
       REDIS_HOST: cache
       REDIS_PORT: 6379
     depends_on:
@@ -124,7 +127,7 @@ services:
     image: redis:8.8.0-alpine
     command: ['redis-server', '--save', '60', '1']
     ports:
-      - '${REDIS_PORT:-6379}:6379'
+      - '${REDIS_HOST_PORT:-6380}:6379'
     volumes:
       - cache-data:/data
     healthcheck:
