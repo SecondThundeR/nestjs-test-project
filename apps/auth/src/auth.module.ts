@@ -1,15 +1,18 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, type ConfigType } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppCacheModule } from '@app/cache';
 import {
+  type AuthConfig,
   authConfig,
   buildDatabaseOptions,
+  type CacheConfig,
   cacheConfig,
   SERVICE_NAMES,
+  type ServicesConfig,
   servicesConfig,
   validateEnv,
 } from '@app/config';
@@ -27,7 +30,7 @@ import { authMigrations } from './migrations';
     }),
     AppCacheModule.registerAsync({
       inject: [cacheConfig.KEY],
-      useFactory: (cache: ConfigType<typeof cacheConfig>) => ({
+      useFactory: (cache: CacheConfig) => ({
         namespace: 'auth',
         ttl: cache.authCacheTtl,
         redis: cache.redis,
@@ -41,7 +44,7 @@ import { authMigrations } from './migrations';
     TypeOrmModule.forFeature([SessionEntity]),
     JwtModule.registerAsync({
       inject: [authConfig.KEY],
-      useFactory: (auth: ConfigType<typeof authConfig>) => ({
+      useFactory: (auth: AuthConfig) => ({
         secret: auth.secret,
         signOptions: {
           expiresIn: auth.expiresIn as JwtSignOptions['expiresIn'],
@@ -52,7 +55,7 @@ import { authMigrations } from './migrations';
       {
         name: SERVICE_NAMES.USERS,
         inject: [servicesConfig.KEY],
-        useFactory: (services: ConfigType<typeof servicesConfig>) => ({
+        useFactory: (services: ServicesConfig) => ({
           transport: Transport.TCP,
           options: { host: services.hosts.users, port: services.ports.users },
         }),

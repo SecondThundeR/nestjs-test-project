@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, type ConfigType } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   buildDatabaseOptions,
   SERVICE_NAMES,
+  type ServicesConfig,
   servicesConfig,
   validateEnv,
 } from '@app/config';
@@ -29,7 +30,7 @@ import { cartMigrations } from './migrations';
       {
         name: SERVICE_NAMES.PRODUCTS,
         inject: [servicesConfig.KEY],
-        useFactory: (services: ConfigType<typeof servicesConfig>) => ({
+        useFactory: (services: ServicesConfig) => ({
           transport: Transport.TCP,
           options: {
             host: services.hosts.products,

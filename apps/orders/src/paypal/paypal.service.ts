@@ -1,7 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { ConfigType } from '@nestjs/config';
 import type { RpcException } from '@nestjs/microservices';
-import { paypalConfig } from '@app/config';
+import { type PaypalConfig, paypalConfig } from '@app/config';
 import { RpcErrors } from '@app/filters';
 
 interface PaypalTokenResponse {
@@ -55,7 +54,7 @@ export class PaypalService {
 
   constructor(
     @Inject(paypalConfig.KEY)
-    private readonly config: ConfigType<typeof paypalConfig>,
+    private readonly config: PaypalConfig,
   ) {}
 
   async createOrder(referenceId: string, amount: number): Promise<PaypalOrder> {

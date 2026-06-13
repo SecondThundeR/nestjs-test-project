@@ -1,4 +1,4 @@
-import { registerAs } from '@nestjs/config';
+import { type ConfigType, registerAs } from '@nestjs/config';
 
 export const paypalConfig = registerAs('paypal', () => {
   const gatewayUrl = `http://localhost:${process.env.GATEWAY_PORT ?? '3000'}/api`;
@@ -14,3 +14,5 @@ export const paypalConfig = registerAs('paypal', () => {
       process.env.PAYPAL_CANCEL_URL ?? `${gatewayUrl}/orders/payment/cancel`,
   };
 });
+
+export type PaypalConfig = ConfigType<typeof paypalConfig>;

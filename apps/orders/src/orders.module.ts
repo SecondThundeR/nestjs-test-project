@@ -1,13 +1,15 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, type ConfigType } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppCacheModule } from '@app/cache';
 import {
   buildDatabaseOptions,
+  type CacheConfig,
   cacheConfig,
   paypalConfig,
   SERVICE_NAMES,
+  type ServicesConfig,
   servicesConfig,
   validateEnv,
 } from '@app/config';
@@ -26,7 +28,7 @@ import { PaypalService } from './paypal/paypal.service';
     }),
     AppCacheModule.registerAsync({
       inject: [cacheConfig.KEY],
-      useFactory: (cache: ConfigType<typeof cacheConfig>) => ({
+      useFactory: (cache: CacheConfig) => ({
         namespace: 'orders',
         ttl: cache.ordersCacheTtl,
         redis: cache.redis,
@@ -41,7 +43,7 @@ import { PaypalService } from './paypal/paypal.service';
       {
         name: SERVICE_NAMES.PRODUCTS,
         inject: [servicesConfig.KEY],
-        useFactory: (services: ConfigType<typeof servicesConfig>) => ({
+        useFactory: (services: ServicesConfig) => ({
           transport: Transport.TCP,
           options: {
             host: services.hosts.products,
@@ -52,7 +54,7 @@ import { PaypalService } from './paypal/paypal.service';
       {
         name: SERVICE_NAMES.CART,
         inject: [servicesConfig.KEY],
-        useFactory: (services: ConfigType<typeof servicesConfig>) => ({
+        useFactory: (services: ServicesConfig) => ({
           transport: Transport.TCP,
           options: { host: services.hosts.cart, port: services.ports.cart },
         }),

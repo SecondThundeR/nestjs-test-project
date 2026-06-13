@@ -1,8 +1,13 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigType } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppCacheModule } from '@app/cache';
-import { buildDatabaseOptions, cacheConfig, validateEnv } from '@app/config';
+import {
+  buildDatabaseOptions,
+  type CacheConfig,
+  cacheConfig,
+  validateEnv,
+} from '@app/config';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { UserEntity } from './entities/user.entity';
@@ -17,7 +22,7 @@ import { usersMigrations } from './migrations';
     }),
     AppCacheModule.registerAsync({
       inject: [cacheConfig.KEY],
-      useFactory: (cache: ConfigType<typeof cacheConfig>) => ({
+      useFactory: (cache: CacheConfig) => ({
         namespace: 'users',
         ttl: cache.usersCacheTtl,
         redis: cache.redis,
