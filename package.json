@@ -121,7 +121,8 @@
     "collectCoverageFrom": [
       "apps/**/*.(controller|service).ts",
       "apps/**/common/*.ts",
-      "libs/**/filters/*.ts"
+      "libs/**/filters/*.ts",
+      "!apps/!(gateway)/src/*.controller.ts"
     ],
     "coveragePathIgnorePatterns": [
       "/node_modules/",
