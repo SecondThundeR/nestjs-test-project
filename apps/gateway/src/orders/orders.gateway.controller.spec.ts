@@ -51,35 +51,44 @@ describe('OrdersGatewayController', () => {
     expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.FIND_ALL, USER);
   });
 
-  it('forwards findOne() as a FIND_ONE message with the id', async () => {
+  it('forwards findOne() as a FIND_ONE message with the id and userId', async () => {
     const result = { id: 'o-1' };
     orders.send.mockReturnValue(of(result));
 
-    await expect(controller.findOne('o-1')).resolves.toBe(result);
-    expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.FIND_ONE, 'o-1');
+    await expect(controller.findOne(USER, 'o-1')).resolves.toBe(result);
+    expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.FIND_ONE, {
+      id: 'o-1',
+      userId: USER,
+    });
   });
 
-  it('forwards updateStatus() with id and status', async () => {
+  it('forwards updateStatus() with id, status and userId', async () => {
     const dto: UpdateOrderStatusDto = { status: OrderStatus.SHIPPED };
     const result = { id: 'o-1', status: OrderStatus.SHIPPED };
     orders.send.mockReturnValue(of(result));
 
-    await expect(controller.updateStatus('o-1', dto)).resolves.toBe(result);
+    await expect(controller.updateStatus(USER, 'o-1', dto)).resolves.toBe(
+      result,
+    );
     expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.UPDATE_STATUS, {
       id: 'o-1',
+      userId: USER,
       status: OrderStatus.SHIPPED,
     });
   });
 
-  it('forwards cancel() as a CANCEL message with the id', async () => {
+  it('forwards cancel() as a CANCEL message with the id and userId', async () => {
     const result = { id: 'o-1', status: OrderStatus.CANCELLED };
     orders.send.mockReturnValue(of(result));
 
-    await expect(controller.cancel('o-1')).resolves.toBe(result);
-    expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.CANCEL, 'o-1');
+    await expect(controller.cancel(USER, 'o-1')).resolves.toBe(result);
+    expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.CANCEL, {
+      id: 'o-1',
+      userId: USER,
+    });
   });
 
-  it('forwards pay() as a PAY message with the id', async () => {
+  it('forwards pay() as a PAY message with the id and userId', async () => {
     const result = {
       orderId: 'o-1',
       paymentId: 'pp-1',
@@ -88,18 +97,21 @@ describe('OrdersGatewayController', () => {
     };
     orders.send.mockReturnValue(of(result));
 
-    await expect(controller.pay('o-1')).resolves.toBe(result);
-    expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.PAY, 'o-1');
+    await expect(controller.pay(USER, 'o-1')).resolves.toBe(result);
+    expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.PAY, {
+      id: 'o-1',
+      userId: USER,
+    });
   });
 
-  it('forwards capturePayment() as a CAPTURE_PAYMENT message with the id', async () => {
+  it('forwards capturePayment() as a CAPTURE_PAYMENT message with the id and userId', async () => {
     const result = { id: 'o-1', status: OrderStatus.PAID };
     orders.send.mockReturnValue(of(result));
 
-    await expect(controller.capturePayment('o-1')).resolves.toBe(result);
-    expect(orders.send).toHaveBeenCalledWith(
-      ORDERS_PATTERNS.CAPTURE_PAYMENT,
-      'o-1',
-    );
+    await expect(controller.capturePayment(USER, 'o-1')).resolves.toBe(result);
+    expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.CAPTURE_PAYMENT, {
+      id: 'o-1',
+      userId: USER,
+    });
   });
 });

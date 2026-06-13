@@ -4,6 +4,7 @@ import { OrdersService } from './orders.service';
 import {
   OrderStatus,
   type CreateOrderPayload,
+  type OrderActionPayload,
   type UpdateOrderStatusPayload,
 } from '@app/domains';
 
@@ -66,17 +67,19 @@ describe('OrdersController', () => {
     expect(ordersService.findAll).toHaveBeenCalledWith('user-1');
   });
 
-  it('delegates findOne() to the service with the id', () => {
+  it('delegates findOne() to the service with the id and userId', () => {
+    const payload: OrderActionPayload = { id: 'order-1', userId: 'user-1' };
     const order = {} as never;
     ordersService.findOne.mockReturnValue(order);
 
-    expect(ordersController.findOne('order-1')).toBe(order);
-    expect(ordersService.findOne).toHaveBeenCalledWith('order-1');
+    expect(ordersController.findOne(payload)).toBe(order);
+    expect(ordersService.findOne).toHaveBeenCalledWith('order-1', 'user-1');
   });
 
-  it('delegates updateStatus() to the service with id and status', () => {
+  it('delegates updateStatus() to the service with id, status and userId', () => {
     const payload: UpdateOrderStatusPayload = {
       id: 'order-1',
+      userId: 'user-1',
       status: OrderStatus.SHIPPED,
     };
     const order = {} as never;
@@ -86,31 +89,38 @@ describe('OrdersController', () => {
     expect(ordersService.updateStatus).toHaveBeenCalledWith(
       'order-1',
       OrderStatus.SHIPPED,
+      'user-1',
     );
   });
 
-  it('delegates cancel() to the service with the id', () => {
+  it('delegates cancel() to the service with the id and userId', () => {
+    const payload: OrderActionPayload = { id: 'order-1', userId: 'user-1' };
     const result = Promise.resolve({} as never);
     ordersService.cancel.mockReturnValue(result);
 
-    expect(ordersController.cancel('order-1')).toBe(result);
-    expect(ordersService.cancel).toHaveBeenCalledWith('order-1');
+    expect(ordersController.cancel(payload)).toBe(result);
+    expect(ordersService.cancel).toHaveBeenCalledWith('order-1', 'user-1');
   });
 
-  it('delegates pay() to the service with the id', () => {
+  it('delegates pay() to the service with the id and userId', () => {
+    const payload: OrderActionPayload = { id: 'order-1', userId: 'user-1' };
     const result = Promise.resolve({} as never);
     ordersService.pay.mockReturnValue(result);
 
-    expect(ordersController.pay('order-1')).toBe(result);
-    expect(ordersService.pay).toHaveBeenCalledWith('order-1');
+    expect(ordersController.pay(payload)).toBe(result);
+    expect(ordersService.pay).toHaveBeenCalledWith('order-1', 'user-1');
   });
 
-  it('delegates capturePayment() to the service with the id', () => {
+  it('delegates capturePayment() to the service with the id and userId', () => {
+    const payload: OrderActionPayload = { id: 'order-1', userId: 'user-1' };
     const result = Promise.resolve({} as never);
     ordersService.capturePayment.mockReturnValue(result);
 
-    expect(ordersController.capturePayment('order-1')).toBe(result);
-    expect(ordersService.capturePayment).toHaveBeenCalledWith('order-1');
+    expect(ordersController.capturePayment(payload)).toBe(result);
+    expect(ordersService.capturePayment).toHaveBeenCalledWith(
+      'order-1',
+      'user-1',
+    );
   });
 
   it('delegates captureByPaymentId() to the service with the payment id', () => {

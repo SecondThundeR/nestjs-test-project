@@ -229,6 +229,38 @@ describe('OrdersService', () => {
     it('throws RpcException for an unknown id', async () => {
       await expect(service.findOne('missing')).rejects.toThrow(RpcException);
     });
+
+    it('returns the order for its owner', async () => {
+      const order = await createOrder();
+
+      await expect(service.findOne(order.id, USER)).resolves.toMatchObject({
+        id: order.id,
+      });
+    });
+
+    it('hides the order from another user as not found', async () => {
+      const order = await createOrder();
+
+      const error: unknown = await service
+        .findOne(order.id, 'someone-else')
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(RpcException);
+      expect((error as RpcException).getError()).toMatchObject({
+        statusCode: 404,
+      });
+    });
+
+    it('blocks owner-scoped cancel for a different user', async () => {
+      const order = await createOrder();
+
+      await expect(
+        service.cancel(order.id, 'someone-else'),
+      ).rejects.toBeInstanceOf(RpcException);
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.PENDING,
+      });
+    });
   });
 
   describe('updateStatus', () => {

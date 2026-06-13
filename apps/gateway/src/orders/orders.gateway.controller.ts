@@ -42,30 +42,41 @@ export class OrdersGatewayController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return rpcSend<Order>(this.orders, ORDERS_PATTERNS.FIND_ONE, id);
+  findOne(@CurrentUserId() userId: string, @Param('id') id: string) {
+    return rpcSend<Order>(this.orders, ORDERS_PATTERNS.FIND_ONE, { id, userId });
   }
 
   @Patch(':id/status')
-  updateStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
+  updateStatus(
+    @CurrentUserId() userId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateOrderStatusDto,
+  ) {
     return rpcSend<Order>(this.orders, ORDERS_PATTERNS.UPDATE_STATUS, {
       id,
+      userId,
       status: dto.status,
     });
   }
 
   @Patch(':id/cancel')
-  cancel(@Param('id') id: string) {
-    return rpcSend<Order>(this.orders, ORDERS_PATTERNS.CANCEL, id);
+  cancel(@CurrentUserId() userId: string, @Param('id') id: string) {
+    return rpcSend<Order>(this.orders, ORDERS_PATTERNS.CANCEL, { id, userId });
   }
 
   @Post(':id/pay')
-  pay(@Param('id') id: string) {
-    return rpcSend<OrderPayment>(this.orders, ORDERS_PATTERNS.PAY, id);
+  pay(@CurrentUserId() userId: string, @Param('id') id: string) {
+    return rpcSend<OrderPayment>(this.orders, ORDERS_PATTERNS.PAY, {
+      id,
+      userId,
+    });
   }
 
   @Post(':id/capture')
-  capturePayment(@Param('id') id: string) {
-    return rpcSend<Order>(this.orders, ORDERS_PATTERNS.CAPTURE_PAYMENT, id);
+  capturePayment(@CurrentUserId() userId: string, @Param('id') id: string) {
+    return rpcSend<Order>(this.orders, ORDERS_PATTERNS.CAPTURE_PAYMENT, {
+      id,
+      userId,
+    });
   }
 }

@@ -17,7 +17,13 @@ export interface CreateOrderPayload {
   shippingAddress: string;
 }
 
+export interface OrderActionPayload {
+  id: string;
+  userId: string;
+}
+
 export interface UpdateOrderStatusPayload {
   id: string;
+  userId: string;
   status: OrderStatus;
 }

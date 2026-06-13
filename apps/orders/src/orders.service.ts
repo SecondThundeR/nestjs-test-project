@@ -134,19 +134,33 @@ export class OrdersService {
     });
   }
 
-  async findOne(id: string): Promise<OrderEntity> {
-    return this.cache.wrap(orderCacheKey(id), async () => {
-      const order = await this.orders.findOneBy({ id });
-      if (!order) {
+  async findOne(id: string, userId?: string): Promise<OrderEntity> {
+    const order = await this.cache.wrap(orderCacheKey(id), async () => {
+      const found = await this.orders.findOneBy({ id });
+      if (!found) {
         this.logger.warn(`Order ${id} not found`);
         throw RpcErrors.notFound(`Order ${id} not found`);
       }
-      return order;
+      return found;
     });
+
+    // Treat someone else's order as missing so order ids cannot be enumerated.
+    if (userId !== undefined && order.userId !== userId) {
+      this.logger.warn(
+        `User ${userId} tried to access order ${id} owned by ${order.userId}`,
+      );
+      throw RpcErrors.notFound(`Order ${id} not found`);
+    }
+
+    return order;
   }
 
-  async updateStatus(id: string, status: OrderStatus): Promise<OrderEntity> {
-    const order = await this.findOne(id);
+  async updateStatus(
+    id: string,
+    status: OrderStatus,
+    userId?: string,
+  ): Promise<OrderEntity> {
+    const order = await this.findOne(id, userId);
     if (order.status === status) {
       this.logger.debug(`Order ${id} is already ${status}`);
       return order;
@@ -186,10 +200,10 @@ export class OrdersService {
     return updated;
   }
 
-  async pay(id: string): Promise<OrderPayment> {
+  async pay(id: string, userId?: string): Promise<OrderPayment> {
     this.logger.log(`Starting PayPal payment for order ${id}`);
 
-    const order = await this.findOne(id);
+    const order = await this.findOne(id, userId);
     if (order.status !== OrderStatus.PENDING) {
       this.logger.warn(
         `Order ${id} is ${order.status} and cannot start a payment`,
@@ -224,10 +238,10 @@ export class OrdersService {
     };
   }
 
-  async capturePayment(id: string): Promise<OrderEntity> {
+  async capturePayment(id: string, userId?: string): Promise<OrderEntity> {
     this.logger.log(`Capturing PayPal payment for order ${id}`);
 
-    const order = await this.findOne(id);
+    const order = await this.findOne(id, userId);
     if (order.status === OrderStatus.PAID) {
       this.logger.debug(`Order ${id} is already paid`);
       return order;
@@ -291,10 +305,10 @@ export class OrdersService {
     return this.capturePayment(order.id);
   }
 
-  async cancel(id: string): Promise<OrderEntity> {
+  async cancel(id: string, userId?: string): Promise<OrderEntity> {
     this.logger.log(`Cancelling order ${id}`);
 
-    const order = await this.findOne(id);
+    const order = await this.findOne(id, userId);
     if (order.status === OrderStatus.CANCELLED) {
       this.logger.debug(`Order ${id} is already cancelled`);
       return order;

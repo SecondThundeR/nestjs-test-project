@@ -3,6 +3,7 @@ import { OrdersService } from './orders.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   type CreateOrderPayload,
+  type OrderActionPayload,
   ORDERS_PATTERNS,
   type UpdateOrderStatusPayload,
 } from '@app/domains';
@@ -22,28 +23,32 @@ export class OrdersController {
   }
 
   @MessagePattern(ORDERS_PATTERNS.FIND_ONE)
-  findOne(@Payload() id: string) {
-    return this.ordersService.findOne(id);
+  findOne(@Payload() payload: OrderActionPayload) {
+    return this.ordersService.findOne(payload.id, payload.userId);
   }
 
   @MessagePattern(ORDERS_PATTERNS.UPDATE_STATUS)
   updateStatus(@Payload() payload: UpdateOrderStatusPayload) {
-    return this.ordersService.updateStatus(payload.id, payload.status);
+    return this.ordersService.updateStatus(
+      payload.id,
+      payload.status,
+      payload.userId,
+    );
   }
 
   @MessagePattern(ORDERS_PATTERNS.CANCEL)
-  cancel(@Payload() id: string) {
-    return this.ordersService.cancel(id);
+  cancel(@Payload() payload: OrderActionPayload) {
+    return this.ordersService.cancel(payload.id, payload.userId);
   }
 
   @MessagePattern(ORDERS_PATTERNS.PAY)
-  pay(@Payload() id: string) {
-    return this.ordersService.pay(id);
+  pay(@Payload() payload: OrderActionPayload) {
+    return this.ordersService.pay(payload.id, payload.userId);
   }
 
   @MessagePattern(ORDERS_PATTERNS.CAPTURE_PAYMENT)
-  capturePayment(@Payload() id: string) {
-    return this.ordersService.capturePayment(id);
+  capturePayment(@Payload() payload: OrderActionPayload) {
+    return this.ordersService.capturePayment(payload.id, payload.userId);
   }
 
   @MessagePattern(ORDERS_PATTERNS.CAPTURE_BY_PAYMENT_ID)
