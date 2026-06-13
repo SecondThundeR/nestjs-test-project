@@ -1,4 +1,4 @@
-FROM node:26-alpine AS builder
+FROM node:26.3.0-alpine AS builder
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++
@@ -9,7 +9,7 @@ RUN npm ci
 COPY . .
 RUN npm run build && npm prune --omit=dev
 
-FROM node:26-alpine AS runner
+FROM node:26.3.0-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
