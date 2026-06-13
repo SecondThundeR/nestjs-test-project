@@ -10,6 +10,7 @@ import {
   ORDERS_PATTERNS,
   PRODUCT_PATTERNS,
   USERS_PATTERNS,
+  UserRole,
 } from '@app/domains';
 import { authConfig, SERVICE_NAMES } from '@app/config';
 import { GatewayModule } from './../src/gateway.module';
@@ -27,8 +28,16 @@ describe('Gateway (e2e)', () => {
     sub: 'alice',
     email: 'alice@example.com',
     sid: 'session-1',
+    role: UserRole.REGULAR,
   });
   const bearer = `Bearer ${aliceToken}`;
+  const adminToken = jwtService.sign({
+    sub: 'admin',
+    email: 'admin@example.com',
+    sid: 'session-admin',
+    role: UserRole.ADMIN,
+  });
+  const adminBearer = `Bearer ${adminToken}`;
 
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
@@ -93,10 +102,12 @@ describe('Gateway (e2e)', () => {
 
     it('POST /api/product forwards a valid CREATE payload', async () => {
       const created = { id: 'p-1', name: 'Widget', price: 10 };
+      auth.send.mockReturnValue(of({ id: 'admin' }));
       products.send.mockReturnValue(of(created));
 
       const res = await http()
         .post('/api/product')
+        .set('authorization', adminBearer)
         .send({ name: 'Widget', price: 10 })
         .expect(201);
 
@@ -107,9 +118,33 @@ describe('Gateway (e2e)', () => {
       });
     });
 
-    it('POST /api/product rejects an invalid body with 400', async () => {
+    it('POST /api/product requires authentication', async () => {
       await http()
         .post('/api/product')
+        .send({ name: 'Widget', price: 10 })
+        .expect(401);
+
+      expect(products.send).not.toHaveBeenCalled();
+    });
+
+    it('POST /api/product forbids a non-admin user', async () => {
+      auth.send.mockReturnValue(of({ id: 'alice' }));
+
+      await http()
+        .post('/api/product')
+        .set('authorization', bearer)
+        .send({ name: 'Widget', price: 10 })
+        .expect(403);
+
+      expect(products.send).not.toHaveBeenCalled();
+    });
+
+    it('POST /api/product rejects an invalid body with 400', async () => {
+      auth.send.mockReturnValue(of({ id: 'admin' }));
+
+      await http()
+        .post('/api/product')
+        .set('authorization', adminBearer)
         .send({ name: 'x', price: -1 })
         .expect(400);
 
@@ -117,8 +152,11 @@ describe('Gateway (e2e)', () => {
     });
 
     it('POST /api/product rejects unknown properties with 400', async () => {
+      auth.send.mockReturnValue(of({ id: 'admin' }));
+
       await http()
         .post('/api/product')
+        .set('authorization', adminBearer)
         .send({ name: 'Widget', price: 10, hacked: true })
         .expect(400);
 

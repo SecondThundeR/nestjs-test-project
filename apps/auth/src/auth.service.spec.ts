@@ -4,7 +4,12 @@ import { JwtModule, JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { DataSource, Repository } from 'typeorm';
 import { of, throwError } from 'rxjs';
-import { USERS_PATTERNS, type JwtPayload, type PublicUser } from '@app/domains';
+import {
+  USERS_PATTERNS,
+  type JwtPayload,
+  type PublicUser,
+  UserRole,
+} from '@app/domains';
 import { authConfig, SERVICE_NAMES } from '@app/config';
 import { CacheService } from '@app/cache';
 import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
@@ -16,6 +21,7 @@ const USER: PublicUser = {
   id: 'u-1',
   email: 'jane@example.com',
   name: 'Jane',
+  role: UserRole.REGULAR,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };

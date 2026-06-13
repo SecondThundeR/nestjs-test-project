@@ -1,4 +1,4 @@
-import { type User } from '@app/domains';
+import { type User, UserRole } from '@app/domains';
 import { isoTransformer } from '@app/config';
 import {
   Column,
@@ -21,6 +21,9 @@ export class UserEntity implements User {
 
   @Column()
   passwordHash!: string;
+
+  @Column({ type: 'varchar', default: UserRole.REGULAR })
+  role!: UserRole;
 
   @CreateDateColumn({ type: 'timestamptz', transformer: isoTransformer })
   createdAt!: string;

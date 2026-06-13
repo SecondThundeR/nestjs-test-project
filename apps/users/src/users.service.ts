@@ -3,6 +3,7 @@ import {
   ValidateUserByCredentialsDto,
   type PublicUser,
   CreateUserDto,
+  UserRole,
 } from '@app/domains';
 import { RpcErrors } from '@app/filters';
 import { Injectable, Logger } from '@nestjs/common';
@@ -44,6 +45,7 @@ export class UsersService {
         email,
         name: dto.name,
         passwordHash: await hash(dto.password, SALT_ROUNDS),
+        role: UserRole.REGULAR,
       }),
     );
 

@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { ExecutionContext } from '@nestjs/common';
-import type { JwtPayload } from '@app/domains';
+import { type JwtPayload, UserRole } from '@app/domains';
 import { CurrentSessionId, CurrentUserId } from './current-user.decorator';
 
 type ParamFactory = (data: unknown, ctx: ExecutionContext) => string;
@@ -32,6 +32,7 @@ const USER: JwtPayload = {
   sub: 'user-1',
   email: 'a@example.com',
   sid: 'session-1',
+  role: UserRole.REGULAR,
 };
 
 describe('CurrentUserId decorator', () => {

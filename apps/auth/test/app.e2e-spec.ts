@@ -19,6 +19,7 @@ import {
   type AuthResult,
   type LogoutResult,
   type PublicUser,
+  UserRole,
 } from '@app/domains';
 import { SERVICE_NAMES } from '@app/config';
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
@@ -59,6 +60,7 @@ describe('Auth microservice (e2e)', () => {
             email: dto.email,
             name: dto.name,
             password: dto.password,
+            role: UserRole.REGULAR,
             createdAt: now,
             updatedAt: now,
           };

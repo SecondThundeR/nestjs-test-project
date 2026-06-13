@@ -1,4 +1,4 @@
-import type { PublicUser } from '../users';
+import type { PublicUser, UserRole } from '../users';
 
 export interface Session {
   id: string;
@@ -13,6 +13,7 @@ export interface JwtPayload {
   sub: string;
   email: string;
   sid: string;
+  role: UserRole;
 }
 
 export interface AuthResult {

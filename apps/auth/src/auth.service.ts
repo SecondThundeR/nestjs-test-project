@@ -211,6 +211,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       sid: session.id,
+      role: user.role,
     };
 
     return {

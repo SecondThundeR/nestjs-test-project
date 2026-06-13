@@ -1,11 +1,12 @@
 import { Test } from '@nestjs/testing';
+import { JwtModule } from '@nestjs/jwt';
 import { of } from 'rxjs';
 import {
   PRODUCT_PATTERNS,
   type CreateProductDto,
   type UpdateProductDto,
 } from '@app/domains';
-import { SERVICE_NAMES } from '@app/config';
+import { authConfig, SERVICE_NAMES } from '@app/config';
 import { ProductsGatewayController } from './products.gateway.controller';
 
 describe('ProductsGatewayController', () => {
@@ -16,8 +17,12 @@ describe('ProductsGatewayController', () => {
     products = { send: jest.fn() };
 
     const moduleRef = await Test.createTestingModule({
+      imports: [JwtModule.register({ secret: authConfig().secret })],
       controllers: [ProductsGatewayController],
-      providers: [{ provide: SERVICE_NAMES.PRODUCTS, useValue: products }],
+      providers: [
+        { provide: SERVICE_NAMES.PRODUCTS, useValue: products },
+        { provide: SERVICE_NAMES.AUTH, useValue: { send: jest.fn() } },
+      ],
     }).compile();
 
     controller = moduleRef.get(ProductsGatewayController);
