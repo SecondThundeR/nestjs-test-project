@@ -34,8 +34,8 @@ export class UsersService {
     this.logger.log(`Create attempt for ${email}`);
 
     if (await this.users.findOneBy({ email })) {
-      this.logger.warn(`Create rejected: ${email} already exist`);
-      throw RpcErrors.conflict(`Email ${dto.email} is already exist`);
+      this.logger.warn(`Create rejected: ${email} already exists`);
+      throw RpcErrors.conflict(`Email ${dto.email} is already registered`);
     }
 
     const user = await this.users.save(
@@ -68,17 +68,22 @@ export class UsersService {
   }
 
   async findById(id: string): Promise<PublicUser | null> {
-    return this.cache.wrap(userCacheKey(id), async () => {
-      this.logger.log(`Trying to get user with ID ${id}`);
-      const user = await this.users.findOneBy({ id });
+    const key = userCacheKey(id);
+    const cached = await this.cache.get<PublicUser>(key);
+    if (cached) {
+      return cached;
+    }
 
-      if (!user) {
-        this.logger.warn(`User with ID ${id} not found`);
-        return null;
-      }
+    this.logger.log(`Trying to get user with ID ${id}`);
+    const user = await this.users.findOneBy({ id });
+    if (!user) {
+      this.logger.warn(`User with ID ${id} not found`);
+      return null;
+    }
 
-      return this.toPublicUser(user);
-    });
+    const publicUser = this.toPublicUser(user);
+    await this.cache.set(key, publicUser);
+    return publicUser;
   }
 
   private toPublicUser(user: UserEntity): PublicUser {

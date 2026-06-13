@@ -138,5 +138,15 @@ describe('UsersService', () => {
       expect(spy).toHaveBeenCalledTimes(1);
       expect(cacheStore.has(`user:${created.id}`)).toBe(true);
     });
+
+    it('does not cache a missing user', async () => {
+      const spy = jest.spyOn(dataSource.getRepository(UserEntity), 'findOneBy');
+
+      await service.findById('missing');
+      await service.findById('missing');
+
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(cacheStore.has('user:missing')).toBe(false);
+    });
   });
 });
