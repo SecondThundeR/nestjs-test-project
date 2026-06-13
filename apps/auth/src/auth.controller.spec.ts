@@ -55,12 +55,12 @@ describe('AuthController', () => {
     expect(authService.login).toHaveBeenCalledWith(dto);
   });
 
-  it('delegates verify() to the service with the token', () => {
+  it('delegates verify() to the service with the session id', () => {
     const result = {} as never;
     authService.verify.mockReturnValue(result);
 
-    expect(authController.verify('a.b.c')).toBe(result);
-    expect(authService.verify).toHaveBeenCalledWith('a.b.c');
+    expect(authController.verify('session-1')).toBe(result);
+    expect(authService.verify).toHaveBeenCalledWith('session-1');
   });
 
   it('delegates refresh() to the service with the dto', () => {

@@ -38,7 +38,7 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
-    await rpcSend<PublicUser>(this.auth, AUTH_PATTERNS.VERIFY, token);
+    await rpcSend<PublicUser>(this.auth, AUTH_PATTERNS.VERIFY, payload.sid);
 
     request.user = payload;
     return true;

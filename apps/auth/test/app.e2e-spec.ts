@@ -167,14 +167,14 @@ describe('Auth microservice (e2e)', () => {
 
     const verified = await send<PublicUser>(
       AUTH_PATTERNS.VERIFY,
-      loggedIn.accessToken,
+      decodeSessionId(loggedIn.accessToken),
     );
     expect(verified.id).toBe(registered.user.id);
   });
 
-  it('rejects verifying a malformed token', async () => {
+  it('rejects verifying an unknown session', async () => {
     await expect(
-      send<PublicUser>(AUTH_PATTERNS.VERIFY, 'not-a-token'),
+      send<PublicUser>(AUTH_PATTERNS.VERIFY, 'missing-session'),
     ).rejects.toMatchObject({ statusCode: 401 });
   });
 
@@ -241,7 +241,7 @@ describe('Auth microservice (e2e)', () => {
     expect(loggedOut).toEqual({ success: true });
 
     await expect(
-      send<PublicUser>(AUTH_PATTERNS.VERIFY, registered.accessToken),
+      send<PublicUser>(AUTH_PATTERNS.VERIFY, sessionId),
     ).rejects.toMatchObject({ statusCode: 401 });
     await expect(
       send<AuthResult>(AUTH_PATTERNS.REFRESH, {

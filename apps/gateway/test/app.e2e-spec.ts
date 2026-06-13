@@ -151,7 +151,7 @@ describe('Gateway (e2e)', () => {
 
       await http().get('/api/cart').set('authorization', bearer).expect(200);
 
-      expect(auth.send).toHaveBeenCalledWith(AUTH_PATTERNS.VERIFY, aliceToken);
+      expect(auth.send).toHaveBeenCalledWith(AUTH_PATTERNS.VERIFY, 'session-1');
       expect(cart.send).toHaveBeenCalledWith(CART_PATTERNS.GET, 'alice');
     });
 

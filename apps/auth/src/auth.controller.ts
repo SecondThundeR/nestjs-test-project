@@ -23,8 +23,8 @@ export class AuthController {
   }
 
   @MessagePattern(AUTH_PATTERNS.VERIFY)
-  verify(@Payload() token: string) {
-    return this.authService.verify(token);
+  verify(@Payload() sessionId: string) {
+    return this.authService.verify(sessionId);
   }
 
   @MessagePattern(AUTH_PATTERNS.REFRESH)

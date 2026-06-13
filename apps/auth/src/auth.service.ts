@@ -61,32 +61,27 @@ export class AuthService {
     return this.openSession(user);
   }
 
-  async verify(token: string): Promise<PublicUser> {
-    let payload: JwtPayload;
-
-    try {
-      payload = this.jwtService.verify<JwtPayload>(token);
-    } catch {
-      this.logger.warn('Token verification failed: invalid or expired token');
-      throw RpcErrors.unauthorized('Invalid or expired token');
-    }
-
-    const session = await this.loadActiveSession(payload.sid);
+  async verify(sessionId: string): Promise<PublicUser> {
+    // JWT guard already verified that passed token is valid
+    // This method only validates if current session is active or not
+    const session = await this.loadActiveSession(sessionId);
     if (!session) {
-      this.logger.warn(`Token valid but session ${payload.sid} is not active`);
+      this.logger.warn(`Session ${sessionId} is not active`);
       throw RpcErrors.unauthorized('Invalid or expired token');
     }
 
     const user = await this.usersCall<PublicUser | null>(
       USERS_PATTERNS.FIND_BY_ID,
-      payload.sub,
+      session.userId,
     );
     if (!user) {
-      this.logger.warn(`Token valid but user ${payload.sub} no longer exists`);
+      this.logger.warn(
+        `Session ${sessionId} refers to a user that no longer exists`,
+      );
       throw RpcErrors.unauthorized('Invalid or expired token');
     }
 
-    this.logger.debug(`Verified token for user ${user.id}`);
+    this.logger.debug(`Verified session ${sessionId} for user ${user.id}`);
     return user;
   }
 

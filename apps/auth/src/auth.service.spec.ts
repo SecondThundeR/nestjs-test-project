@@ -167,14 +167,17 @@ describe('AuthService', () => {
   });
 
   describe('verify', () => {
-    it('returns the public user for a valid token', async () => {
+    it('returns the public user for an active session', async () => {
       const { accessToken } = await register();
+      const { sid } = jwtService.verify<JwtPayload>(accessToken);
 
-      await expect(service.verify(accessToken)).resolves.toEqual(USER);
+      await expect(service.verify(sid)).resolves.toEqual(USER);
     });
 
-    it('throws RpcException for a malformed token', async () => {
-      await expect(service.verify('not-a-token')).rejects.toThrow(RpcException);
+    it('throws RpcException for an unknown session', async () => {
+      await expect(service.verify('missing-session')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('throws RpcException when the session has been revoked', async () => {
@@ -183,26 +186,16 @@ describe('AuthService', () => {
 
       await service.logout(sid);
 
-      await expect(service.verify(accessToken)).rejects.toThrow(RpcException);
-    });
-
-    it('throws RpcException when the token carries an unknown session', async () => {
-      await register();
-      const token = jwtService.sign({
-        sub: USER.id,
-        email: USER.email,
-        sid: 'missing-session',
-      });
-
-      await expect(service.verify(token)).rejects.toThrow(RpcException);
+      await expect(service.verify(sid)).rejects.toThrow(RpcException);
     });
 
     it('throws RpcException when the user no longer exists', async () => {
       const { accessToken } = await register();
+      const { sid } = jwtService.verify<JwtPayload>(accessToken);
 
       users.send.mockReturnValue(of(null));
 
-      await expect(service.verify(accessToken)).rejects.toThrow(RpcException);
+      await expect(service.verify(sid)).rejects.toThrow(RpcException);
     });
 
     it('caches the active session so repeated verifies skip the DB lookup', async () => {
@@ -210,8 +203,8 @@ describe('AuthService', () => {
       const { sid } = jwtService.verify<JwtPayload>(accessToken);
       const spy = jest.spyOn(sessions, 'findOneBy');
 
-      await service.verify(accessToken);
-      await service.verify(accessToken);
+      await service.verify(sid);
+      await service.verify(sid);
 
       expect(spy).toHaveBeenCalledTimes(1);
       expect(cacheStore.has(`session:${sid}`)).toBe(true);
@@ -221,13 +214,13 @@ describe('AuthService', () => {
       const { accessToken } = await register();
       const { sid } = jwtService.verify<JwtPayload>(accessToken);
 
-      await service.verify(accessToken);
+      await service.verify(sid);
       expect(cacheStore.has(`session:${sid}`)).toBe(true);
 
       await service.logout(sid);
 
       expect(cacheStore.has(`session:${sid}`)).toBe(false);
-      await expect(service.verify(accessToken)).rejects.toThrow(RpcException);
+      await expect(service.verify(sid)).rejects.toThrow(RpcException);
     });
   });
 

@@ -53,7 +53,7 @@ describe('JwtAuthGuard', () => {
       email: 'a@example.com',
       sid: 'session-1',
     });
-    expect(auth.send).toHaveBeenCalledWith(AUTH_PATTERNS.VERIFY, token);
+    expect(auth.send).toHaveBeenCalledWith(AUTH_PATTERNS.VERIFY, 'session-1');
   });
 
   it('throws when the Authorization header is missing', async () => {
