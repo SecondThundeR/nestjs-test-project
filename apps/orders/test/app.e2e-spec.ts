@@ -160,14 +160,20 @@ describe('Orders microservice (e2e)', () => {
       total: 20,
     });
 
-    const found = await send<Order>(ORDERS_PATTERNS.FIND_ONE, order.id);
+    const found = await send<Order>(ORDERS_PATTERNS.FIND_ONE, {
+      id: order.id,
+      userId: USER,
+    });
     expect(found.id).toBe(order.id);
 
     const all = await send<Order[]>(ORDERS_PATTERNS.FIND_ALL, USER);
     expect(all.map((o) => o.id)).toContain(order.id);
 
     paypal.createOrder.mockResolvedValue(makePaypalOrder());
-    const payment = await send<OrderPayment>(ORDERS_PATTERNS.PAY, order.id);
+    const payment = await send<OrderPayment>(ORDERS_PATTERNS.PAY, {
+      id: order.id,
+      userId: USER,
+    });
     expect(payment).toEqual({
       orderId: order.id,
       paymentId: 'pp-1',
@@ -176,17 +182,22 @@ describe('Orders microservice (e2e)', () => {
     });
 
     paypal.captureOrder.mockResolvedValue(makePaypalCapture());
-    const paid = await send<Order>(ORDERS_PATTERNS.CAPTURE_PAYMENT, order.id);
+    const paid = await send<Order>(ORDERS_PATTERNS.CAPTURE_PAYMENT, {
+      id: order.id,
+      userId: USER,
+    });
     expect(paid.status).toBe(OrderStatus.PAID);
 
     const shipped = await send<Order>(ORDERS_PATTERNS.UPDATE_STATUS, {
       id: order.id,
+      userId: USER,
       status: OrderStatus.SHIPPED,
     });
     expect(shipped.status).toBe(OrderStatus.SHIPPED);
 
     const delivered = await send<Order>(ORDERS_PATTERNS.UPDATE_STATUS, {
       id: order.id,
+      userId: USER,
       status: OrderStatus.DELIVERED,
     });
     expect(delivered.status).toBe(OrderStatus.DELIVERED);
@@ -205,7 +216,10 @@ describe('Orders microservice (e2e)', () => {
         ? of(makeProduct({ stock: 3 }))
         : of(makeProduct()),
     );
-    const cancelled = await send<Order>(ORDERS_PATTERNS.CANCEL, order.id);
+    const cancelled = await send<Order>(ORDERS_PATTERNS.CANCEL, {
+      id: order.id,
+      userId: USER,
+    });
     expect(cancelled.status).toBe(OrderStatus.CANCELLED);
   });
 
@@ -220,12 +234,18 @@ describe('Orders microservice (e2e)', () => {
     paypal.createOrder.mockResolvedValue(
       makePaypalOrder({ id: 'pp-refund-1', status: 'PAYER_ACTION_REQUIRED' }),
     );
-    await send<OrderPayment>(ORDERS_PATTERNS.PAY, order.id);
+    await send<OrderPayment>(ORDERS_PATTERNS.PAY, {
+      id: order.id,
+      userId: USER,
+    });
 
     paypal.captureOrder.mockResolvedValue(
       makePaypalCapture({ id: 'pp-refund-1', captureId: 'cap-refund-1' }),
     );
-    await send<Order>(ORDERS_PATTERNS.CAPTURE_PAYMENT, order.id);
+    await send<Order>(ORDERS_PATTERNS.CAPTURE_PAYMENT, {
+      id: order.id,
+      userId: USER,
+    });
 
     paypal.refundCapture.mockResolvedValue(makePaypalRefund());
     productsClient.send.mockImplementation((pattern: string) =>
@@ -233,7 +253,10 @@ describe('Orders microservice (e2e)', () => {
         ? of(makeProduct({ stock: 3 }))
         : of(makeProduct()),
     );
-    const cancelled = await send<Order>(ORDERS_PATTERNS.CANCEL, order.id);
+    const cancelled = await send<Order>(ORDERS_PATTERNS.CANCEL, {
+      id: order.id,
+      userId: USER,
+    });
 
     expect(cancelled.status).toBe(OrderStatus.CANCELLED);
     expect(paypal.refundCapture).toHaveBeenCalledWith('cap-refund-1');
@@ -250,7 +273,10 @@ describe('Orders microservice (e2e)', () => {
     paypal.createOrder.mockResolvedValue(
       makePaypalOrder({ id: 'pp-token-1', status: 'PAYER_ACTION_REQUIRED' }),
     );
-    await send<OrderPayment>(ORDERS_PATTERNS.PAY, order.id);
+    await send<OrderPayment>(ORDERS_PATTERNS.PAY, {
+      id: order.id,
+      userId: USER,
+    });
 
     paypal.captureOrder.mockResolvedValue(
       makePaypalCapture({ id: 'pp-token-1' }),
@@ -274,6 +300,7 @@ describe('Orders microservice (e2e)', () => {
     await expect(
       send<Order>(ORDERS_PATTERNS.UPDATE_STATUS, {
         id: order.id,
+        userId: USER,
         status: OrderStatus.SHIPPED,
       }),
     ).rejects.toMatchObject({ statusCode: 400 });
@@ -299,7 +326,7 @@ describe('Orders microservice (e2e)', () => {
 
   it('rejects finding an unknown order', async () => {
     await expect(
-      send<Order>(ORDERS_PATTERNS.FIND_ONE, 'missing'),
+      send<Order>(ORDERS_PATTERNS.FIND_ONE, { id: 'missing', userId: USER }),
     ).rejects.toMatchObject({ statusCode: 404 });
   });
 });

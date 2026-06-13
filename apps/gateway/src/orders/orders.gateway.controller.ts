@@ -43,7 +43,10 @@ export class OrdersGatewayController {
 
   @Get(':id')
   findOne(@CurrentUserId() userId: string, @Param('id') id: string) {
-    return rpcSend<Order>(this.orders, ORDERS_PATTERNS.FIND_ONE, { id, userId });
+    return rpcSend<Order>(this.orders, ORDERS_PATTERNS.FIND_ONE, {
+      id,
+      userId,
+    });
   }
 
   @Patch(':id/status')
