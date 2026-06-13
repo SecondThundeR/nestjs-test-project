@@ -20,10 +20,9 @@ class EnvironmentVariables {
   @IsNotEmpty()
   LOG_FORMAT?: string;
 
-  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  JWT_SECRET?: string;
+  JWT_SECRET!: string;
 
   @IsOptional()
   @IsString()
