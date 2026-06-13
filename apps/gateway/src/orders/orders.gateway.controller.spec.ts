@@ -1,13 +1,14 @@
-import { Test } from '@nestjs/testing';
-import { JwtModule } from '@nestjs/jwt';
-import { of } from 'rxjs';
+import { authConfig, SERVICE_NAMES } from '@app/config';
 import {
+  type CreateOrderDto,
   ORDERS_PATTERNS,
   OrderStatus,
-  type CreateOrderDto,
   type UpdateOrderStatusDto,
 } from '@app/domains';
-import { authConfig, SERVICE_NAMES } from '@app/config';
+import { JwtModule } from '@nestjs/jwt';
+import { Test } from '@nestjs/testing';
+import { of } from 'rxjs';
+
 import { OrdersGatewayController } from './orders.gateway.controller';
 
 const USER = 'user-1';

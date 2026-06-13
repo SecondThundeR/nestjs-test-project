@@ -1,5 +1,5 @@
-import { type User, UserRole } from '@app/domains';
 import { isoTransformer } from '@app/config';
+import { type User, UserRole } from '@app/domains';
 import {
   Column,
   CreateDateColumn,

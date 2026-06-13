@@ -1,4 +1,5 @@
 import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
+
 import type { AuthenticatedRequest } from './jwt-auth.guard';
 
 export const CurrentUserId = createParamDecorator(

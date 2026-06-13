@@ -1,4 +1,12 @@
-import { Test } from '@nestjs/testing';
+import {
+  type Product,
+  PRODUCT_PATTERNS,
+  type ProductDeleteResult,
+} from '@app/domains';
+import {
+  GlobalRpcExceptionFilter,
+  rpcValidationExceptionFactory,
+} from '@app/filters';
 import { type INestMicroservice, ValidationPipe } from '@nestjs/common';
 import {
   type ClientProxy,
@@ -6,20 +14,13 @@ import {
   type MicroserviceOptions,
   Transport,
 } from '@nestjs/microservices';
+import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
-import {
-  PRODUCT_PATTERNS,
-  type ProductDeleteResult,
-  type Product,
-} from '@app/domains';
-import {
-  GlobalRpcExceptionFilter,
-  rpcValidationExceptionFactory,
-} from '@app/filters';
+
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
-import { ProductsModule } from './../src/products.module';
 import { ProductEntity } from './../src/entities/product.entity';
+import { ProductsModule } from './../src/products.module';
 
 const HOST = '127.0.0.1';
 const PORT = 4001;

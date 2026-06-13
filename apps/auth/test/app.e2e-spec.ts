@@ -1,4 +1,18 @@
-import { Test } from '@nestjs/testing';
+import { randomUUID } from 'node:crypto';
+
+import { SERVICE_NAMES } from '@app/config';
+import {
+  AUTH_PATTERNS,
+  type AuthResult,
+  type LogoutResult,
+  type PublicUser,
+  UserRole,
+  USERS_PATTERNS,
+} from '@app/domains';
+import {
+  GlobalRpcExceptionFilter,
+  rpcValidationExceptionFactory,
+} from '@app/filters';
 import { type INestMicroservice, ValidationPipe } from '@nestjs/common';
 import {
   type ClientProxy,
@@ -6,22 +20,10 @@ import {
   type MicroserviceOptions,
   Transport,
 } from '@nestjs/microservices';
+import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom, of, throwError } from 'rxjs';
-import { randomUUID } from 'node:crypto';
-import {
-  GlobalRpcExceptionFilter,
-  rpcValidationExceptionFactory,
-} from '@app/filters';
-import {
-  AUTH_PATTERNS,
-  USERS_PATTERNS,
-  type AuthResult,
-  type LogoutResult,
-  type PublicUser,
-  UserRole,
-} from '@app/domains';
-import { SERVICE_NAMES } from '@app/config';
+
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
 import { AuthModule } from './../src/auth.module';
 import { SessionEntity } from './../src/entities/session.entity';

@@ -1,5 +1,5 @@
-import { type Order, ORDERS_PATTERNS } from '@app/domains';
 import { SERVICE_NAMES } from '@app/config';
+import { type Order, ORDERS_PATTERNS } from '@app/domains';
 import {
   BadRequestException,
   Controller,
@@ -8,6 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
+
 import { rpcSend } from '../common/rpc.util';
 
 // PayPal redirects the buyer here after checkout, so these routes

@@ -1,5 +1,5 @@
-import { registerAs } from '@nestjs/config';
 import type { ConfigType } from '@nestjs/config';
+import { registerAs } from '@nestjs/config';
 
 function optionalNumber(value: string | undefined): number | undefined {
   return value ? Number(value) : undefined;

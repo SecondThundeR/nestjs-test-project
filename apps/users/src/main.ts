@@ -1,14 +1,16 @@
 import 'dotenv/config';
-import { NestFactory } from '@nestjs/core';
-import { UsersModule } from './users.module';
-import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
+
 import { servicesConfig } from '@app/config';
-import { createWinstonLogger } from '@app/logger';
 import {
   GlobalRpcExceptionFilter,
   rpcValidationExceptionFactory,
 } from '@app/filters';
+import { createWinstonLogger } from '@app/logger';
 import { Logger, ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
+
+import { UsersModule } from './users.module';
 
 async function bootstrap() {
   const { ports } = servicesConfig();

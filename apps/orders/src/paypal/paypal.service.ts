@@ -1,7 +1,7 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { RpcException } from '@nestjs/microservices';
 import { type PaypalConfig, paypalConfig } from '@app/config';
 import { RpcErrors } from '@app/filters';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { RpcException } from '@nestjs/microservices';
 
 interface PaypalTokenResponse {
   access_token: string;

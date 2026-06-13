@@ -1,3 +1,5 @@
+import { SERVICE_NAMES } from '@app/config';
+import { AUTH_PATTERNS, type JwtPayload, type PublicUser } from '@app/domains';
 import {
   type CanActivate,
   type ExecutionContext,
@@ -8,8 +10,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import type { ClientProxy } from '@nestjs/microservices';
 import type { Request } from 'express';
-import { AUTH_PATTERNS, type JwtPayload, type PublicUser } from '@app/domains';
-import { SERVICE_NAMES } from '@app/config';
+
 import { rpcSend } from './rpc.util';
 
 export type AuthenticatedRequest = Request & { user: JwtPayload };

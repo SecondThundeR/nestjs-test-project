@@ -1,14 +1,15 @@
+import { SERVICE_NAMES } from '@app/config';
 import {
   AUTH_PATTERNS,
   type AuthResult,
-  ValidateUserByCredentialsDto,
+  CreateUserDto,
   type LogoutResult,
   RefreshTokenDto,
-  CreateUserDto,
+  ValidateUserByCredentialsDto,
 } from '@app/domains';
-import { SERVICE_NAMES } from '@app/config';
 import { Body, Controller, Inject, Post, UseGuards } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
+
 import { CurrentSessionId } from '../common/current-user.decorator';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { rpcSend } from '../common/rpc.util';

@@ -1,18 +1,19 @@
+import { SERVICE_NAMES } from '@app/config';
 import {
   AddCartItemDto,
   type Cart,
   type Product,
   PRODUCT_PATTERNS,
 } from '@app/domains';
-import { SERVICE_NAMES } from '@app/config';
 import { RpcErrors } from '@app/filters';
+import { roundPrice } from '@app/utils';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
+import { Repository } from 'typeorm';
+
 import { CartSchema } from './schemas/cart.schema';
-import { roundPrice } from '@app/utils';
 
 @Injectable()
 export class CartService {

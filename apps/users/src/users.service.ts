@@ -1,16 +1,18 @@
+import { randomUUID } from 'node:crypto';
+
 import { CacheService } from '@app/cache';
 import {
-  ValidateUserByCredentialsDto,
-  type PublicUser,
   CreateUserDto,
+  type PublicUser,
   UserRole,
+  ValidateUserByCredentialsDto,
 } from '@app/domains';
 import { RpcErrors } from '@app/filters';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { randomUUID } from 'node:crypto';
+import { compare, hash } from 'bcrypt';
 import { Repository } from 'typeorm';
-import { hash, compare } from 'bcrypt';
+
 import { UserEntity } from './entities/user.entity';
 
 const SALT_ROUNDS = 10;

@@ -1,9 +1,11 @@
 import 'reflect-metadata';
+
+import { buildDataSourceOptions } from '@app/config';
 import { config as loadEnv } from 'dotenv';
 import { DataSource } from 'typeorm';
-import { buildDataSourceOptions } from '@app/config';
-import { CartSchema } from './schemas/cart.schema';
+
 import { cartMigrations } from './migrations';
+import { CartSchema } from './schemas/cart.schema';
 
 loadEnv();
 

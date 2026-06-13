@@ -1,5 +1,5 @@
-import { registerAs } from '@nestjs/config';
 import type { ConfigType } from '@nestjs/config';
+import { registerAs } from '@nestjs/config';
 
 export const SERVICE_NAMES = {
   PRODUCTS: 'PRODUCTS_SERVICE',

@@ -1,8 +1,9 @@
-import { Test } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
-import { of } from 'rxjs';
-import { ORDERS_PATTERNS, OrderStatus } from '@app/domains';
 import { SERVICE_NAMES } from '@app/config';
+import { ORDERS_PATTERNS, OrderStatus } from '@app/domains';
+import { BadRequestException } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { of } from 'rxjs';
+
 import { OrdersPaymentGatewayController } from './orders-payment.gateway.controller';
 
 describe('OrdersPaymentGatewayController', () => {

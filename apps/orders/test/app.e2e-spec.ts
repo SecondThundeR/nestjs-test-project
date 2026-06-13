@@ -1,4 +1,19 @@
-import { Test } from '@nestjs/testing';
+import { SERVICE_NAMES } from '@app/config';
+import {
+  type Cart,
+  CART_PATTERNS,
+  type CartItem,
+  type Order,
+  type OrderPayment,
+  ORDERS_PATTERNS,
+  OrderStatus,
+  type Product,
+  PRODUCT_PATTERNS,
+} from '@app/domains';
+import {
+  GlobalRpcExceptionFilter,
+  rpcValidationExceptionFactory,
+} from '@app/filters';
 import { type INestMicroservice, ValidationPipe } from '@nestjs/common';
 import {
   type ClientProxy,
@@ -6,32 +21,18 @@ import {
   type MicroserviceOptions,
   Transport,
 } from '@nestjs/microservices';
+import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom, of } from 'rxjs';
-import {
-  CART_PATTERNS,
-  ORDERS_PATTERNS,
-  OrderStatus,
-  PRODUCT_PATTERNS,
-  type Cart,
-  type CartItem,
-  type Order,
-  type OrderPayment,
-  type Product,
-} from '@app/domains';
-import { SERVICE_NAMES } from '@app/config';
-import {
-  rpcValidationExceptionFactory,
-  GlobalRpcExceptionFilter,
-} from '@app/filters';
+
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
 import {
   makePaypalCapture,
   makePaypalOrder,
   makePaypalRefund,
 } from './../../../test/utils/paypal';
-import { OrdersModule } from './../src/orders.module';
 import { OrderEntity } from './../src/entities/order.entity';
+import { OrdersModule } from './../src/orders.module';
 import { PaypalService } from './../src/paypal/paypal.service';
 
 const HOST = '127.0.0.1';

@@ -1,27 +1,28 @@
-import { Test } from '@nestjs/testing';
-import { RpcException } from '@nestjs/microservices';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import type { DataSource } from 'typeorm';
-import { of, throwError } from 'rxjs';
-import {
-  CART_PATTERNS,
-  OrderStatus,
-  PRODUCT_PATTERNS,
-  type Cart,
-  type CartItem,
-  type Product,
-} from '@app/domains';
-import { SERVICE_NAMES } from '@app/config';
 import { CacheService } from '@app/cache';
-import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
+import { SERVICE_NAMES } from '@app/config';
+import {
+  type Cart,
+  CART_PATTERNS,
+  type CartItem,
+  OrderStatus,
+  type Product,
+  PRODUCT_PATTERNS,
+} from '@app/domains';
+import { RpcException } from '@nestjs/microservices';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { of, throwError } from 'rxjs';
+import type { DataSource } from 'typeorm';
+
 import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
+import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import {
   makePaypalCapture,
   makePaypalOrder,
   makePaypalRefund,
 } from '../../../test/utils/paypal';
-import { OrdersService } from './orders.service';
 import { OrderEntity } from './entities/order.entity';
+import { OrdersService } from './orders.service';
 import { PaypalService } from './paypal/paypal.service';
 
 const USER = 'user-1';

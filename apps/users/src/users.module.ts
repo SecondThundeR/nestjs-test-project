@@ -1,6 +1,3 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppCacheModule } from '@app/cache';
 import {
   buildDatabaseOptions,
@@ -8,10 +5,14 @@ import {
   cacheConfig,
   validateEnv,
 } from '@app/config';
-import { UsersController } from './users.controller';
-import { UsersService } from './users.service';
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { UserEntity } from './entities/user.entity';
 import { usersMigrations } from './migrations';
+import { UsersController } from './users.controller';
+import { UsersService } from './users.service';
 
 @Module({
   imports: [

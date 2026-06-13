@@ -1,24 +1,26 @@
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
+
+import { CacheService } from '@app/cache';
+import { type AuthConfig, authConfig, SERVICE_NAMES } from '@app/config';
 import {
   type AuthResult,
+  CreateUserDto,
   type JwtPayload,
   type LogoutResult,
-  ValidateUserByCredentialsDto,
   type PublicUser,
   RefreshTokenDto,
-  CreateUserDto,
   USERS_PATTERNS,
+  ValidateUserByCredentialsDto,
 } from '@app/domains';
-import { CacheService } from '@app/cache';
-import { authConfig, type AuthConfig, SERVICE_NAMES } from '@app/config';
 import { RpcErrors } from '@app/filters';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { type ClientProxy, RpcException } from '@nestjs/microservices';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { IsNull, LessThan, Not, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
+import { IsNull, LessThan, Not, Repository } from 'typeorm';
+
 import { SessionEntity } from './entities/session.entity';
 
 const REFRESH_TOKEN_BYTES = 48;

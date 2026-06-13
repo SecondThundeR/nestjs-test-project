@@ -1,7 +1,3 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { ClientsModule, Transport } from '@nestjs/microservices';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppCacheModule } from '@app/cache';
 import {
   buildDatabaseOptions,
@@ -13,10 +9,15 @@ import {
   servicesConfig,
   validateEnv,
 } from '@app/config';
-import { OrdersController } from './orders.controller';
-import { OrdersService } from './orders.service';
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { OrderEntity } from './entities/order.entity';
 import { ordersMigrations } from './migrations';
+import { OrdersController } from './orders.controller';
+import { OrdersService } from './orders.service';
 import { PaypalService } from './paypal/paypal.service';
 
 @Module({

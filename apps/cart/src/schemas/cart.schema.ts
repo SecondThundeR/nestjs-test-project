@@ -1,6 +1,6 @@
-import { EntitySchema } from 'typeorm';
 import { isoTransformer, numericTransformer } from '@app/config';
 import { type Cart } from '@app/domains';
+import { EntitySchema } from 'typeorm';
 
 export const CartSchema = new EntitySchema<Cart>({
   name: 'Cart',

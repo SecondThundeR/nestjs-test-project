@@ -1,4 +1,8 @@
-import { Test } from '@nestjs/testing';
+import { type PublicUser, USERS_PATTERNS } from '@app/domains';
+import {
+  GlobalRpcExceptionFilter,
+  rpcValidationExceptionFactory,
+} from '@app/filters';
 import { type INestMicroservice, ValidationPipe } from '@nestjs/common';
 import {
   type ClientProxy,
@@ -6,16 +10,13 @@ import {
   type MicroserviceOptions,
   Transport,
 } from '@nestjs/microservices';
+import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
-import {
-  GlobalRpcExceptionFilter,
-  rpcValidationExceptionFactory,
-} from '@app/filters';
-import { type PublicUser, USERS_PATTERNS } from '@app/domains';
+
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
-import { UsersModule } from './../src/users.module';
 import { UserEntity } from './../src/entities/user.entity';
+import { UsersModule } from './../src/users.module';
 
 const HOST = '127.0.0.1';
 const PORT = 4004;

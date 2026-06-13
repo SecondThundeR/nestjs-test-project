@@ -1,13 +1,14 @@
 import { CacheService } from '@app/cache';
-import { Test } from '@nestjs/testing';
+import { type CreateUserDto } from '@app/domains';
 import { RpcException } from '@nestjs/microservices';
+import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { DataSource } from 'typeorm';
-import { type CreateUserDto } from '@app/domains';
-import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
+
 import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
-import { UsersService } from './users.service';
+import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import { UserEntity } from './entities/user.entity';
+import { UsersService } from './users.service';
 
 describe('UsersService', () => {
   let service: UsersService;

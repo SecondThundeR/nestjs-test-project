@@ -1,19 +1,20 @@
-import { Test } from '@nestjs/testing';
-import { RpcException } from '@nestjs/microservices';
-import { JwtModule, JwtService, type JwtSignOptions } from '@nestjs/jwt';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import type { DataSource, Repository } from 'typeorm';
-import { of, throwError } from 'rxjs';
+import { CacheService } from '@app/cache';
+import { authConfig, SERVICE_NAMES } from '@app/config';
 import {
-  USERS_PATTERNS,
   type JwtPayload,
   type PublicUser,
   UserRole,
+  USERS_PATTERNS,
 } from '@app/domains';
-import { authConfig, SERVICE_NAMES } from '@app/config';
-import { CacheService } from '@app/cache';
-import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
+import { JwtModule, JwtService, type JwtSignOptions } from '@nestjs/jwt';
+import { RpcException } from '@nestjs/microservices';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { of, throwError } from 'rxjs';
+import type { DataSource, Repository } from 'typeorm';
+
 import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
+import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import { AuthService } from './auth.service';
 import { SessionEntity } from './entities/session.entity';
 

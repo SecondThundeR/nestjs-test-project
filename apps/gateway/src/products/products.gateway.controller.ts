@@ -1,3 +1,4 @@
+import { SERVICE_NAMES } from '@app/config';
 import {
   CreateProductDto,
   type Product,
@@ -5,7 +6,6 @@ import {
   UpdateProductDto,
   UserRole,
 } from '@app/domains';
-import { SERVICE_NAMES } from '@app/config';
 import {
   Body,
   Controller,
@@ -18,10 +18,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
-import { rpcSend } from '../common/rpc.util';
+
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
+import { RolesGuard } from '../common/roles.guard';
+import { rpcSend } from '../common/rpc.util';
 
 @Controller('product')
 export class ProductsGatewayController {

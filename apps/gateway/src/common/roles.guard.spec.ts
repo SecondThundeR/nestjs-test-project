@@ -1,6 +1,7 @@
+import { type JwtPayload, UserRole } from '@app/domains';
 import { type ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { type JwtPayload, UserRole } from '@app/domains';
+
 import { RolesGuard } from './roles.guard';
 
 function contextWithUser(user?: Partial<JwtPayload>): ExecutionContext {

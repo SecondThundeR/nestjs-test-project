@@ -1,3 +1,7 @@
+import { randomUUID } from 'node:crypto';
+
+import { CacheService } from '@app/cache';
+import { SERVICE_NAMES } from '@app/config';
 import {
   type Cart,
   CART_PATTERNS,
@@ -8,21 +12,19 @@ import {
   type Product,
   PRODUCT_PATTERNS,
 } from '@app/domains';
-import { CacheService } from '@app/cache';
-import { SERVICE_NAMES } from '@app/config';
 import { RpcErrors } from '@app/filters';
+import { roundPrice } from '@app/utils';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { randomUUID } from 'node:crypto';
-import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
+import { Repository } from 'typeorm';
+
 import { OrderEntity } from './entities/order.entity';
 import {
   PAYPAL_ALREADY_REFUNDED_STATUS,
   PaypalService,
 } from './paypal/paypal.service';
-import { roundPrice } from '@app/utils';
 
 const PAYPAL_COMPLETED_STATUS = 'COMPLETED';
 

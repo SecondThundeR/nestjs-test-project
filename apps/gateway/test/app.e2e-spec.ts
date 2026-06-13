@@ -1,18 +1,20 @@
-import { Test } from '@nestjs/testing';
-import { type INestApplication, ValidationPipe } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { of, throwError } from 'rxjs';
-import request from 'supertest';
 import type { Server } from 'node:http';
+
+import { authConfig, SERVICE_NAMES } from '@app/config';
 import {
   AUTH_PATTERNS,
   CART_PATTERNS,
   ORDERS_PATTERNS,
   PRODUCT_PATTERNS,
-  USERS_PATTERNS,
   UserRole,
+  USERS_PATTERNS,
 } from '@app/domains';
-import { authConfig, SERVICE_NAMES } from '@app/config';
+import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { Test } from '@nestjs/testing';
+import { of, throwError } from 'rxjs';
+import request from 'supertest';
+
 import { GatewayModule } from './../src/gateway.module';
 
 describe('Gateway (e2e)', () => {

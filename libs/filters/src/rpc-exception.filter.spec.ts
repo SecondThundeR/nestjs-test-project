@@ -1,11 +1,12 @@
-import { firstValueFrom } from 'rxjs';
 import {
+  type ArgumentsHost,
   HttpException,
   HttpStatus,
   NotFoundException,
-  type ArgumentsHost,
 } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
+
 import {
   GlobalRpcExceptionFilter,
   type RpcErrorPayload,

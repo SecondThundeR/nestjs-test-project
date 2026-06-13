@@ -1,12 +1,13 @@
-import { Test } from '@nestjs/testing';
-import { JwtModule } from '@nestjs/jwt';
-import { of } from 'rxjs';
+import { authConfig, SERVICE_NAMES } from '@app/config';
 import {
-  PRODUCT_PATTERNS,
   type CreateProductDto,
+  PRODUCT_PATTERNS,
   type UpdateProductDto,
 } from '@app/domains';
-import { authConfig, SERVICE_NAMES } from '@app/config';
+import { JwtModule } from '@nestjs/jwt';
+import { Test } from '@nestjs/testing';
+import { of } from 'rxjs';
+
 import { ProductsGatewayController } from './products.gateway.controller';
 
 describe('ProductsGatewayController', () => {

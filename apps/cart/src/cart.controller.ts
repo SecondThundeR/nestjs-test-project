@@ -1,12 +1,13 @@
-import { Controller } from '@nestjs/common';
-import { CartService } from './cart.service';
-import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   type AddCartItemPayload,
   CART_PATTERNS,
   type RemoveCartItemPayload,
   type UpdateCartItemPayload,
 } from '@app/domains';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+
+import { CartService } from './cart.service';
 
 @Controller()
 export class CartController {

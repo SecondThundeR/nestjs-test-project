@@ -1,14 +1,16 @@
+import { randomUUID } from 'node:crypto';
+
 import { CacheService } from '@app/cache';
 import {
-  ProductDeleteResult,
   type CreateProductDto,
+  ProductDeleteResult,
   type UpdateProductDto,
 } from '@app/domains';
 import { RpcErrors } from '@app/filters';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { randomUUID } from 'node:crypto';
 import { In, Repository } from 'typeorm';
+
 import { ProductEntity } from './entities/product.entity';
 
 const LIST_CACHE_KEY = 'products:all';

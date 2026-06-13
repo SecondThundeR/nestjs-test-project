@@ -1,13 +1,14 @@
-import { Test } from '@nestjs/testing';
-import { JwtModule } from '@nestjs/jwt';
-import { of } from 'rxjs';
+import { authConfig, SERVICE_NAMES } from '@app/config';
 import {
   AUTH_PATTERNS,
-  type ValidateUserByCredentialsDto,
-  type RefreshTokenDto,
   type CreateUserDto,
+  type RefreshTokenDto,
+  type ValidateUserByCredentialsDto,
 } from '@app/domains';
-import { authConfig, SERVICE_NAMES } from '@app/config';
+import { JwtModule } from '@nestjs/jwt';
+import { Test } from '@nestjs/testing';
+import { of } from 'rxjs';
+
 import { AuthGatewayController } from './auth.gateway.controller';
 
 describe('AuthGatewayController', () => {

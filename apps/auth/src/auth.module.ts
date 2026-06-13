@@ -1,9 +1,3 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
-import { ClientsModule, Transport } from '@nestjs/microservices';
-import { ScheduleModule } from '@nestjs/schedule';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppCacheModule } from '@app/cache';
 import {
   type AuthConfig,
@@ -16,6 +10,13 @@ import {
   servicesConfig,
   validateEnv,
 } from '@app/config';
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { SessionEntity } from './entities/session.entity';

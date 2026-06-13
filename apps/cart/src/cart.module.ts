@@ -1,7 +1,3 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { ClientsModule, Transport } from '@nestjs/microservices';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   buildDatabaseOptions,
   SERVICE_NAMES,
@@ -9,10 +5,15 @@ import {
   servicesConfig,
   validateEnv,
 } from '@app/config';
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { CartController } from './cart.controller';
 import { CartService } from './cart.service';
-import { CartSchema } from './schemas/cart.schema';
 import { cartMigrations } from './migrations';
+import { CartSchema } from './schemas/cart.schema';
 
 @Module({
   imports: [

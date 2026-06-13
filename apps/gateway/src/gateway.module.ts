@@ -1,7 +1,3 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { ClientsModule, Transport } from '@nestjs/microservices';
-import { JwtModule } from '@nestjs/jwt';
 import {
   type AuthConfig,
   authConfig,
@@ -10,13 +6,18 @@ import {
   servicesConfig,
   validateEnv,
 } from '@app/config';
-import { ProductsGatewayController } from './products/products.gateway.controller';
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+
+import { AuthGatewayController } from './auth/auth.gateway.controller';
 import { CartGatewayController } from './cart/cart.gateway.controller';
+import { HealthController } from './health.controller';
 import { OrdersGatewayController } from './orders/orders.gateway.controller';
 import { OrdersPaymentGatewayController } from './orders/orders-payment.gateway.controller';
-import { HealthController } from './health.controller';
+import { ProductsGatewayController } from './products/products.gateway.controller';
 import { UsersGatewayController } from './users/users.gateway.controller';
-import { AuthGatewayController } from './auth/auth.gateway.controller';
 
 @Module({
   imports: [

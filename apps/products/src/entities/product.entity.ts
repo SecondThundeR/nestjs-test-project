@@ -1,5 +1,5 @@
-import { type Product } from '@app/domains';
 import { isoTransformer, numericTransformer } from '@app/config';
+import { type Product } from '@app/domains';
 import {
   Column,
   CreateDateColumn,

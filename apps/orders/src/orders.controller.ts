@@ -1,12 +1,13 @@
-import { Controller } from '@nestjs/common';
-import { OrdersService } from './orders.service';
-import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   type CreateOrderPayload,
   type OrderActionPayload,
   ORDERS_PATTERNS,
   type UpdateOrderStatusPayload,
 } from '@app/domains';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+
+import { OrdersService } from './orders.service';
 
 @Controller()
 export class OrdersController {

@@ -1,12 +1,12 @@
 import {
-  Catch,
-  type RpcExceptionFilter,
   type ArgumentsHost,
+  Catch,
   HttpException,
   HttpStatus,
+  type RpcExceptionFilter,
 } from '@nestjs/common';
-import { type Observable, throwError } from 'rxjs';
 import { RpcException } from '@nestjs/microservices';
+import { type Observable, throwError } from 'rxjs';
 
 export interface RpcErrorPayload {
   statusCode: number;

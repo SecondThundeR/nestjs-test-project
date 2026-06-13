@@ -1,5 +1,5 @@
-import type { Session } from '@app/domains';
 import { isoTransformer, nullableIsoTransformer } from '@app/config';
+import type { Session } from '@app/domains';
 import {
   Column,
   CreateDateColumn,

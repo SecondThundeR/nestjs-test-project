@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { of, throwError, type Observable } from 'rxjs';
 import type { ClientProxy } from '@nestjs/microservices';
+import { type Observable, of, throwError } from 'rxjs';
+
 import { rpcSend } from './rpc.util';
 
 function makeClient(observable: Observable<unknown>) {

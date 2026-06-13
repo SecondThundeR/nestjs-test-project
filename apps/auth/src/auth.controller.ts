@@ -1,11 +1,12 @@
-import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   AUTH_PATTERNS,
-  ValidateUserByCredentialsDto,
-  RefreshTokenDto,
   CreateUserDto,
+  RefreshTokenDto,
+  ValidateUserByCredentialsDto,
 } from '@app/domains';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+
 import { AuthService } from './auth.service';
 
 @Controller()

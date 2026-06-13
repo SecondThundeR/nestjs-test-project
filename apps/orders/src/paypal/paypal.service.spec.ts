@@ -1,6 +1,7 @@
-import { Test } from '@nestjs/testing';
-import { RpcException } from '@nestjs/microservices';
 import { paypalConfig } from '@app/config';
+import { RpcException } from '@nestjs/microservices';
+import { Test } from '@nestjs/testing';
+
 import { PaypalService } from './paypal.service';
 
 const API_URL = 'https://api.paypal.test';

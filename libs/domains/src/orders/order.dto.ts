@@ -1,4 +1,5 @@
 import { IsEnum, IsString, MinLength } from 'class-validator';
+
 import { OrderStatus } from './order.interface';
 
 export class CreateOrderDto {

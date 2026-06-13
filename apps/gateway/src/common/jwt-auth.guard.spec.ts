@@ -1,13 +1,14 @@
+import { authConfig } from '@app/config';
+import { AUTH_PATTERNS, type JwtPayload } from '@app/domains';
 import {
-  HttpException,
   type ExecutionContext,
+  HttpException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { ClientProxy } from '@nestjs/microservices';
 import { of, throwError } from 'rxjs';
-import { AUTH_PATTERNS, type JwtPayload } from '@app/domains';
-import { authConfig } from '@app/config';
+
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 describe('JwtAuthGuard', () => {

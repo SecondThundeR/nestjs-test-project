@@ -1,14 +1,15 @@
 import { CacheModule as NestCacheModule } from '@nestjs/cache-manager';
 import {
-  Global,
-  Module,
   type DynamicModule,
   type FactoryProvider,
+  Global,
+  Module,
   type ModuleMetadata,
 } from '@nestjs/common';
+
 import {
-  buildCacheManagerOptions,
   type AppCacheOptions,
+  buildCacheManagerOptions,
 } from './cache.options';
 import { CacheService } from './cache.service';
 

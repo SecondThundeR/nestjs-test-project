@@ -1,6 +1,6 @@
+import { createKeyv } from '@keyv/redis';
 import type { CacheManagerOptions } from '@nestjs/cache-manager';
 import { Logger } from '@nestjs/common';
-import { createKeyv } from '@keyv/redis';
 
 export const DEFAULT_CACHE_TTL_MS = 30_000;
 const DEFAULT_REDIS_PORT = 6379;

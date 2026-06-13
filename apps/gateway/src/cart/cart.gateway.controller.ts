@@ -1,10 +1,10 @@
+import { SERVICE_NAMES } from '@app/config';
 import {
   AddCartItemDto,
   type Cart,
   CART_PATTERNS,
   UpdateCartItemDto,
 } from '@app/domains';
-import { SERVICE_NAMES } from '@app/config';
 import {
   Body,
   Controller,
@@ -17,6 +17,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
+
 import { CurrentUserId } from '../common/current-user.decorator';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { rpcSend } from '../common/rpc.util';

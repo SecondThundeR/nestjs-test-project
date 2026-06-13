@@ -1,7 +1,9 @@
 import 'reflect-metadata';
+
+import { buildDataSourceOptions } from '@app/config';
 import { config as loadEnv } from 'dotenv';
 import { DataSource } from 'typeorm';
-import { buildDataSourceOptions } from '@app/config';
+
 import { OrderEntity } from './entities/order.entity';
 import { ordersMigrations } from './migrations';
 

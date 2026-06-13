@@ -1,4 +1,9 @@
-import { Test } from '@nestjs/testing';
+import { SERVICE_NAMES } from '@app/config';
+import { type Cart, CART_PATTERNS, type Product } from '@app/domains';
+import {
+  GlobalRpcExceptionFilter,
+  rpcValidationExceptionFactory,
+} from '@app/filters';
 import { type INestMicroservice, ValidationPipe } from '@nestjs/common';
 import {
   type ClientProxy,
@@ -6,17 +11,13 @@ import {
   type MicroserviceOptions,
   Transport,
 } from '@nestjs/microservices';
+import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom, of } from 'rxjs';
-import { CART_PATTERNS, type Cart, type Product } from '@app/domains';
-import { SERVICE_NAMES } from '@app/config';
-import {
-  GlobalRpcExceptionFilter,
-  rpcValidationExceptionFactory,
-} from '@app/filters';
+
+import { CartSchema } from '../src/schemas/cart.schema';
 import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
 import { CartModule } from './../src/cart.module';
-import { CartSchema } from '../src/schemas/cart.schema';
 
 const HOST = '127.0.0.1';
 const PORT = 4002;

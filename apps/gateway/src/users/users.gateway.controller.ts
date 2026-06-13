@@ -1,5 +1,5 @@
-import { type PublicUser, USERS_PATTERNS } from '@app/domains';
 import { SERVICE_NAMES } from '@app/config';
+import { type PublicUser, USERS_PATTERNS } from '@app/domains';
 import {
   Controller,
   Get,
@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
+
 import { CurrentUserId } from '../common/current-user.decorator';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { rpcSend } from '../common/rpc.util';

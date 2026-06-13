@@ -1,5 +1,5 @@
-import { registerAs } from '@nestjs/config';
 import type { ConfigType } from '@nestjs/config';
+import { registerAs } from '@nestjs/config';
 
 export const authConfig = registerAs('auth', () => ({
   secret: process.env.JWT_SECRET,

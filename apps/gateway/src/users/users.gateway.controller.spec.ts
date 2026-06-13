@@ -1,9 +1,10 @@
-import { Test } from '@nestjs/testing';
+import { authConfig, SERVICE_NAMES } from '@app/config';
+import { USERS_PATTERNS } from '@app/domains';
 import { NotFoundException } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
-import { USERS_PATTERNS } from '@app/domains';
-import { authConfig, SERVICE_NAMES } from '@app/config';
+
 import { UsersGatewayController } from './users.gateway.controller';
 
 describe('UsersGatewayController', () => {

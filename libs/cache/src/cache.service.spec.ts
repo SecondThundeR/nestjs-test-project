@@ -1,4 +1,5 @@
 import type { Cache } from 'cache-manager';
+
 import { CacheService } from './cache.service';
 
 describe('CacheService', () => {

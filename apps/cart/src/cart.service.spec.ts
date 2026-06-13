@@ -1,10 +1,11 @@
-import { Test } from '@nestjs/testing';
-import { RpcException } from '@nestjs/microservices';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import type { DataSource } from 'typeorm';
-import { of, throwError } from 'rxjs';
-import { PRODUCT_PATTERNS, type Product } from '@app/domains';
 import { SERVICE_NAMES } from '@app/config';
+import { type Product, PRODUCT_PATTERNS } from '@app/domains';
+import { RpcException } from '@nestjs/microservices';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { of, throwError } from 'rxjs';
+import type { DataSource } from 'typeorm';
+
 import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
 import { CartService } from './cart.service';
 import { CartSchema } from './schemas/cart.schema';
