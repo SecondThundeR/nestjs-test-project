@@ -32,6 +32,8 @@ async function bootstrap() {
   );
   app.useGlobalFilters(new GlobalRpcExceptionFilter());
 
+  app.enableShutdownHooks();
+
   await app.listen();
   Logger.log(
     `Products microservice is listening on TCP port ${ports.products}`,

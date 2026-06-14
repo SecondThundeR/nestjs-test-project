@@ -26,6 +26,8 @@ async function bootstrap() {
     }),
   );
 
+  app.enableShutdownHooks();
+
   await app.listen(services.ports.gateway);
   Logger.log(
     `API Gateway is running on http://localhost:${services.ports.gateway}/api`,
