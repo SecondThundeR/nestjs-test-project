@@ -25,6 +25,5 @@ export interface OrderActionPayload {
 
 export interface UpdateOrderStatusPayload {
   id: string;
-  userId: string;
   status: OrderStatus;
 }

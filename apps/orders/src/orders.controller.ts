@@ -30,11 +30,7 @@ export class OrdersController {
 
   @MessagePattern(ORDERS_PATTERNS.UPDATE_STATUS)
   updateStatus(@Payload() payload: UpdateOrderStatusPayload) {
-    return this.ordersService.updateStatus(
-      payload.id,
-      payload.status,
-      payload.userId,
-    );
+    return this.ordersService.updateStatus(payload.id, payload.status);
   }
 
   @MessagePattern(ORDERS_PATTERNS.CANCEL)

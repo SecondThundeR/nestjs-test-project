@@ -63,17 +63,14 @@ describe('OrdersGatewayController', () => {
     });
   });
 
-  it('forwards updateStatus() with id, status and userId', async () => {
+  it('forwards updateStatus() with id and status, unscoped to an owner', async () => {
     const dto: UpdateOrderStatusDto = { status: OrderStatus.SHIPPED };
     const result = { id: 'o-1', status: OrderStatus.SHIPPED };
     orders.send.mockReturnValue(of(result));
 
-    await expect(controller.updateStatus(USER, 'o-1', dto)).resolves.toBe(
-      result,
-    );
+    await expect(controller.updateStatus('o-1', dto)).resolves.toBe(result);
     expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.UPDATE_STATUS, {
       id: 'o-1',
-      userId: USER,
       status: OrderStatus.SHIPPED,
     });
   });

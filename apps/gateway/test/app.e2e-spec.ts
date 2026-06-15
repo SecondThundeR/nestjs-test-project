@@ -250,6 +250,43 @@ describe('Gateway (e2e)', () => {
 
       expect(orders.send).not.toHaveBeenCalled();
     });
+
+    it('PATCH /api/orders/:id/status lets an admin change any order, unscoped to an owner', async () => {
+      auth.send.mockReturnValue(of({ id: 'admin' }));
+      orders.send.mockReturnValue(of({ id: 'o-1', status: 'SHIPPED' }));
+
+      await http()
+        .patch('/api/orders/o-1/status')
+        .set('authorization', adminBearer)
+        .send({ status: 'SHIPPED' })
+        .expect(200);
+
+      expect(orders.send).toHaveBeenCalledWith(ORDERS_PATTERNS.UPDATE_STATUS, {
+        id: 'o-1',
+        status: 'SHIPPED',
+      });
+    });
+
+    it('PATCH /api/orders/:id/status forbids a non-admin user', async () => {
+      auth.send.mockReturnValue(of({ id: 'alice' }));
+
+      await http()
+        .patch('/api/orders/o-1/status')
+        .set('authorization', bearer)
+        .send({ status: 'SHIPPED' })
+        .expect(403);
+
+      expect(orders.send).not.toHaveBeenCalled();
+    });
+
+    it('PATCH /api/orders/:id/status rejects an unauthenticated request with 401', async () => {
+      await http()
+        .patch('/api/orders/o-1/status')
+        .send({ status: 'SHIPPED' })
+        .expect(401);
+
+      expect(orders.send).not.toHaveBeenCalled();
+    });
   });
 
   describe('auth (public auth routes)', () => {

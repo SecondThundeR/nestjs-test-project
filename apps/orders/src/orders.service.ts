@@ -157,12 +157,8 @@ export class OrdersService {
     return order;
   }
 
-  async updateStatus(
-    id: string,
-    status: OrderStatus,
-    userId?: string,
-  ): Promise<OrderEntity> {
-    const order = await this.findOne(id, userId);
+  async updateStatus(id: string, status: OrderStatus): Promise<OrderEntity> {
+    const order = await this.findOne(id);
     if (order.status === status) {
       this.logger.debug(`Order ${id} is already ${status}`);
       return order;

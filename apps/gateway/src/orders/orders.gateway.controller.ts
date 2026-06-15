@@ -5,6 +5,7 @@ import {
   type OrderPayment,
   ORDERS_PATTERNS,
   UpdateOrderStatusDto,
+  UserRole,
 } from '@app/domains';
 import {
   Body,
@@ -20,6 +21,8 @@ import type { ClientProxy } from '@nestjs/microservices';
 
 import { CurrentUserId } from '../common/current-user.decorator';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
+import { Roles } from '../common/roles.decorator';
+import { RolesGuard } from '../common/roles.guard';
 import { rpcSend } from '../common/rpc.util';
 
 @Controller('orders')
@@ -51,14 +54,12 @@ export class OrdersGatewayController {
   }
 
   @Patch(':id/status')
-  updateStatus(
-    @CurrentUserId() userId: string,
-    @Param('id') id: string,
-    @Body() dto: UpdateOrderStatusDto,
-  ) {
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  updateStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
+    // Only admins can change order status and not regular user that created order
     return rpcSend<Order>(this.orders, ORDERS_PATTERNS.UPDATE_STATUS, {
       id,
-      userId,
       status: dto.status,
     });
   }
