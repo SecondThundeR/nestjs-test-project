@@ -18,12 +18,24 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
 import { rpcSend } from '../common/rpc.util';
+import { ProductDeleteResponse, ProductResponse } from './product.response';
 
+@ApiTags('products')
 @Controller('product')
 export class ProductsGatewayController {
   constructor(
@@ -33,16 +45,26 @@ export class ProductsGatewayController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a product', description: 'Admin only.' })
+  @ApiCreatedResponse({ type: ProductResponse })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  @ApiForbiddenResponse({ description: 'Caller is not an admin' })
   create(@Body() dto: CreateProductDto) {
     return rpcSend<Product>(this.products, PRODUCT_PATTERNS.CREATE, dto);
   }
 
   @Get()
+  @ApiOperation({ summary: 'List all products' })
+  @ApiOkResponse({ type: ProductResponse, isArray: true })
   findAll() {
     return rpcSend<Product[]>(this.products, PRODUCT_PATTERNS.FIND_ALL, {});
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a product by ID' })
+  @ApiOkResponse({ type: ProductResponse })
+  @ApiNotFoundResponse({ description: 'Product not found' })
   findOne(@Param('id') id: string) {
     return rpcSend<Product>(this.products, PRODUCT_PATTERNS.FIND_ONE, id);
   }
@@ -50,6 +72,12 @@ export class ProductsGatewayController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a product', description: 'Admin only.' })
+  @ApiOkResponse({ type: ProductResponse })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  @ApiForbiddenResponse({ description: 'Caller is not an admin' })
+  @ApiNotFoundResponse({ description: 'Product not found' })
   update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
     return rpcSend<Product>(this.products, PRODUCT_PATTERNS.UPDATE, {
       id,
@@ -60,6 +88,12 @@ export class ProductsGatewayController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a product', description: 'Admin only.' })
+  @ApiOkResponse({ type: ProductDeleteResponse })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  @ApiForbiddenResponse({ description: 'Caller is not an admin' })
+  @ApiNotFoundResponse({ description: 'Product not found' })
   remove(@Param('id') id: string) {
     return rpcSend<{ id: string; deleted: true }>(
       this.products,

@@ -21,7 +21,7 @@
     "noImplicitAny": true,
     "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["node", "jest", "supertest"],
+    "types": ["node", "jest", "supertest", "js-yaml"],
     "paths": {
       "@app/cache": ["libs/cache/src"],
       "@app/cache/*": ["libs/cache/src/*"],
