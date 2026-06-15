@@ -151,6 +151,11 @@
       "^@app/utils(|/.*)$": "<rootDir>/libs/utils/src/$1"
     }
   },
+  "overrides": {
+    "openapi-validator": {
+      "axios": "^1.12.0"
+    }
+  },
   "allowScripts": {
     "@nestjs/core@11.1.26": true,
     "unrs-resolver@1.12.2": true,
