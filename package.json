@@ -96,6 +96,7 @@
     "eslint-plugin-simple-import-sort": "13.0.0",
     "globals": "17.6.0",
     "jest": "30.4.2",
+    "jest-openapi": "0.14.2",
     "pg-mem": "3.0.14",
     "prettier": "3.8.4",
     "source-map-support": "0.5.21",
