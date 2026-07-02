@@ -50,8 +50,12 @@ services:
       CART_DB_HOST: cart-db
       CART_DB_PORT: 5432
       PRODUCTS_HOST: products
+      KAFKA_BROKERS: kafka:9092
+      KAFKAJS_NO_PARTITIONER_WARNING: 1
     depends_on:
       cart-db:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
 
   orders:
@@ -66,10 +70,14 @@ services:
       CART_HOST: cart
       REDIS_HOST: cache
       REDIS_PORT: 6379
+      KAFKA_BROKERS: kafka:9092
+      KAFKAJS_NO_PARTITIONER_WARNING: 1
     depends_on:
       orders-db:
         condition: service_healthy
       cache:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
 
   users:
@@ -122,6 +130,32 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  kafka:
+    image: apache/kafka:4.3.1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: INTERNAL://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:${KAFKA_HOST_PORT:-9094}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    ports:
+      - '${KAFKA_HOST_PORT:-9094}:9094'
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ['CMD-SHELL', '/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092']
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
 
   cache:
     image: redis:8.8.0-alpine
@@ -202,6 +236,7 @@ services:
 
 volumes:
   products-db-data:
+  kafka-data:
   cache-data:
   cart-db-data:
   orders-db-data:

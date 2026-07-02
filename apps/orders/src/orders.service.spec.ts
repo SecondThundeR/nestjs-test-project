@@ -171,10 +171,13 @@ describe('OrdersService', () => {
       );
     });
 
-    it('clears the cart after creating the order', async () => {
+    it('does not clear the cart synchronously (the cart reacts to the Kafka order.created event)', async () => {
       await createOrder();
 
-      expect(cartClient.send).toHaveBeenCalledWith(CART_PATTERNS.CLEAR, USER);
+      expect(cartClient.send).not.toHaveBeenCalledWith(
+        CART_PATTERNS.CLEAR,
+        USER,
+      );
     });
 
     it('persists the order so it can be retrieved afterwards', async () => {

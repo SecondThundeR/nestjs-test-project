@@ -1,5 +1,6 @@
 import {
   CommandHandler,
+  EventBus,
   type ICommandHandler,
   IQueryHandler,
   QueryHandler,
@@ -14,32 +15,53 @@ import {
   PayOrderCommand,
   UpdateOrderStatusCommand,
 } from './commands';
+import {
+  OrderCancelledEvent,
+  OrderCreatedEvent,
+  OrderPaidEvent,
+  OrderStatusChangedEvent,
+} from './events';
 import { FindAllOrdersQuery, FindOneOrderQuery } from './queries';
 
 @CommandHandler(CreateOrderCommand)
 export class CreateOrderHandler implements ICommandHandler<CreateOrderCommand> {
-  constructor(private readonly orders: OrdersService) {}
+  constructor(
+    private readonly orders: OrdersService,
+    private readonly eventBus: EventBus,
+  ) {}
 
-  execute({ userId, shippingAddress }: CreateOrderCommand) {
-    return this.orders.create(userId, shippingAddress);
+  async execute({ userId, shippingAddress }: CreateOrderCommand) {
+    const order = await this.orders.create(userId, shippingAddress);
+    this.eventBus.publish(new OrderCreatedEvent(order));
+    return order;
   }
 }
 
 @CommandHandler(UpdateOrderStatusCommand)
 export class UpdateOrderStatusHandler implements ICommandHandler<UpdateOrderStatusCommand> {
-  constructor(private readonly orders: OrdersService) {}
+  constructor(
+    private readonly orders: OrdersService,
+    private readonly eventBus: EventBus,
+  ) {}
 
-  execute({ id, status }: UpdateOrderStatusCommand) {
-    return this.orders.updateStatus(id, status);
+  async execute({ id, status }: UpdateOrderStatusCommand) {
+    const order = await this.orders.updateStatus(id, status);
+    this.eventBus.publish(new OrderStatusChangedEvent(order));
+    return order;
   }
 }
 
 @CommandHandler(CancelOrderCommand)
 export class CancelOrderHandler implements ICommandHandler<CancelOrderCommand> {
-  constructor(private readonly orders: OrdersService) {}
+  constructor(
+    private readonly orders: OrdersService,
+    private readonly eventBus: EventBus,
+  ) {}
 
-  execute({ id, userId }: CancelOrderCommand) {
-    return this.orders.cancel(id, userId);
+  async execute({ id, userId }: CancelOrderCommand) {
+    const order = await this.orders.cancel(id, userId);
+    this.eventBus.publish(new OrderCancelledEvent(order));
+    return order;
   }
 }
 
@@ -54,19 +76,29 @@ export class PayOrderHandler implements ICommandHandler<PayOrderCommand> {
 
 @CommandHandler(CapturePaymentCommand)
 export class CapturePaymentHandler implements ICommandHandler<CapturePaymentCommand> {
-  constructor(private readonly orders: OrdersService) {}
+  constructor(
+    private readonly orders: OrdersService,
+    private readonly eventBus: EventBus,
+  ) {}
 
-  execute({ id, userId }: CapturePaymentCommand) {
-    return this.orders.capturePayment(id, userId);
+  async execute({ id, userId }: CapturePaymentCommand) {
+    const order = await this.orders.capturePayment(id, userId);
+    this.eventBus.publish(new OrderPaidEvent(order));
+    return order;
   }
 }
 
 @CommandHandler(CaptureByPaymentIdCommand)
 export class CaptureByPaymentIdHandler implements ICommandHandler<CaptureByPaymentIdCommand> {
-  constructor(private readonly orders: OrdersService) {}
+  constructor(
+    private readonly orders: OrdersService,
+    private readonly eventBus: EventBus,
+  ) {}
 
-  execute({ paymentId }: CaptureByPaymentIdCommand) {
-    return this.orders.captureByPaymentId(paymentId);
+  async execute({ paymentId }: CaptureByPaymentIdCommand) {
+    const order = await this.orders.captureByPaymentId(paymentId);
+    this.eventBus.publish(new OrderPaidEvent(order));
+    return order;
   }
 }
 

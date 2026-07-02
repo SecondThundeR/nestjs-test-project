@@ -1,5 +1,6 @@
 import {
   buildDatabaseOptions,
+  kafkaConfig,
   SERVICE_NAMES,
   type ServicesConfig,
   servicesConfig,
@@ -21,7 +22,7 @@ import { CartSchema } from './schemas/cart.schema';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [servicesConfig],
+      load: [servicesConfig, kafkaConfig],
       validate: validateEnv,
     }),
     CqrsModule.forRoot(),

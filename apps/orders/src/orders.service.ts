@@ -114,8 +114,6 @@ export class OrdersService {
 
     await this.invalidate(order);
 
-    await firstValueFrom(this.cartClient.send(CART_PATTERNS.CLEAR, userId));
-
     this.logger.log(
       `Created order ${order.id} for user ${userId}: ${items.length} item(s), total ${order.total}`,
     );

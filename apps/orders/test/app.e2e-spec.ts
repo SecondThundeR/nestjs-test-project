@@ -1,9 +1,10 @@
-import { SERVICE_NAMES } from '@app/config';
+import { KAFKA_CLIENT, SERVICE_NAMES } from '@app/config';
 import {
   type Cart,
   CART_PATTERNS,
   type CartItem,
   type Order,
+  ORDER_EVENTS,
   type OrderPayment,
   ORDERS_PATTERNS,
   OrderStatus,
@@ -70,6 +71,11 @@ describe('Orders microservice (e2e)', () => {
   let client: ClientProxy;
   const productsClient = { send: jest.fn(), emit: jest.fn() };
   const cartClient = { send: jest.fn(), emit: jest.fn() };
+  const kafkaClient = {
+    emit: jest.fn(() => of(undefined)),
+    connect: jest.fn(),
+    close: jest.fn(),
+  };
   const paypal = {
     createOrder: jest.fn(),
     captureOrder: jest.fn(),
@@ -88,6 +94,8 @@ describe('Orders microservice (e2e)', () => {
       .useValue(productsClient)
       .overrideProvider(SERVICE_NAMES.CART)
       .useValue(cartClient)
+      .overrideProvider(KAFKA_CLIENT)
+      .useValue(kafkaClient)
       .overrideProvider(PaypalService)
       .useValue(paypal)
       .compile();
@@ -121,6 +129,7 @@ describe('Orders microservice (e2e)', () => {
   beforeEach(() => {
     productsClient.send.mockReset();
     cartClient.send.mockReset();
+    kafkaClient.emit.mockClear();
     paypal.createOrder.mockReset();
     paypal.captureOrder.mockReset();
     paypal.refundCapture.mockReset();
@@ -159,6 +168,15 @@ describe('Orders microservice (e2e)', () => {
       userId: USER,
       status: OrderStatus.PENDING,
       total: 20,
+    });
+    expect(kafkaClient.emit).toHaveBeenCalledWith(ORDER_EVENTS.CREATED, {
+      key: order.id,
+      value: {
+        orderId: order.id,
+        userId: USER,
+        total: order.total,
+        items: order.items,
+      },
     });
 
     const found = await send<Order>(ORDERS_PATTERNS.FIND_ONE, {

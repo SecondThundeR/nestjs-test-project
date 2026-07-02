@@ -15,6 +15,7 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/apps/gateway/src/orders/orders.openapi.yaml ./apps/gateway/src/orders/
 COPY package.json ./
 
 USER node

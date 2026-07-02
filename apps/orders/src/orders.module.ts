@@ -3,6 +3,9 @@ import {
   buildDatabaseOptions,
   type CacheConfig,
   cacheConfig,
+  KAFKA_CLIENT,
+  type KafkaConfig,
+  kafkaConfig,
   paypalConfig,
   SERVICE_NAMES,
   type ServicesConfig,
@@ -15,6 +18,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { ordersEventHandlers } from './cqrs/event-handlers';
 import { ordersHandlers } from './cqrs/handlers';
 import { OrderEntity } from './entities/order.entity';
 import { ordersMigrations } from './migrations';
@@ -26,7 +30,7 @@ import { PaypalService } from './paypal/paypal.service';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [servicesConfig, cacheConfig, paypalConfig],
+      load: [servicesConfig, cacheConfig, paypalConfig, kafkaConfig],
       validate: validateEnv,
     }),
     CqrsModule.forRoot(),
@@ -63,9 +67,26 @@ import { PaypalService } from './paypal/paypal.service';
           options: { host: services.hosts.cart, port: services.ports.cart },
         }),
       },
+      {
+        name: KAFKA_CLIENT,
+        inject: [kafkaConfig.KEY],
+        useFactory: (kafka: KafkaConfig) => ({
+          transport: Transport.KAFKA,
+          options: {
+            client: { clientId: 'orders', brokers: kafka.brokers },
+            producerOnlyMode: true,
+            producer: { allowAutoTopicCreation: true },
+          },
+        }),
+      },
     ]),
   ],
   controllers: [OrdersController],
-  providers: [OrdersService, PaypalService, ...ordersHandlers],
+  providers: [
+    OrdersService,
+    PaypalService,
+    ...ordersHandlers,
+    ...ordersEventHandlers,
+  ],
 })
 export class OrdersModule {}

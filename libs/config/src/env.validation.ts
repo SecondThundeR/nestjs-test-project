@@ -145,6 +145,18 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  KAFKA_BROKERS?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(65535)
+  KAFKA_HOST_PORT?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
   REDIS_HOST?: string;
 
   @IsOptional()
