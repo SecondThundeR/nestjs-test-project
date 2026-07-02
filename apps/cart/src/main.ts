@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-import { servicesConfig } from '@app/config';
+import { kafkaConfig, servicesConfig } from '@app/config';
 import {
   GlobalRpcExceptionFilter,
   rpcValidationExceptionFactory,
@@ -14,13 +14,28 @@ import { CartModule } from './cart.module';
 
 async function bootstrap() {
   const { ports } = servicesConfig();
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    CartModule,
+  const { brokers } = kafkaConfig();
+
+  const app = await NestFactory.create(CartModule, {
+    logger: createWinstonLogger('Cart'),
+  });
+
+  app.connectMicroservice<MicroserviceOptions>(
     {
       transport: Transport.TCP,
       options: { host: '0.0.0.0', port: ports.cart },
-      logger: createWinstonLogger('Cart'),
     },
+    { inheritAppConfig: true },
+  );
+  app.connectMicroservice<MicroserviceOptions>(
+    {
+      transport: Transport.KAFKA,
+      options: {
+        client: { clientId: 'cart', brokers },
+        consumer: { groupId: 'cart-consumer', allowAutoTopicCreation: true },
+      },
+    },
+    { inheritAppConfig: true },
   );
 
   app.useGlobalPipes(
@@ -34,9 +49,11 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
-  await app.listen();
+  await app.startAllMicroservices();
+  await app.init();
+
   Logger.log(
-    `Cart microservice is listening on TCP port ${ports.cart}`,
+    `Cart microservice is listening on TCP port ${ports.cart} and Kafka brokers ${brokers.join(', ')}`,
     'Cart',
   );
 }
