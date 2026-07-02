@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=26.3.0",
+    "node": ">=26.4.0",
     "npm": ">=11.16.0"
   },
   "scripts": {
@@ -56,6 +56,7 @@
     "@nestjs/common": "11.1.27",
     "@nestjs/config": "4.0.4",
     "@nestjs/core": "11.1.27",
+    "@nestjs/cqrs": "11.0.3",
     "@nestjs/jwt": "11.0.2",
     "@nestjs/microservices": "11.1.27",
     "@nestjs/passport": "11.0.5",
@@ -87,7 +88,7 @@
     "@types/express": "5.0.6",
     "@types/jest": "30.0.0",
     "@types/js-yaml": "4.0.9",
-    "@types/node": "25.9.4",
+    "@types/node": "26.1.0",
     "@types/supertest": "7.2.0",
     "concurrently": "10.0.3",
     "eslint": "10.6.0",
@@ -156,7 +157,7 @@
       "axios": "^1.18.1"
     },
     "form-data": "^4.0.6",
-    "js-yaml": "^4.3.0",
+    "js-yaml": "^5.2.1",
     "multer": "^2.2.0"
   },
   "allowScripts": {
