@@ -7,8 +7,10 @@ import {
 } from '@app/config';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { productsHandlers } from './cqrs/handlers';
 import { ProductEntity } from './entities/product.entity';
 import { productsMigrations } from './migrations';
 import { ProductsController } from './products.controller';
@@ -21,6 +23,7 @@ import { ProductsService } from './products.service';
       load: [cacheConfig],
       validate: validateEnv,
     }),
+    CqrsModule.forRoot(),
     AppCacheModule.registerAsync({
       inject: [cacheConfig.KEY],
       useFactory: (cache: CacheConfig) => ({
@@ -36,6 +39,6 @@ import { ProductsService } from './products.service';
     TypeOrmModule.forFeature([ProductEntity]),
   ],
   controllers: [ProductsController],
-  providers: [ProductsService],
+  providers: [ProductsService, ...productsHandlers],
 })
 export class ProductsModule {}

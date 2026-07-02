@@ -11,9 +11,11 @@ import {
 } from '@app/config';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { CqrsModule } from '@nestjs/cqrs';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { ordersHandlers } from './cqrs/handlers';
 import { OrderEntity } from './entities/order.entity';
 import { ordersMigrations } from './migrations';
 import { OrdersController } from './orders.controller';
@@ -27,6 +29,7 @@ import { PaypalService } from './paypal/paypal.service';
       load: [servicesConfig, cacheConfig, paypalConfig],
       validate: validateEnv,
     }),
+    CqrsModule.forRoot(),
     AppCacheModule.registerAsync({
       inject: [cacheConfig.KEY],
       useFactory: (cache: CacheConfig) => ({
@@ -63,6 +66,6 @@ import { PaypalService } from './paypal/paypal.service';
     ]),
   ],
   controllers: [OrdersController],
-  providers: [OrdersService, PaypalService],
+  providers: [OrdersService, PaypalService, ...ordersHandlers],
 })
 export class OrdersModule {}
