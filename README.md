@@ -8,7 +8,7 @@
 - **NestJS** (монорепозиторий, `apps/*` + общие `libs/*`)
 - **PostgreSQL** + **TypeORM** (отдельная БД на каждый сервис, миграции для прода)
 - **Redis** для кэширования (через `cache-manager`/`keyv`, с фолбэком на in-memory)
-- **Kafka** (KRaft) как шина событий + паттерн **CQRS** (`@nestjs/cqrs`)
+- **Kafka** (KRaft) как шина событий + паттерн **CQRS** (`@nestjs/cqrs`) в `orders`
 - **JWT** + серверные сессии с ротацией refresh-токенов
 - **PayPal** (sandbox) для обработки платежей
 - **Winston** для логирования

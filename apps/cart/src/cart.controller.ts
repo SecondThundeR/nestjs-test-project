@@ -7,7 +7,6 @@ import {
   type UpdateCartItemPayload,
 } from '@app/domains';
 import { Controller } from '@nestjs/common';
-import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import {
   EventPattern,
   MessagePattern,
@@ -15,58 +14,43 @@ import {
   Transport,
 } from '@nestjs/microservices';
 
-import {
-  AddCartItemCommand,
-  ClearCartCommand,
-  RemoveCartItemCommand,
-  UpdateCartItemCommand,
-} from './cqrs/commands';
-import { GetCartQuery } from './cqrs/queries';
+import { CartService } from './cart.service';
 
 @Controller()
 export class CartController {
-  constructor(
-    private readonly commandBus: CommandBus,
-    private readonly queryBus: QueryBus,
-  ) {}
+  constructor(private readonly cartService: CartService) {}
 
   @MessagePattern(CART_PATTERNS.GET, Transport.TCP)
   get(@Payload() userId: string) {
-    return this.queryBus.execute(new GetCartQuery(userId));
+    return this.cartService.get(userId);
   }
 
   @MessagePattern(CART_PATTERNS.ADD_ITEM, Transport.TCP)
   addItem(@Payload() payload: AddCartItemPayload) {
-    return this.commandBus.execute(
-      new AddCartItemCommand(payload.userId, payload.item),
-    );
+    return this.cartService.addItem(payload.userId, payload.item);
   }
 
   @MessagePattern(CART_PATTERNS.UPDATE_ITEM, Transport.TCP)
   updateItem(@Payload() payload: UpdateCartItemPayload) {
-    return this.commandBus.execute(
-      new UpdateCartItemCommand(
-        payload.userId,
-        payload.productId,
-        payload.quantity,
-      ),
+    return this.cartService.updateItem(
+      payload.userId,
+      payload.productId,
+      payload.quantity,
     );
   }
 
   @MessagePattern(CART_PATTERNS.REMOVE_ITEM, Transport.TCP)
   removeItem(@Payload() payload: RemoveCartItemPayload) {
-    return this.commandBus.execute(
-      new RemoveCartItemCommand(payload.userId, payload.productId),
-    );
+    return this.cartService.removeItem(payload.userId, payload.productId);
   }
 
   @MessagePattern(CART_PATTERNS.CLEAR, Transport.TCP)
   clear(@Payload() userId: string) {
-    return this.commandBus.execute(new ClearCartCommand(userId));
+    return this.cartService.clear(userId);
   }
 
   @EventPattern(ORDER_EVENTS.CREATED, Transport.KAFKA)
   onOrderCreated(@Payload() event: OrderCreatedEventPayload) {
-    return this.commandBus.execute(new ClearCartCommand(event.userId));
+    return this.cartService.clear(event.userId);
   }
 }

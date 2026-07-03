@@ -4,56 +4,41 @@ import {
   type UpdateProductPayload,
 } from '@app/domains';
 import { Controller } from '@nestjs/common';
-import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
-import {
-  CreateProductCommand,
-  RemoveProductCommand,
-  UpdateProductCommand,
-} from './cqrs/commands';
-import {
-  FindAllProductsQuery,
-  FindManyProductsQuery,
-  FindOneProductQuery,
-} from './cqrs/queries';
+import { ProductsService } from './products.service';
 
 @Controller()
 export class ProductsController {
-  constructor(
-    private readonly commandBus: CommandBus,
-    private readonly queryBus: QueryBus,
-  ) {}
+  constructor(private readonly productsService: ProductsService) {}
 
   @MessagePattern(PRODUCT_PATTERNS.CREATE)
   create(@Payload() dto: CreateProductDto) {
-    return this.commandBus.execute(new CreateProductCommand(dto));
+    return this.productsService.create(dto);
   }
 
   @MessagePattern(PRODUCT_PATTERNS.FIND_ALL)
   findAll() {
-    return this.queryBus.execute(new FindAllProductsQuery());
+    return this.productsService.findAll();
   }
 
   @MessagePattern(PRODUCT_PATTERNS.FIND_ONE)
   findOne(@Payload() id: string) {
-    return this.queryBus.execute(new FindOneProductQuery(id));
+    return this.productsService.findOne(id);
   }
 
   @MessagePattern(PRODUCT_PATTERNS.FIND_MANY)
   findMany(@Payload() ids: string[]) {
-    return this.queryBus.execute(new FindManyProductsQuery(ids));
+    return this.productsService.findMany(ids);
   }
 
   @MessagePattern(PRODUCT_PATTERNS.UPDATE)
   update(@Payload() payload: UpdateProductPayload) {
-    return this.commandBus.execute(
-      new UpdateProductCommand(payload.id, payload.data),
-    );
+    return this.productsService.update(payload.id, payload.data);
   }
 
   @MessagePattern(PRODUCT_PATTERNS.REMOVE)
   remove(@Payload() id: string) {
-    return this.commandBus.execute(new RemoveProductCommand(id));
+    return this.productsService.remove(id);
   }
 }

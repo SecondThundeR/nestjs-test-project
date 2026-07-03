@@ -1,16 +1,13 @@
 import type { OrderCreatedEventPayload } from '@app/domains';
-import type { CommandBus, QueryBus } from '@nestjs/cqrs';
 
 import { CartController } from './cart.controller';
-import { ClearCartCommand } from './cqrs/commands';
+import type { CartService } from './cart.service';
 
 describe('CartController', () => {
   it('clears the user cart when an order.created event arrives', async () => {
-    const commandBus = { execute: jest.fn().mockResolvedValue(undefined) };
-    const queryBus = { execute: jest.fn() };
+    const cartService = { clear: jest.fn().mockResolvedValue(undefined) };
     const controller = new CartController(
-      commandBus as unknown as CommandBus,
-      queryBus as unknown as QueryBus,
+      cartService as unknown as CartService,
     );
 
     const event: OrderCreatedEventPayload = {
@@ -30,6 +27,6 @@ describe('CartController', () => {
 
     await controller.onOrderCreated(event);
 
-    expect(commandBus.execute).toHaveBeenCalledWith(new ClearCartCommand('u1'));
+    expect(cartService.clear).toHaveBeenCalledWith('u1');
   });
 });
