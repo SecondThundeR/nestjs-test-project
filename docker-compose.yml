@@ -116,7 +116,7 @@ services:
         condition: service_healthy
 
   products-db:
-    image: postgres:18.4
+    image: postgres:18.4-alpine
     environment:
       POSTGRES_USER: ${PRODUCTS_DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${PRODUCTS_DB_PASSWORD:-postgres}
@@ -171,7 +171,7 @@ services:
       retries: 5
 
   cart-db:
-    image: postgres:18.4
+    image: postgres:18.4-alpine
     environment:
       POSTGRES_USER: ${CART_DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${CART_DB_PASSWORD:-postgres}
@@ -187,7 +187,7 @@ services:
       retries: 5
 
   orders-db:
-    image: postgres:18.4
+    image: postgres:18.4-alpine
     environment:
       POSTGRES_USER: ${ORDERS_DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${ORDERS_DB_PASSWORD:-postgres}
@@ -203,7 +203,7 @@ services:
       retries: 5
 
   users-db:
-    image: postgres:18.4
+    image: postgres:18.4-alpine
     environment:
       POSTGRES_USER: ${USERS_DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${USERS_DB_PASSWORD:-postgres}
@@ -219,7 +219,7 @@ services:
       retries: 5
 
   auth-db:
-    image: postgres:18.4
+    image: postgres:18.4-alpine
     environment:
       POSTGRES_USER: ${AUTH_DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-postgres}
