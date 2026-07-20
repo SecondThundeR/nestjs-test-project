@@ -157,6 +157,17 @@ services:
       retries: 10
       start_period: 15s
 
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:v1.5.0
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - '${KAFKA_UI_PORT:-8090}:8080'
+    depends_on:
+      kafka:
+        condition: service_healthy
+
   cache:
     image: redis:8.8.0-alpine
     command: ['redis-server', '--save', '60', '1']
