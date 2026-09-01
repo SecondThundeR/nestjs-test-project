@@ -1,0 +1,28 @@
+allowBuilds:
+  '@nestjs/core': true
+  '@parcel/watcher': true
+  '@scarf/scarf': true
+  bcrypt: true
+  fsevents: true
+  unrs-resolver: true
+minimumReleaseAgeExclude:
+  - '@eslint/eslintrc@3.3.7'
+  - '@rspack/binding-darwin-arm64@2.2.2'
+  - '@rspack/binding-darwin-x64@2.2.2'
+  - '@rspack/binding-linux-arm64-gnu@2.2.2'
+  - '@rspack/binding-linux-arm64-musl@2.2.2'
+  - '@rspack/binding-linux-ppc64-gnu@2.2.2'
+  - '@rspack/binding-linux-riscv64-gnu@2.2.2'
+  - '@rspack/binding-linux-riscv64-musl@2.2.2'
+  - '@rspack/binding-linux-s390x-gnu@2.2.2'
+  - '@rspack/binding-linux-x64-gnu@2.2.2'
+  - '@rspack/binding-linux-x64-musl@2.2.2'
+  - '@rspack/binding-wasm32-wasi@2.2.2'
+  - '@rspack/binding-win32-arm64-msvc@2.2.2'
+  - '@rspack/binding-win32-ia32-msvc@2.2.2'
+  - '@rspack/binding-win32-x64-msvc@2.2.2'
+  - '@rspack/binding@2.2.2'
+  - '@rspack/core@2.2.2'
+  - '@types/node@26.4.1'
+  - globals@17.12.0
+  - typeorm@1.1.1

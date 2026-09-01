@@ -57,7 +57,7 @@ JWT содержит `sid` (id сессии). На каждый защищённ
 
 ```bash
 cp .env.example .env      # задайте JWT_SECRET (openssl rand --hex 64)
-npm run docker:up         # поднимет все сервисы, БД, Redis и Kafka
+pnpm run docker:up        # поднимет все сервисы, БД, Redis и Kafka
 ```
 
 В контейнерах используется `DB_SYNCHRONIZE=false` + автозапуск миграций (`DB_MIGRATIONS_RUN=true`)
@@ -65,9 +65,10 @@ npm run docker:up         # поднимет все сервисы, БД, Redis 
 ### Локально (dev)
 
 ```bash
-npm install
-npm run docker:db         # только инфраструктура (БД + Redis + Kafka)
-npm run start:dev         # все сервисы через concurrently (synchronize=true)
+corepack enable
+pnpm install
+pnpm run docker:db        # только инфраструктура (БД + Redis + Kafka)
+pnpm run start:dev        # все сервисы через concurrently (synchronize=true)
 ```
 
 После запуска:
@@ -93,15 +94,15 @@ npm run start:dev         # все сервисы через concurrently (synch
 Для каждого сервиса - свой `data-source.ts` и набор миграций. В проде `synchronize` выключен
 
 ```bash
-npm run migration:run:all       # применить миграции всех сервисов
-npm run migration:run:products  # либо по одному сервису
+pnpm run migration:run:all       # применить миграции всех сервисов
+pnpm run migration:run:products  # либо по одному сервису
 ```
 
 ## Тесты
 
 ```bash
-npm test          # unit + e2e (Jest)
-npm run test:cov  # с покрытием
+pnpm test          # unit + e2e (Jest)
+pnpm run test:cov  # с покрытием
 ```
 
 Внешние зависимости (PayPal, Redis) в тестах замоканы, поэтому реальная инфраструктура не нужна

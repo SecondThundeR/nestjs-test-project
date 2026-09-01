@@ -2,13 +2,13 @@ FROM node:26.3.0-alpine AS builder
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++
-RUN npm install --global npm@12.0.2
+RUN npm install --global pnpm@12.2.1
 
-COPY package*.json .npmrc ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN npm run build && npm prune --omit=dev
+RUN pnpm run build && pnpm prune --prod
 
 FROM node:26.3.0-alpine AS runner
 WORKDIR /app

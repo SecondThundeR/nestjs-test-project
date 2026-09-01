@@ -10,5 +10,5 @@ Dockerfile
 .dockerignore
 docker-compose.yml
 README.md
-npm-debug.log*
+pnpm-debug.log*
 *.log

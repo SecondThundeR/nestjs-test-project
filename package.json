@@ -5,10 +5,11 @@
   "author": "",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@12.2.1+sha512.f55ca68aacb9eb5ab69c66f828a98af89a32286703aef1f8da131ca7eab4d677f34bfa85e186467a919c0799df8b6f4aa240f7dc2919b33b3273190104162616",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=24.20.0",
-    "npm": ">=12.0.2"
+    "pnpm": ">=12.2.1"
   },
   "scripts": {
     "docker:up": "docker compose up -d --build",
@@ -29,7 +30,7 @@
     "start:orders": "nest start orders --start",
     "start:users": "nest start users --start",
     "start:auth": "nest start auth --start",
-    "start:dev": "concurrently -n gateway,products,cart,orders,users,auth -c blue,green,magenta,yellow,cyan,red \"npm:start:gateway\" \"npm:start:products\" \"npm:start:cart\" \"npm:start:orders\" \"npm:start:users\" \"npm:start:auth\"",
+    "start:dev": "concurrently -n gateway,products,cart,orders,users,auth -c blue,green,magenta,yellow,cyan,red \"pnpm:start:gateway\" \"pnpm:start:products\" \"pnpm:start:cart\" \"pnpm:start:orders\" \"pnpm:start:users\" \"pnpm:start:auth\"",
     "start:prod": "concurrently -n gateway,products,cart,orders,users,auth -c blue,green,magenta,yellow,cyan,red \"node dist/apps/gateway/main.js\" \"node dist/apps/products/main.js\" \"node dist/apps/cart/main.js\" \"node dist/apps/orders/main.js\" \"node dist/apps/users/main.js\" \"node dist/apps/auth/main.js\"",
     "lint": "eslint \"{apps,libs,test}/**/*.ts\"",
     "lint:fix": "eslint \"{apps,libs,test}/**/*.ts\" --fix",
@@ -39,18 +40,18 @@
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "typeorm:build": "tsc --project tsconfig.typeorm.json",
-    "typeorm": "npm run typeorm:build && typeorm",
-    "migration:run:products": "npm run typeorm -- migration:run -d dist/typeorm/apps/products/src/data-source.js",
-    "migration:run:cart": "npm run typeorm -- migration:run -d dist/typeorm/apps/cart/src/data-source.js",
-    "migration:run:orders": "npm run typeorm -- migration:run -d dist/typeorm/apps/orders/src/data-source.js",
-    "migration:run:users": "npm run typeorm -- migration:run -d dist/typeorm/apps/users/src/data-source.js",
-    "migration:run:auth": "npm run typeorm -- migration:run -d dist/typeorm/apps/auth/src/data-source.js",
-    "migration:run:all": "npm run migration:run:products && npm run migration:run:cart && npm run migration:run:orders && npm run migration:run:users && npm run migration:run:auth",
-    "migration:revert:products": "npm run typeorm -- migration:revert -d dist/typeorm/apps/products/src/data-source.js",
-    "migration:revert:cart": "npm run typeorm -- migration:revert -d dist/typeorm/apps/cart/src/data-source.js",
-    "migration:revert:orders": "npm run typeorm -- migration:revert -d dist/typeorm/apps/orders/src/data-source.js",
-    "migration:revert:users": "npm run typeorm -- migration:revert -d dist/typeorm/apps/users/src/data-source.js",
-    "migration:revert:auth": "npm run typeorm -- migration:revert -d dist/typeorm/apps/auth/src/data-source.js"
+    "typeorm": "pnpm run typeorm:build && typeorm",
+    "migration:run:products": "pnpm run typeorm -- migration:run -d dist/typeorm/apps/products/src/data-source.js",
+    "migration:run:cart": "pnpm run typeorm -- migration:run -d dist/typeorm/apps/cart/src/data-source.js",
+    "migration:run:orders": "pnpm run typeorm -- migration:run -d dist/typeorm/apps/orders/src/data-source.js",
+    "migration:run:users": "pnpm run typeorm -- migration:run -d dist/typeorm/apps/users/src/data-source.js",
+    "migration:run:auth": "pnpm run typeorm -- migration:run -d dist/typeorm/apps/auth/src/data-source.js",
+    "migration:run:all": "pnpm run migration:run:products && pnpm run migration:run:cart && pnpm run migration:run:orders && pnpm run migration:run:users && pnpm run migration:run:auth",
+    "migration:revert:products": "pnpm run typeorm -- migration:revert -d dist/typeorm/apps/products/src/data-source.js",
+    "migration:revert:cart": "pnpm run typeorm -- migration:revert -d dist/typeorm/apps/cart/src/data-source.js",
+    "migration:revert:orders": "pnpm run typeorm -- migration:revert -d dist/typeorm/apps/orders/src/data-source.js",
+    "migration:revert:users": "pnpm run typeorm -- migration:revert -d dist/typeorm/apps/users/src/data-source.js",
+    "migration:revert:auth": "pnpm run typeorm -- migration:revert -d dist/typeorm/apps/auth/src/data-source.js"
   },
   "dependencies": {
     "@keyv/redis": "5.1.6",
@@ -71,6 +72,7 @@
     "class-transformer": "0.5.1",
     "class-validator": "0.15.1",
     "dotenv": "17.4.2",
+    "js-yaml": "5.4.1",
     "kafkajs": "2.2.4",
     "keyv": "5.6.0",
     "nest-winston": "1.10.2",
@@ -116,13 +118,5 @@
     "axios": "^1.20.0",
     "js-yaml": "^5.4.1",
     "browserslist": "^4.28.8"
-  },
-  "allowScripts": {
-    "@nestjs/core@11.1.26": true,
-    "unrs-resolver@1.12.2": true,
-    "bcrypt@6.0.0": true,
-    "fsevents@2.3.3": true,
-    "@scarf/scarf@1.4.0": true,
-    "@parcel/watcher@2.6.0": true
   }
 }
