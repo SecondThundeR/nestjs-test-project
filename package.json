@@ -73,14 +73,14 @@
     "keyv": "5.6.0",
     "nest-winston": "1.10.2",
     "passport": "0.7.0",
-    "pg": "8.22.0",
+    "pg": "8.23.0",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
-    "typeorm": "1.1.0",
+    "typeorm": "1.1.1",
     "winston": "3.19.0"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "3.3.6",
+    "@eslint/eslintrc": "3.3.7",
     "@eslint/js": "10.0.1",
     "@nestjs/cli": "11.0.24",
     "@nestjs/schematics": "11.1.0",
@@ -89,15 +89,15 @@
     "@types/express": "5.0.6",
     "@types/jest": "30.0.0",
     "@types/js-yaml": "4.0.9",
-    "@types/node": "26.1.2",
+    "@types/node": "26.4.1",
     "@types/supertest": "7.2.1",
-    "concurrently": "10.0.4",
-    "eslint": "10.8.0",
+    "concurrently": "10.0.5",
+    "eslint": "10.9.1",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-prettier": "5.5.6",
     "eslint-plugin-simple-import-sort": "14.0.0",
-    "globals": "17.9.0",
-    "jest": "30.4.2",
+    "globals": "17.12.0",
+    "jest": "30.5.1",
     "jest-openapi": "0.14.2",
     "pg-mem": "3.0.14",
     "prettier": "3.9.6",
@@ -108,7 +108,7 @@
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.66.0"
+    "typescript-eslint": "8.69.0"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -154,18 +154,16 @@
     }
   },
   "overrides": {
-    "axios": "^1.19.0",
-    "js-yaml": "^5.2.2",
-    "body-parser": "^2.3.0",
-    "brace-expansion": "^1.1.17",
-    "fast-uri": "^3.1.5",
-    "immutable": "^4.3.9"
+    "axios": "^1.20.0",
+    "js-yaml": "^5.4.1",
+    "browserslist": "^4.28.8"
   },
   "allowScripts": {
     "@nestjs/core@11.1.26": true,
     "unrs-resolver@1.12.2": true,
     "bcrypt@6.0.0": true,
     "fsevents@2.3.3": true,
-    "@scarf/scarf@1.4.0": true
+    "@scarf/scarf@1.4.0": true,
+    "@parcel/watcher@2.6.0": true
   }
 }
