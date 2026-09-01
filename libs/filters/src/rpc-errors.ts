@@ -1,6 +1,8 @@
-import { HttpStatus } from '@nestjs/common';
+import {
+  HttpStatus,
+  type StandardSchemaValidationPipeOptions,
+} from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import type { ValidationError } from 'class-validator';
 
 import type { RpcErrorPayload } from './rpc-exception.filter.js';
 
@@ -29,12 +31,23 @@ export const RpcErrors = {
     rpcException(HttpStatus.BAD_GATEWAY, 'Bad Gateway', message),
 };
 
-export function rpcValidationExceptionFactory(
-  errors: ValidationError[],
+type StandardSchemaIssues = Parameters<
+  NonNullable<StandardSchemaValidationPipeOptions['exceptionFactory']>
+>[0];
+
+export function rpcStandardSchemaExceptionFactory(
+  issues: StandardSchemaIssues,
 ): RpcException {
-  const messages = errors.flatMap((error) =>
-    Object.values(error.constraints ?? {}),
-  );
+  const messages = issues.map((issue) => {
+    const path = issue.path
+      ?.map((segment) =>
+        typeof segment === 'object' && segment !== null
+          ? String(segment.key)
+          : String(segment),
+      )
+      .join('.');
+    return path ? `${path}: ${issue.message}` : issue.message;
+  });
   return rpcException(
     HttpStatus.BAD_REQUEST,
     'Bad Request',

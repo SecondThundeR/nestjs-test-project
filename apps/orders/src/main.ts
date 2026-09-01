@@ -3,10 +3,10 @@ import 'dotenv/config';
 import { servicesConfig } from '@app/config';
 import {
   GlobalRpcExceptionFilter,
-  rpcValidationExceptionFactory,
+  rpcStandardSchemaExceptionFactory,
 } from '@app/filters';
 import { createWinstonLogger } from '@app/logger';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger, StandardSchemaValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
 
@@ -24,10 +24,9 @@ async function bootstrap() {
   );
 
   app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
+    new StandardSchemaValidationPipe({
       transform: true,
-      exceptionFactory: rpcValidationExceptionFactory,
+      exceptionFactory: rpcStandardSchemaExceptionFactory,
     }),
   );
   app.useGlobalFilters(new GlobalRpcExceptionFilter());

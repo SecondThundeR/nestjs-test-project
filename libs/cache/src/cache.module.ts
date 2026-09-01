@@ -29,7 +29,7 @@ export class AppCacheModule {
           imports: options.imports,
           inject: options.inject,
           useFactory: async (...args) =>
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+            // oxlint-disable-next-line typescript/no-unsafe-argument
             buildCacheManagerOptions(await options.useFactory(...args)),
         }),
       ],

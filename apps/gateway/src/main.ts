@@ -5,8 +5,12 @@ import { join } from 'node:path';
 
 import { type ServicesConfig, servicesConfig } from '@app/config';
 import { createWinstonLogger } from '@app/logger';
-import { Logger, ValidationPipe } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import {
+  Logger,
+  StandardSchemaSerializerInterceptor,
+  StandardSchemaValidationPipe,
+} from '@nestjs/common';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import {
   DocumentBuilder,
@@ -15,6 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { load as loadYaml } from 'js-yaml';
 
+import { standardSchemaDocumentOptions } from './common/openapi.js';
 import { GatewayModule } from './gateway.module.js';
 
 function filterPathsByTag(
@@ -45,7 +50,11 @@ function setupCodeFirstDocs(app: NestExpressApplication): void {
     .addBearerAuth()
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(
+    app,
+    config,
+    standardSchemaDocumentOptions,
+  );
   // Make Swagger page to list only Products API endpoints for clarity
   document.paths = filterPathsByTag(document.paths, CODE_FIRST_TAG);
   document.tags = document.tags?.filter((tag) => tag.name === CODE_FIRST_TAG);
@@ -68,6 +77,8 @@ function setupSchemaFirstDocs(app: NestExpressApplication): void {
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(GatewayModule, {
     logger: createWinstonLogger('Gateway'),
+    routeConflictPolicy: { duplicate: 'error', shadow: 'warn' },
+    routeResolutionStrategy: 'specificity',
   });
 
   const services = app.get<ServicesConfig>(servicesConfig.KEY);
@@ -75,12 +86,9 @@ async function bootstrap() {
   app.disable('x-powered-by');
   app.setGlobalPrefix('api');
   app.enableCors();
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
+  app.useGlobalPipes(new StandardSchemaValidationPipe({ transform: true }));
+  app.useGlobalInterceptors(
+    new StandardSchemaSerializerInterceptor(app.get(Reflector)),
   );
 
   setupCodeFirstDocs(app);

@@ -9,7 +9,12 @@ import {
   OrderStatus,
   UserRole,
 } from '@app/domains';
-import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  type INestApplication,
+  StandardSchemaSerializerInterceptor,
+  StandardSchemaValidationPipe,
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
@@ -80,12 +85,9 @@ describe('Orders API contract (Schema First)', () => {
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api');
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
+    app.useGlobalPipes(new StandardSchemaValidationPipe({ transform: true }));
+    app.useGlobalInterceptors(
+      new StandardSchemaSerializerInterceptor(app.get(Reflector)),
     );
     await app.init();
   });

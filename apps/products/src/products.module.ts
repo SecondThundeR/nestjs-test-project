@@ -3,7 +3,7 @@ import {
   buildDatabaseOptions,
   type CacheConfig,
   cacheConfig,
-  validateEnv,
+  environmentSchema,
 } from '@app/config';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -19,7 +19,7 @@ import { ProductsService } from './products.service.js';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [cacheConfig],
-      validate: validateEnv,
+      validationSchema: environmentSchema,
     }),
     AppCacheModule.registerAsync({
       inject: [cacheConfig.KEY],

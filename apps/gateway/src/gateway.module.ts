@@ -1,10 +1,10 @@
 import {
   type AuthConfig,
   authConfig,
+  environmentSchema,
   SERVICE_NAMES,
   type ServicesConfig,
   servicesConfig,
-  validateEnv,
 } from '@app/config';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -24,7 +24,7 @@ import { UsersGatewayController } from './users/users.gateway.controller.js';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [authConfig, servicesConfig],
-      validate: validateEnv,
+      validationSchema: environmentSchema,
     }),
     JwtModule.registerAsync({
       inject: [authConfig.KEY],

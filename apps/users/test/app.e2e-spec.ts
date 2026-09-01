@@ -1,9 +1,12 @@
 import { type PublicUser, USERS_PATTERNS } from '@app/domains';
 import {
   GlobalRpcExceptionFilter,
-  rpcValidationExceptionFactory,
+  rpcStandardSchemaExceptionFactory,
 } from '@app/filters';
-import { type INestMicroservice, ValidationPipe } from '@nestjs/common';
+import {
+  type INestMicroservice,
+  StandardSchemaValidationPipe,
+} from '@nestjs/common';
 import {
   type ClientProxy,
   ClientProxyFactory,
@@ -40,10 +43,9 @@ describe('Users microservice (e2e)', () => {
       options: { host: HOST, port: PORT },
     });
     app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
+      new StandardSchemaValidationPipe({
         transform: true,
-        exceptionFactory: rpcValidationExceptionFactory,
+        exceptionFactory: rpcStandardSchemaExceptionFactory,
       }),
     );
     app.useGlobalFilters(new GlobalRpcExceptionFilter());

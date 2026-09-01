@@ -1,345 +1,74 @@
-import { plainToInstance, Type } from 'class-transformer';
-import {
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
-  validateSync,
-} from 'class-validator';
+import { z } from 'zod';
 
-class EnvironmentVariables {
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  LOG_LEVEL?: string;
+const optionalNonEmptyString = z.string().min(1).optional();
+const optionalPort = z.coerce.number().int().min(0).max(65535).optional();
+const optionalPositiveInt = z.coerce.number().int().positive().optional();
+const optionalNonNegativeInt = z.coerce.number().int().nonnegative().optional();
 
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  LOG_FORMAT?: string;
+export const environmentSchema = z.object({
+  LOG_LEVEL: optionalNonEmptyString,
+  LOG_FORMAT: optionalNonEmptyString,
+  JWT_SECRET: z.string().min(1),
+  JWT_EXPIRES_IN: optionalNonEmptyString,
+  REFRESH_TTL_DAYS: optionalPositiveInt,
 
-  @IsString()
-  @IsNotEmpty()
-  JWT_SECRET!: string;
+  GATEWAY_PORT: optionalPort,
+  PRODUCTS_PORT: optionalPort,
+  CART_PORT: optionalPort,
+  ORDERS_PORT: optionalPort,
+  USERS_PORT: optionalPort,
+  AUTH_PORT: optionalPort,
+  PRODUCTS_HOST: optionalNonEmptyString,
+  CART_HOST: optionalNonEmptyString,
+  ORDERS_HOST: optionalNonEmptyString,
+  USERS_HOST: optionalNonEmptyString,
+  AUTH_HOST: optionalNonEmptyString,
 
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  JWT_EXPIRES_IN?: string;
+  PAYPAL_API_URL: optionalNonEmptyString,
+  PAYPAL_CLIENT_ID: optionalNonEmptyString,
+  PAYPAL_CLIENT_SECRET: optionalNonEmptyString,
+  PAYPAL_CURRENCY: optionalNonEmptyString,
+  PAYPAL_RETURN_URL: optionalNonEmptyString,
+  PAYPAL_CANCEL_URL: optionalNonEmptyString,
 
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  REFRESH_TTL_DAYS?: number;
+  DB_SYNCHRONIZE: optionalNonEmptyString,
+  DB_MIGRATIONS_RUN: optionalNonEmptyString,
+  KAFKA_BROKERS: optionalNonEmptyString,
+  KAFKA_HOST_PORT: optionalPort,
 
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(65535)
-  GATEWAY_PORT?: number;
+  REDIS_HOST: optionalNonEmptyString,
+  REDIS_PORT: optionalPort,
+  REDIS_PASSWORD: optionalNonEmptyString,
+  PRODUCTS_CACHE_TTL: optionalNonNegativeInt,
+  USERS_CACHE_TTL: optionalNonNegativeInt,
+  AUTH_CACHE_TTL: optionalNonNegativeInt,
+  ORDERS_CACHE_TTL: optionalNonNegativeInt,
 
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(65535)
-  PRODUCTS_PORT?: number;
+  PRODUCTS_DB_HOST: optionalNonEmptyString,
+  PRODUCTS_DB_PORT: optionalPort,
+  PRODUCTS_DB_USERNAME: optionalNonEmptyString,
+  PRODUCTS_DB_PASSWORD: optionalNonEmptyString,
+  PRODUCTS_DB_NAME: optionalNonEmptyString,
+  CART_DB_HOST: optionalNonEmptyString,
+  CART_DB_PORT: optionalPort,
+  CART_DB_USERNAME: optionalNonEmptyString,
+  CART_DB_PASSWORD: optionalNonEmptyString,
+  CART_DB_NAME: optionalNonEmptyString,
+  ORDERS_DB_HOST: optionalNonEmptyString,
+  ORDERS_DB_PORT: optionalPort,
+  ORDERS_DB_USERNAME: optionalNonEmptyString,
+  ORDERS_DB_PASSWORD: optionalNonEmptyString,
+  ORDERS_DB_NAME: optionalNonEmptyString,
+  USERS_DB_HOST: optionalNonEmptyString,
+  USERS_DB_PORT: optionalPort,
+  USERS_DB_USERNAME: optionalNonEmptyString,
+  USERS_DB_PASSWORD: optionalNonEmptyString,
+  USERS_DB_NAME: optionalNonEmptyString,
+  AUTH_DB_HOST: optionalNonEmptyString,
+  AUTH_DB_PORT: optionalPort,
+  AUTH_DB_USERNAME: optionalNonEmptyString,
+  AUTH_DB_PASSWORD: optionalNonEmptyString,
+  AUTH_DB_NAME: optionalNonEmptyString,
+});
 
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(65535)
-  CART_PORT?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(65535)
-  ORDERS_PORT?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(65535)
-  USERS_PORT?: number;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  PRODUCTS_HOST?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  CART_HOST?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  ORDERS_HOST?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  USERS_HOST?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(65535)
-  AUTH_PORT?: number;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  AUTH_HOST?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  PAYPAL_API_URL?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  PAYPAL_CLIENT_ID?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  PAYPAL_CLIENT_SECRET?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  PAYPAL_CURRENCY?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  PAYPAL_RETURN_URL?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  PAYPAL_CANCEL_URL?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  DB_SYNCHRONIZE?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  DB_MIGRATIONS_RUN?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  KAFKA_BROKERS?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(65535)
-  KAFKA_HOST_PORT?: number;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  REDIS_HOST?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(65535)
-  REDIS_PORT?: number;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  REDIS_PASSWORD?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  PRODUCTS_CACHE_TTL?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  USERS_CACHE_TTL?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  AUTH_CACHE_TTL?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  ORDERS_CACHE_TTL?: number;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  PRODUCTS_DB_HOST?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(65535)
-  PRODUCTS_DB_PORT?: number;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  PRODUCTS_DB_USERNAME?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  PRODUCTS_DB_PASSWORD?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  PRODUCTS_DB_NAME?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  CART_DB_HOST?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(65535)
-  CART_DB_PORT?: number;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  CART_DB_USERNAME?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  CART_DB_PASSWORD?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  CART_DB_NAME?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  ORDERS_DB_HOST?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(65535)
-  ORDERS_DB_PORT?: number;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  ORDERS_DB_USERNAME?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  ORDERS_DB_PASSWORD?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  ORDERS_DB_NAME?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  USERS_DB_HOST?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(65535)
-  USERS_DB_PORT?: number;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  USERS_DB_USERNAME?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  USERS_DB_PASSWORD?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  USERS_DB_NAME?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  AUTH_DB_HOST?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(65535)
-  AUTH_DB_PORT?: number;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  AUTH_DB_USERNAME?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  AUTH_DB_PASSWORD?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  AUTH_DB_NAME?: string;
-}
-
-export function validateEnv(
-  config: Record<string, unknown>,
-): EnvironmentVariables {
-  const validated = plainToInstance(EnvironmentVariables, config);
-
-  const errors = validateSync(validated, { skipMissingProperties: false });
-  if (errors.length > 0) {
-    throw new Error(errors.map((error) => error.toString()).join('\n'));
-  }
-
-  return validated;
-}
+export type Environment = z.infer<typeof environmentSchema>;

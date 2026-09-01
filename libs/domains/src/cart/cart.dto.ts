@@ -1,33 +1,33 @@
-import { IsInt, IsString, Min, MinLength } from 'class-validator';
+import { z } from 'zod';
 
-export class AddCartItemDto {
-  @IsString()
-  @MinLength(1)
-  productId!: string;
+import { idSchema } from '../common.schema.js';
 
-  @IsInt()
-  @Min(1)
-  quantity!: number;
-}
+export const addCartItemSchema = z.strictObject({
+  productId: idSchema,
+  quantity: z.int().min(1),
+});
+export type AddCartItemDto = z.infer<typeof addCartItemSchema>;
 
-export class UpdateCartItemDto {
-  @IsInt()
-  @Min(0)
-  quantity!: number;
-}
+export const updateCartItemSchema = z.strictObject({
+  quantity: z.int().nonnegative(),
+});
+export type UpdateCartItemDto = z.infer<typeof updateCartItemSchema>;
 
-export interface AddCartItemPayload {
-  userId: string;
-  item: AddCartItemDto;
-}
+export const addCartItemPayloadSchema = z.strictObject({
+  userId: idSchema,
+  item: addCartItemSchema,
+});
+export type AddCartItemPayload = z.infer<typeof addCartItemPayloadSchema>;
 
-export interface UpdateCartItemPayload {
-  userId: string;
-  productId: string;
-  quantity: number;
-}
+export const updateCartItemPayloadSchema = z.strictObject({
+  userId: idSchema,
+  productId: idSchema,
+  quantity: z.int().nonnegative(),
+});
+export type UpdateCartItemPayload = z.infer<typeof updateCartItemPayloadSchema>;
 
-export interface RemoveCartItemPayload {
-  userId: string;
-  productId: string;
-}
+export const removeCartItemPayloadSchema = z.strictObject({
+  userId: idSchema,
+  productId: idSchema,
+});
+export type RemoveCartItemPayload = z.infer<typeof removeCartItemPayloadSchema>;

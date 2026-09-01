@@ -1,39 +1,17 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsInt,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Min,
-  MinLength,
-} from 'class-validator';
+import { z } from 'zod';
 
-export class CreateProductDto {
-  @ApiProperty({ example: 'Logitech PRO X2 SUPERSTRIKE', minLength: 2 })
-  @IsString()
-  @MinLength(2)
-  name!: string;
-
-  @ApiPropertyOptional({
+export const createProductSchema = z.strictObject({
+  name: z.string().min(2).meta({ example: 'Logitech PRO X2 SUPERSTRIKE' }),
+  description: z.string().optional().meta({
     example:
       'PRO X2 SUPERSTRIKE is a breakthrough in ultra-low click-latency technology',
-  })
-  @IsString()
-  @IsOptional()
-  description?: string;
+  }),
+  price: z
+    .number()
+    .nonnegative()
+    .multipleOf(0.01)
+    .meta({ description: 'Price per unit (USD)', example: 179.99 }),
+  stock: z.int().nonnegative().optional().meta({ default: 0, example: 50 }),
+});
 
-  @ApiProperty({
-    example: 179.99,
-    minimum: 0,
-    description: 'Price per unit (USD)',
-  })
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  price!: number;
-
-  @ApiPropertyOptional({ example: 50, minimum: 0, default: 0 })
-  @IsInt()
-  @Min(0)
-  @IsOptional()
-  stock?: number;
-}
+export type CreateProductDto = z.infer<typeof createProductSchema>;

@@ -3,6 +3,7 @@ import {
   buildDatabaseOptions,
   type CacheConfig,
   cacheConfig,
+  environmentSchema,
   KAFKA_CLIENT,
   type KafkaConfig,
   kafkaConfig,
@@ -10,7 +11,6 @@ import {
   SERVICE_NAMES,
   type ServicesConfig,
   servicesConfig,
-  validateEnv,
 } from '@app/config';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -31,7 +31,7 @@ import { PaypalService } from './paypal/paypal.service.js';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [servicesConfig, cacheConfig, paypalConfig, kafkaConfig],
-      validate: validateEnv,
+      validationSchema: environmentSchema,
     }),
     CqrsModule.forRoot(),
     AppCacheModule.registerAsync({

@@ -1,10 +1,15 @@
 import { SERVICE_NAMES } from '@app/config';
-import { type PublicUser, USERS_PATTERNS } from '@app/domains';
+import {
+  publicUserSchema,
+  type PublicUser,
+  USERS_PATTERNS,
+} from '@app/domains';
 import {
   Controller,
   Get,
   Inject,
   NotFoundException,
+  SerializeOptions,
   UseGuards,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
@@ -21,6 +26,7 @@ export class UsersGatewayController {
   ) {}
 
   @Get('me')
+  @SerializeOptions({ schema: publicUserSchema })
   async me(@CurrentUserId() userId: string): Promise<PublicUser> {
     const user = await rpcSend<PublicUser | null>(
       this.users,

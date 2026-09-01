@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "options": {
+    "typeAware": true
+  },
+  "env": {
+    "node": true,
+    "vitest": true
+  },
+  "plugins": ["import", "typescript", "vitest"],
+  "ignorePatterns": ["dist/**", "node_modules/**"],
+  "rules": {
+    "import/first": "error",
+    "import/no-duplicates": "error",
+    "sort-imports": "off",
+    "typescript/consistent-type-imports": "off",
+    "typescript/no-explicit-any": "off",
+    "typescript/no-floating-promises": "warn",
+    "typescript/no-unsafe-argument": "warn",
+    "typescript/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_"
+      }
+    ],
+    "vitest/require-mock-type-parameters": "off"
+  }
+}

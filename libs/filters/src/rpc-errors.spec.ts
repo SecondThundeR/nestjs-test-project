@@ -1,8 +1,7 @@
 import { HttpStatus } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import type { ValidationError } from 'class-validator';
 
-import { RpcErrors, rpcValidationExceptionFactory } from './rpc-errors.js';
+import { RpcErrors, rpcStandardSchemaExceptionFactory } from './rpc-errors.js';
 import type { RpcErrorPayload } from './rpc-exception.filter.js';
 
 function payloadOf(exception: RpcException): RpcErrorPayload {
@@ -46,51 +45,40 @@ describe('RpcErrors', () => {
   });
 });
 
-describe('rpcValidationExceptionFactory', () => {
-  it('flattens the constraints of every validation error into the message array', () => {
-    const errors = [
+describe('rpcStandardSchemaExceptionFactory', () => {
+  it('formats issue paths into the message array', () => {
+    const issues = [
       {
-        property: 'email',
-        constraints: { isEmail: 'email must be an email' },
+        path: ['email'],
+        message: 'Invalid email address',
       },
       {
-        property: 'password',
-        constraints: {
-          isString: 'password must be a string',
-          minLength: 'password is too short',
-        },
+        path: ['user', { key: 'password' }],
+        message: 'Too small',
       },
-    ] as ValidationError[];
+    ];
 
-    expect(payloadOf(rpcValidationExceptionFactory(errors))).toEqual({
+    expect(payloadOf(rpcStandardSchemaExceptionFactory(issues))).toEqual({
       statusCode: HttpStatus.BAD_REQUEST,
-      message: [
-        'email must be an email',
-        'password must be a string',
-        'password is too short',
-      ],
+      message: ['email: Invalid email address', 'user.password: Too small'],
       error: 'Bad Request',
     });
   });
 
-  it('ignores errors without constraints', () => {
-    const errors = [
-      { property: 'nested' },
-      {
-        property: 'name',
-        constraints: { isNotEmpty: 'name should not be empty' },
-      },
-    ] as ValidationError[];
-
-    expect(payloadOf(rpcValidationExceptionFactory(errors))).toEqual({
+  it('keeps messages for issues without a path', () => {
+    expect(
+      payloadOf(
+        rpcStandardSchemaExceptionFactory([{ message: 'Validation failed' }]),
+      ),
+    ).toEqual({
       statusCode: HttpStatus.BAD_REQUEST,
-      message: ['name should not be empty'],
+      message: ['Validation failed'],
       error: 'Bad Request',
     });
   });
 
-  it('falls back to a generic message when no constraints are present', () => {
-    expect(payloadOf(rpcValidationExceptionFactory([]))).toEqual({
+  it('falls back to a generic message when no issues are present', () => {
+    expect(payloadOf(rpcStandardSchemaExceptionFactory([]))).toEqual({
       statusCode: HttpStatus.BAD_REQUEST,
       message: 'Validation failed',
       error: 'Bad Request',

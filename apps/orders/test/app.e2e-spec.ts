@@ -13,9 +13,12 @@ import {
 } from '@app/domains';
 import {
   GlobalRpcExceptionFilter,
-  rpcValidationExceptionFactory,
+  rpcStandardSchemaExceptionFactory,
 } from '@app/filters';
-import { type INestMicroservice, ValidationPipe } from '@nestjs/common';
+import {
+  type INestMicroservice,
+  StandardSchemaValidationPipe,
+} from '@nestjs/common';
 import {
   type ClientProxy,
   ClientProxyFactory,
@@ -105,10 +108,9 @@ describe('Orders microservice (e2e)', () => {
       options: { host: HOST, port: PORT },
     });
     app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
+      new StandardSchemaValidationPipe({
         transform: true,
-        exceptionFactory: rpcValidationExceptionFactory,
+        exceptionFactory: rpcStandardSchemaExceptionFactory,
       }),
     );
     app.useGlobalFilters(new GlobalRpcExceptionFilter());
@@ -209,14 +211,12 @@ describe('Orders microservice (e2e)', () => {
 
     const shipped = await send<Order>(ORDERS_PATTERNS.UPDATE_STATUS, {
       id: order.id,
-      userId: USER,
       status: OrderStatus.SHIPPED,
     });
     expect(shipped.status).toBe(OrderStatus.SHIPPED);
 
     const delivered = await send<Order>(ORDERS_PATTERNS.UPDATE_STATUS, {
       id: order.id,
-      userId: USER,
       status: OrderStatus.DELIVERED,
     });
     expect(delivered.status).toBe(OrderStatus.DELIVERED);
@@ -319,7 +319,6 @@ describe('Orders microservice (e2e)', () => {
     await expect(
       send<Order>(ORDERS_PATTERNS.UPDATE_STATUS, {
         id: order.id,
-        userId: USER,
         status: OrderStatus.SHIPPED,
       }),
     ).rejects.toMatchObject({ statusCode: 400 });

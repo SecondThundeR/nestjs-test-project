@@ -1,9 +1,13 @@
 import { SERVICE_NAMES } from '@app/config';
 import {
-  AddCartItemDto,
+  type AddCartItemDto,
+  addCartItemSchema,
   type Cart,
   CART_PATTERNS,
-  UpdateCartItemDto,
+  cartSchema,
+  idSchema,
+  type UpdateCartItemDto,
+  updateCartItemSchema,
 } from '@app/domains';
 import {
   Body,
@@ -14,6 +18,7 @@ import {
   Param,
   Patch,
   Post,
+  SerializeOptions,
   UseGuards,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
@@ -28,12 +33,17 @@ export class CartGatewayController {
   constructor(@Inject(SERVICE_NAMES.CART) private readonly cart: ClientProxy) {}
 
   @Get()
+  @SerializeOptions({ schema: cartSchema })
   get(@CurrentUserId() userId: string) {
     return rpcSend<Cart>(this.cart, CART_PATTERNS.GET, userId);
   }
 
   @Post('items')
-  addItem(@CurrentUserId() userId: string, @Body() dto: AddCartItemDto) {
+  @SerializeOptions({ schema: cartSchema })
+  addItem(
+    @CurrentUserId() userId: string,
+    @Body({ schema: addCartItemSchema }) dto: AddCartItemDto,
+  ) {
     return rpcSend<Cart>(this.cart, CART_PATTERNS.ADD_ITEM, {
       userId,
       item: dto,
@@ -41,10 +51,11 @@ export class CartGatewayController {
   }
 
   @Patch('items/:productId')
+  @SerializeOptions({ schema: cartSchema })
   updateItem(
     @CurrentUserId() userId: string,
-    @Param('productId') productId: string,
-    @Body() dto: UpdateCartItemDto,
+    @Param('productId', { schema: idSchema }) productId: string,
+    @Body({ schema: updateCartItemSchema }) dto: UpdateCartItemDto,
   ) {
     return rpcSend<Cart>(this.cart, CART_PATTERNS.UPDATE_ITEM, {
       userId,
@@ -54,9 +65,10 @@ export class CartGatewayController {
   }
 
   @Delete('items/:productId')
+  @SerializeOptions({ schema: cartSchema })
   removeItem(
     @CurrentUserId() userId: string,
-    @Param('productId') productId: string,
+    @Param('productId', { schema: idSchema }) productId: string,
   ) {
     return rpcSend<Cart>(this.cart, CART_PATTERNS.REMOVE_ITEM, {
       userId,
@@ -65,6 +77,7 @@ export class CartGatewayController {
   }
 
   @Delete()
+  @SerializeOptions({ schema: cartSchema })
   clear(@CurrentUserId() userId: string) {
     return rpcSend<Cart>(this.cart, CART_PATTERNS.CLEAR, userId);
   }

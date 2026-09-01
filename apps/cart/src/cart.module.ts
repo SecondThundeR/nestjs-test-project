@@ -1,10 +1,10 @@
 import {
   buildDatabaseOptions,
+  environmentSchema,
   kafkaConfig,
   SERVICE_NAMES,
   type ServicesConfig,
   servicesConfig,
-  validateEnv,
 } from '@app/config';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -21,7 +21,7 @@ import { CartSchema } from './schemas/cart.schema.js';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [servicesConfig, kafkaConfig],
-      validate: validateEnv,
+      validationSchema: environmentSchema,
     }),
     TypeOrmModule.forRootAsync({
       useFactory: () =>

@@ -1,10 +1,15 @@
 import { SERVICE_NAMES } from '@app/config';
 import {
-  CreateOrderDto,
+  type CreateOrderDto,
+  createOrderSchema,
+  idSchema,
   type Order,
+  orderPaymentSchema,
+  orderSchema,
   type OrderPayment,
   ORDERS_PATTERNS,
-  UpdateOrderStatusDto,
+  type UpdateOrderStatusDto,
+  updateOrderStatusSchema,
   UserRole,
 } from '@app/domains';
 import {
@@ -15,6 +20,7 @@ import {
   Param,
   Patch,
   Post,
+  SerializeOptions,
   UseGuards,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
@@ -33,7 +39,11 @@ export class OrdersGatewayController {
   ) {}
 
   @Post()
-  create(@CurrentUserId() userId: string, @Body() dto: CreateOrderDto) {
+  @SerializeOptions({ schema: orderSchema })
+  create(
+    @CurrentUserId() userId: string,
+    @Body({ schema: createOrderSchema }) dto: CreateOrderDto,
+  ) {
     return rpcSend<Order>(this.orders, ORDERS_PATTERNS.CREATE, {
       userId,
       shippingAddress: dto.shippingAddress,
@@ -41,12 +51,17 @@ export class OrdersGatewayController {
   }
 
   @Get()
+  @SerializeOptions({ schema: orderSchema })
   findAll(@CurrentUserId() userId: string) {
     return rpcSend<Order[]>(this.orders, ORDERS_PATTERNS.FIND_ALL, userId);
   }
 
   @Get(':id')
-  findOne(@CurrentUserId() userId: string, @Param('id') id: string) {
+  @SerializeOptions({ schema: orderSchema })
+  findOne(
+    @CurrentUserId() userId: string,
+    @Param('id', { schema: idSchema }) id: string,
+  ) {
     return rpcSend<Order>(this.orders, ORDERS_PATTERNS.FIND_ONE, {
       id,
       userId,
@@ -56,7 +71,11 @@ export class OrdersGatewayController {
   @Patch(':id/status')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  updateStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
+  @SerializeOptions({ schema: orderSchema })
+  updateStatus(
+    @Param('id', { schema: idSchema }) id: string,
+    @Body({ schema: updateOrderStatusSchema }) dto: UpdateOrderStatusDto,
+  ) {
     // Only admins can change order status and not regular user that created order
     return rpcSend<Order>(this.orders, ORDERS_PATTERNS.UPDATE_STATUS, {
       id,
@@ -65,12 +84,20 @@ export class OrdersGatewayController {
   }
 
   @Patch(':id/cancel')
-  cancel(@CurrentUserId() userId: string, @Param('id') id: string) {
+  @SerializeOptions({ schema: orderSchema })
+  cancel(
+    @CurrentUserId() userId: string,
+    @Param('id', { schema: idSchema }) id: string,
+  ) {
     return rpcSend<Order>(this.orders, ORDERS_PATTERNS.CANCEL, { id, userId });
   }
 
   @Post(':id/pay')
-  pay(@CurrentUserId() userId: string, @Param('id') id: string) {
+  @SerializeOptions({ schema: orderPaymentSchema })
+  pay(
+    @CurrentUserId() userId: string,
+    @Param('id', { schema: idSchema }) id: string,
+  ) {
     return rpcSend<OrderPayment>(this.orders, ORDERS_PATTERNS.PAY, {
       id,
       userId,
@@ -78,7 +105,11 @@ export class OrdersGatewayController {
   }
 
   @Post(':id/capture')
-  capturePayment(@CurrentUserId() userId: string, @Param('id') id: string) {
+  @SerializeOptions({ schema: orderSchema })
+  capturePayment(
+    @CurrentUserId() userId: string,
+    @Param('id', { schema: idSchema }) id: string,
+  ) {
     return rpcSend<Order>(this.orders, ORDERS_PATTERNS.CAPTURE_PAYMENT, {
       id,
       userId,

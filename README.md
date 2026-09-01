@@ -12,7 +12,9 @@
 - **JWT** + серверные сессии с ротацией refresh-токенов
 - **PayPal** (sandbox) для обработки платежей
 - **Winston** для логирования
-- **Jest** для unit и e2e тестов
+- **Zod** + NestJS Standard Schema для валидации, сериализации и Code First OpenAPI
+- **Vitest** для unit и e2e тестов, **oxlint** + Prettier для качества кода
+- **Rspack** для параллельной сборки монорепозитория
 - **Docker** / **docker-compose** для контейнеризации
 
 ## Архитектура
@@ -34,7 +36,7 @@
 
 ### Code First / Schema First
 
-- **Code First** (`products`) - OpenAPI генерируется из кода через декораторы `@nestjs/swagger`.
+- **Code First** (`products`) - OpenAPI генерируется из общих Zod-схем через `@nestjs/swagger`.
   Документация: `GET /api/docs/products`
 - **Schema First** (`orders`) - сервис реализован под вручную написанный контракт
   `apps/gateway/src/orders/orders.openapi.yaml`, соответствие проверяется контракт-тестом
@@ -101,8 +103,11 @@ pnpm run migration:run:products  # либо по одному сервису
 ## Тесты
 
 ```bash
-pnpm test          # unit + e2e (Jest)
-pnpm run test:cov  # с покрытием
+pnpm test           # unit-тесты (Vitest)
+pnpm run test:e2e   # e2e и контракт-тесты
+pnpm run test:cov   # unit-тесты с покрытием
+pnpm run lint       # type-aware oxlint + проверка Prettier
+pnpm run typecheck  # TypeScript 6 без генерации файлов
 ```
 
 Внешние зависимости (PayPal, Redis) в тестах замоканы, поэтому реальная инфраструктура не нужна

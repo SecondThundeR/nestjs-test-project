@@ -1,4 +1,7 @@
-import type { OrderItem, OrderStatus } from './order.interface.js';
+import { z } from 'zod';
+
+import { idSchema, moneySchema } from '../common.schema.js';
+import { orderItemSchema, orderStatusSchema } from './order.interface.js';
 
 export const ORDER_EVENTS = {
   CREATED: 'order.created',
@@ -7,15 +10,21 @@ export const ORDER_EVENTS = {
   STATUS_CHANGED: 'order.status-changed',
 } as const;
 
-export interface OrderCreatedEventPayload {
-  orderId: string;
-  userId: string;
-  total: number;
-  items: OrderItem[];
-}
+export const orderCreatedEventPayloadSchema = z.strictObject({
+  orderId: idSchema,
+  userId: idSchema,
+  total: moneySchema,
+  items: z.array(orderItemSchema),
+});
+export type OrderCreatedEventPayload = z.infer<
+  typeof orderCreatedEventPayloadSchema
+>;
 
-export interface OrderStatusChangedEventPayload {
-  orderId: string;
-  userId: string;
-  status: OrderStatus;
-}
+export const orderStatusChangedEventPayloadSchema = z.strictObject({
+  orderId: idSchema,
+  userId: idSchema,
+  status: orderStatusSchema,
+});
+export type OrderStatusChangedEventPayload = z.infer<
+  typeof orderStatusChangedEventPayloadSchema
+>;

@@ -1,13 +1,25 @@
 import { SERVICE_NAMES } from '@app/config';
 import {
   AUTH_PATTERNS,
+  authResultSchema,
   type AuthResult,
-  CreateUserDto,
+  type CreateUserDto,
+  createUserSchema,
+  logoutResultSchema,
   type LogoutResult,
-  RefreshTokenDto,
-  ValidateUserByCredentialsDto,
+  type RefreshTokenDto,
+  refreshTokenSchema,
+  type ValidateUserByCredentialsDto,
+  validateUserByCredentialsSchema,
 } from '@app/domains';
-import { Body, Controller, Inject, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Inject,
+  Post,
+  SerializeOptions,
+  UseGuards,
+} from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 
 import { CurrentSessionId } from '../common/current-user.decorator.js';
@@ -19,22 +31,29 @@ export class AuthGatewayController {
   constructor(@Inject(SERVICE_NAMES.AUTH) private readonly auth: ClientProxy) {}
 
   @Post('register')
-  register(@Body() dto: CreateUserDto) {
+  @SerializeOptions({ schema: authResultSchema })
+  register(@Body({ schema: createUserSchema }) dto: CreateUserDto) {
     return rpcSend<AuthResult>(this.auth, AUTH_PATTERNS.REGISTER, dto);
   }
 
   @Post('login')
-  login(@Body() dto: ValidateUserByCredentialsDto) {
+  @SerializeOptions({ schema: authResultSchema })
+  login(
+    @Body({ schema: validateUserByCredentialsSchema })
+    dto: ValidateUserByCredentialsDto,
+  ) {
     return rpcSend<AuthResult>(this.auth, AUTH_PATTERNS.LOGIN, dto);
   }
 
   @Post('refresh')
-  refresh(@Body() dto: RefreshTokenDto) {
+  @SerializeOptions({ schema: authResultSchema })
+  refresh(@Body({ schema: refreshTokenSchema }) dto: RefreshTokenDto) {
     return rpcSend<AuthResult>(this.auth, AUTH_PATTERNS.REFRESH, dto);
   }
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)
+  @SerializeOptions({ schema: logoutResultSchema })
   logout(@CurrentSessionId() sessionId: string) {
     return rpcSend<LogoutResult>(this.auth, AUTH_PATTERNS.LOGOUT, sessionId);
   }

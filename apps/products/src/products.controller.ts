@@ -1,7 +1,11 @@
 import {
-  CreateProductDto,
+  type CreateProductDto,
+  createProductSchema,
+  idListSchema,
+  idSchema,
   PRODUCT_PATTERNS,
   type UpdateProductPayload,
+  updateProductPayloadSchema,
 } from '@app/domains';
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
@@ -13,7 +17,7 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @MessagePattern(PRODUCT_PATTERNS.CREATE)
-  create(@Payload() dto: CreateProductDto) {
+  create(@Payload({ schema: createProductSchema }) dto: CreateProductDto) {
     return this.productsService.create(dto);
   }
 
@@ -23,22 +27,25 @@ export class ProductsController {
   }
 
   @MessagePattern(PRODUCT_PATTERNS.FIND_ONE)
-  findOne(@Payload() id: string) {
+  findOne(@Payload({ schema: idSchema }) id: string) {
     return this.productsService.findOne(id);
   }
 
   @MessagePattern(PRODUCT_PATTERNS.FIND_MANY)
-  findMany(@Payload() ids: string[]) {
+  findMany(@Payload({ schema: idListSchema }) ids: string[]) {
     return this.productsService.findMany(ids);
   }
 
   @MessagePattern(PRODUCT_PATTERNS.UPDATE)
-  update(@Payload() payload: UpdateProductPayload) {
+  update(
+    @Payload({ schema: updateProductPayloadSchema })
+    payload: UpdateProductPayload,
+  ) {
     return this.productsService.update(payload.id, payload.data);
   }
 
   @MessagePattern(PRODUCT_PATTERNS.REMOVE)
-  remove(@Payload() id: string) {
+  remove(@Payload({ schema: idSchema }) id: string) {
     return this.productsService.remove(id);
   }
 }

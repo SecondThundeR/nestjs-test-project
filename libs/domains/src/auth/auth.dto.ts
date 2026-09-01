@@ -1,7 +1,6 @@
-import { IsString, MinLength } from 'class-validator';
+import { z } from 'zod';
 
-export class RefreshTokenDto {
-  @IsString()
-  @MinLength(1)
-  refreshToken!: string;
-}
+export const refreshTokenSchema = z.strictObject({
+  refreshToken: z.string().min(1),
+});
+export type RefreshTokenDto = z.infer<typeof refreshTokenSchema>;

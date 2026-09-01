@@ -1,3 +1,7 @@
+import { z } from 'zod';
+
+import { idSchema, isoDateTimeSchema, moneySchema } from '../common.schema.js';
+
 export enum OrderStatus {
   PENDING = 'PENDING',
   PAID = 'PAID',
@@ -6,30 +10,35 @@ export enum OrderStatus {
   CANCELLED = 'CANCELLED',
 }
 
-export interface OrderItem {
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-  subtotal: number;
-}
+export const orderStatusSchema = z.enum(OrderStatus);
 
-export interface Order {
-  id: string;
-  userId: string;
-  items: OrderItem[];
-  total: number;
-  status: OrderStatus;
-  shippingAddress: string;
-  paymentId: string | null;
-  captureId: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+export const orderItemSchema = z.object({
+  productId: idSchema,
+  name: z.string(),
+  price: moneySchema,
+  quantity: z.int().positive(),
+  subtotal: moneySchema,
+});
+export type OrderItem = z.infer<typeof orderItemSchema>;
 
-export interface OrderPayment {
-  orderId: string;
-  paymentId: string;
-  paymentStatus: string;
-  approveUrl: string | null;
-}
+export const orderSchema = z.object({
+  id: idSchema,
+  userId: idSchema,
+  items: z.array(orderItemSchema),
+  total: moneySchema,
+  status: orderStatusSchema,
+  shippingAddress: z.string(),
+  paymentId: z.string().nullable(),
+  captureId: z.string().nullable(),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+});
+export type Order = z.infer<typeof orderSchema>;
+
+export const orderPaymentSchema = z.object({
+  orderId: idSchema,
+  paymentId: z.string().min(1),
+  paymentStatus: z.string(),
+  approveUrl: z.url().nullable(),
+});
+export type OrderPayment = z.infer<typeof orderPaymentSchema>;

@@ -3,19 +3,98 @@ import type { Server } from 'node:http';
 import { authConfig, SERVICE_NAMES } from '@app/config';
 import {
   AUTH_PATTERNS,
+  type AuthResult,
   CART_PATTERNS,
+  type Cart,
+  type Order,
   ORDERS_PATTERNS,
+  OrderStatus,
+  type Product,
   PRODUCT_PATTERNS,
+  type PublicUser,
   UserRole,
   USERS_PATTERNS,
 } from '@app/domains';
-import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  type INestApplication,
+  StandardSchemaSerializerInterceptor,
+  StandardSchemaValidationPipe,
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import { of, throwError } from 'rxjs';
 import request from 'supertest';
 
+import { standardSchemaDocumentOptions } from './../src/common/openapi.js';
 import { GatewayModule } from './../src/gateway.module.js';
+
+const timestamp = '2026-06-15T10:00:00.000Z';
+
+function makeProduct(overrides: Partial<Product> = {}): Product {
+  return {
+    id: 'p-1',
+    name: 'Widget',
+    description: '',
+    price: 10,
+    stock: 5,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    ...overrides,
+  };
+}
+
+function makeCart(overrides: Partial<Cart> = {}): Cart {
+  return {
+    userId: 'alice',
+    items: [],
+    total: 0,
+    updatedAt: timestamp,
+    ...overrides,
+  };
+}
+
+function makeOrder(overrides: Partial<Order> = {}): Order {
+  return {
+    id: 'o-1',
+    userId: 'alice',
+    items: [],
+    total: 0,
+    status: OrderStatus.PENDING,
+    shippingAddress: '1 Test Street',
+    paymentId: null,
+    captureId: null,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    ...overrides,
+  };
+}
+
+function makePublicUser(overrides: Partial<PublicUser> = {}): PublicUser {
+  return {
+    id: 'alice',
+    email: 'alice@example.com',
+    name: 'Alice',
+    role: UserRole.REGULAR,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    ...overrides,
+  };
+}
+
+function makeAuthResult(overrides: Partial<AuthResult> = {}): AuthResult {
+  return {
+    accessToken: 'jwt-token',
+    refreshToken: 'refresh-token',
+    user: makePublicUser({
+      id: 'u-1',
+      email: 'jane@example.com',
+      name: 'Jane',
+    }),
+    ...overrides,
+  };
+}
 
 describe('Gateway (e2e)', () => {
   let app: INestApplication;
@@ -59,12 +138,9 @@ describe('Gateway (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api');
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
+    app.useGlobalPipes(new StandardSchemaValidationPipe({ transform: true }));
+    app.useGlobalInterceptors(
+      new StandardSchemaSerializerInterceptor(app.get(Reflector)),
     );
     await app.init();
   });
@@ -93,7 +169,7 @@ describe('Gateway (e2e)', () => {
 
   describe('products', () => {
     it('GET /api/product forwards FIND_ALL and returns the result', async () => {
-      const list = [{ id: 'p-1', name: 'Widget' }];
+      const list = [makeProduct()];
       products.send.mockReturnValue(of(list));
 
       const res = await http().get('/api/product').expect(200);
@@ -103,7 +179,7 @@ describe('Gateway (e2e)', () => {
     });
 
     it('POST /api/product forwards a valid CREATE payload', async () => {
-      const created = { id: 'p-1', name: 'Widget', price: 10 };
+      const created = makeProduct();
       auth.send.mockReturnValue(of({ id: 'admin' }));
       products.send.mockReturnValue(of(created));
 
@@ -117,6 +193,53 @@ describe('Gateway (e2e)', () => {
       expect(products.send).toHaveBeenCalledWith(PRODUCT_PATTERNS.CREATE, {
         name: 'Widget',
         price: 10,
+      });
+    });
+
+    it('strips undeclared fields from product responses', async () => {
+      const product = makeProduct();
+      products.send.mockReturnValue(of({ ...product, internalOnly: 'secret' }));
+
+      const res = await http().get('/api/product/p-1').expect(200);
+
+      expect(res.body).toEqual(product);
+      expect(res.body).not.toHaveProperty('internalOnly');
+    });
+
+    it('generates request and response OpenAPI schemas from Zod', () => {
+      const document = SwaggerModule.createDocument(
+        app,
+        new DocumentBuilder().setTitle('Test').setVersion('1').build(),
+        standardSchemaDocumentOptions,
+      );
+
+      expect(document.paths['/api/product']?.post).toMatchObject({
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  name: { type: 'string', minLength: 2 },
+                  price: { type: 'number', minimum: 0 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { id: { type: 'string' } },
+                },
+              },
+            },
+          },
+        },
       });
     });
 
@@ -187,7 +310,7 @@ describe('Gateway (e2e)', () => {
   describe('cart (JWT auth)', () => {
     it('resolves the user from the bearer token after session verification', async () => {
       auth.send.mockReturnValue(of({ id: 'alice' }));
-      cart.send.mockReturnValue(of({ userId: 'alice', items: [] }));
+      cart.send.mockReturnValue(of(makeCart()));
 
       await http().get('/api/cart').set('authorization', bearer).expect(200);
 
@@ -228,7 +351,7 @@ describe('Gateway (e2e)', () => {
   describe('orders (JWT auth)', () => {
     it('forwards the token user and shippingAddress', async () => {
       auth.send.mockReturnValue(of({ id: 'alice' }));
-      orders.send.mockReturnValue(of({ id: 'o-1' }));
+      orders.send.mockReturnValue(of(makeOrder()));
 
       await http()
         .post('/api/orders')
@@ -253,7 +376,9 @@ describe('Gateway (e2e)', () => {
 
     it('PATCH /api/orders/:id/status lets an admin change any order, unscoped to an owner', async () => {
       auth.send.mockReturnValue(of({ id: 'admin' }));
-      orders.send.mockReturnValue(of({ id: 'o-1', status: 'SHIPPED' }));
+      orders.send.mockReturnValue(
+        of(makeOrder({ status: OrderStatus.SHIPPED })),
+      );
 
       await http()
         .patch('/api/orders/o-1/status')
@@ -291,11 +416,7 @@ describe('Gateway (e2e)', () => {
 
   describe('auth (public auth routes)', () => {
     it('POST /api/auth/register forwards the body and returns the auth result', async () => {
-      const result = {
-        accessToken: 'jwt-token',
-        refreshToken: 'refresh-token',
-        user: { id: 'u-1', email: 'jane@example.com', name: 'Jane' },
-      };
+      const result = makeAuthResult();
       auth.send.mockReturnValue(of(result));
 
       const res = await http()
@@ -316,11 +437,7 @@ describe('Gateway (e2e)', () => {
     });
 
     it('POST /api/auth/login is reachable without a token', async () => {
-      const result = {
-        accessToken: 'jwt-token',
-        refreshToken: 'refresh-token',
-        user: { id: 'u-1', email: 'jane@example.com', name: 'Jane' },
-      };
+      const result = makeAuthResult();
       auth.send.mockReturnValue(of(result));
 
       await http()
@@ -335,11 +452,10 @@ describe('Gateway (e2e)', () => {
     });
 
     it('POST /api/auth/refresh is reachable without a token', async () => {
-      const result = {
+      const result = makeAuthResult({
         accessToken: 'new-jwt-token',
         refreshToken: 'new-refresh-token',
-        user: { id: 'u-1', email: 'jane@example.com', name: 'Jane' },
-      };
+      });
       auth.send.mockReturnValue(of(result));
 
       const res = await http()
@@ -384,7 +500,7 @@ describe('Gateway (e2e)', () => {
 
   describe('users (whoami)', () => {
     it('GET /api/users/me returns the current user', async () => {
-      const user = { id: 'alice', email: 'alice@example.com', name: 'Alice' };
+      const user = makePublicUser();
       auth.send.mockReturnValue(of(user));
       users.send.mockReturnValue(of(user));
 

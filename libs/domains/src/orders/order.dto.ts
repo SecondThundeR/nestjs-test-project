@@ -1,29 +1,34 @@
-import { IsEnum, IsString, MinLength } from 'class-validator';
+import { z } from 'zod';
 
-import { OrderStatus } from './order.interface.js';
+import { idSchema } from '../common.schema.js';
+import { orderStatusSchema } from './order.interface.js';
 
-export class CreateOrderDto {
-  @IsString()
-  @MinLength(5)
-  shippingAddress!: string;
-}
+export const createOrderSchema = z.strictObject({
+  shippingAddress: z.string().min(5),
+});
+export type CreateOrderDto = z.infer<typeof createOrderSchema>;
 
-export class UpdateOrderStatusDto {
-  @IsEnum(OrderStatus)
-  status!: OrderStatus;
-}
+export const updateOrderStatusSchema = z.strictObject({
+  status: orderStatusSchema,
+});
+export type UpdateOrderStatusDto = z.infer<typeof updateOrderStatusSchema>;
 
-export interface CreateOrderPayload {
-  userId: string;
-  shippingAddress: string;
-}
+export const createOrderPayloadSchema = z.strictObject({
+  userId: idSchema,
+  shippingAddress: z.string().min(5),
+});
+export type CreateOrderPayload = z.infer<typeof createOrderPayloadSchema>;
 
-export interface OrderActionPayload {
-  id: string;
-  userId: string;
-}
+export const orderActionPayloadSchema = z.strictObject({
+  id: idSchema,
+  userId: idSchema,
+});
+export type OrderActionPayload = z.infer<typeof orderActionPayloadSchema>;
 
-export interface UpdateOrderStatusPayload {
-  id: string;
-  status: OrderStatus;
-}
+export const updateOrderStatusPayloadSchema = z.strictObject({
+  id: idSchema,
+  status: orderStatusSchema,
+});
+export type UpdateOrderStatusPayload = z.infer<
+  typeof updateOrderStatusPayloadSchema
+>;
