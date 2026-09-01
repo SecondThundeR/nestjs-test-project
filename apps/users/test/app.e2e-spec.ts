@@ -14,9 +14,9 @@ import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 
-import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
-import { UserEntity } from './../src/entities/user.entity';
-import { UsersModule } from './../src/users.module';
+import { createInMemoryDataSource } from './../../../test/utils/in-memory-database.js';
+import { UserEntity } from './../src/entities/user.entity.js';
+import { UsersModule } from './../src/users.module.js';
 
 const HOST = '127.0.0.1';
 const PORT = 4004;

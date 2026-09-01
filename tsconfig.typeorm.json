@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": false,
+    "incremental": false,
+    "noEmitOnError": true,
+    "outDir": "./dist/typeorm",
+    "rootDir": "./"
+  },
+  "include": [
+    "apps/*/src/data-source.ts",
+    "apps/*/src/entities/**/*.ts",
+    "apps/*/src/schemas/**/*.ts",
+    "apps/*/src/migrations/**/*.ts",
+    "libs/config/src/**/*.ts",
+    "libs/domains/src/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+}

@@ -1,3 +1,3 @@
-export * from './cache.module';
-export * from './cache.options';
-export * from './cache.service';
+export * from './cache.module.js';
+export * from './cache.options.js';
+export * from './cache.service.js';

@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 
-import { rpcSend } from '../common/rpc.util';
+import { rpcSend } from '../common/rpc.util.js';
 
 // PayPal redirects the buyer here after checkout, so these routes
 // are intentionally left outside the JWT guard

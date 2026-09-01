@@ -9,10 +9,10 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { UserEntity } from './entities/user.entity';
-import { usersMigrations } from './migrations';
-import { UsersController } from './users.controller';
-import { UsersService } from './users.service';
+import { UserEntity } from './entities/user.entity.js';
+import { usersMigrations } from './migrations/index.js';
+import { UsersController } from './users.controller.js';
+import { UsersService } from './users.service.js';
 
 @Module({
   imports: [

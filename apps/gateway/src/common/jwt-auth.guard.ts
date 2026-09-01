@@ -11,7 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { ClientProxy } from '@nestjs/microservices';
 import type { Request } from 'express';
 
-import { rpcSend } from './rpc.util';
+import { rpcSend } from './rpc.util.js';
 
 export type AuthenticatedRequest = Request & { user: JwtPayload };
 

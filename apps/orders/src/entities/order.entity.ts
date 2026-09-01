@@ -1,5 +1,3 @@
-import { isoTransformer, numericTransformer } from '@app/config';
-import { type Order, type OrderItem, OrderStatus } from '@app/domains';
 import {
   Column,
   CreateDateColumn,
@@ -7,6 +5,16 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
+import {
+  isoTransformer,
+  numericTransformer,
+} from '../../../../libs/config/src/index.js';
+import {
+  type Order,
+  type OrderItem,
+  OrderStatus,
+} from '../../../../libs/domains/src/index.js';
 
 @Entity('orders')
 export class OrderEntity implements Order {

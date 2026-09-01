@@ -1,5 +1,3 @@
-import { isoTransformer, nullableIsoTransformer } from '@app/config';
-import type { Session } from '@app/domains';
 import {
   Column,
   CreateDateColumn,
@@ -7,6 +5,12 @@ import {
   Index,
   PrimaryColumn,
 } from 'typeorm';
+
+import {
+  isoTransformer,
+  nullableIsoTransformer,
+} from '../../../../libs/config/src/index.js';
+import type { Session } from '../../../../libs/domains/src/index.js';
 
 @Entity('sessions')
 export class SessionEntity implements Session {

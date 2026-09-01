@@ -2,8 +2,9 @@ FROM node:26.3.0-alpine AS builder
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++
+RUN npm install --global npm@12.0.2
 
-COPY package*.json ./
+COPY package*.json .npmrc ./
 RUN npm ci
 
 COPY . .
@@ -20,4 +21,4 @@ COPY package.json ./
 
 USER node
 
-CMD ["node", "dist/apps/gateway/main"]
+CMD ["node", "dist/apps/gateway/main.js"]

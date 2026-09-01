@@ -10,9 +10,9 @@ import {
 import { Body, Controller, Inject, Post, UseGuards } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 
-import { CurrentSessionId } from '../common/current-user.decorator';
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { rpcSend } from '../common/rpc.util';
+import { CurrentSessionId } from '../common/current-user.decorator.js';
+import { JwtAuthGuard } from '../common/jwt-auth.guard.js';
+import { rpcSend } from '../common/rpc.util.js';
 
 @Controller('auth')
 export class AuthGatewayController {

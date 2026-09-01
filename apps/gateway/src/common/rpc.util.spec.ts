@@ -2,10 +2,10 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import { type Observable, of, throwError } from 'rxjs';
 
-import { rpcSend } from './rpc.util';
+import { rpcSend } from './rpc.util.js';
 
 function makeClient(observable: Observable<unknown>) {
-  const send = jest.fn().mockReturnValue(observable);
+  const send = vi.fn().mockReturnValue(observable);
   const client = { send } as unknown as ClientProxy;
   return { client, send };
 }

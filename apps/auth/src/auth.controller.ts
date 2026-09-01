@@ -7,7 +7,7 @@ import {
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
-import { AuthService } from './auth.service';
+import { AuthService } from './auth.service.js';
 
 @Controller()
 export class AuthController {

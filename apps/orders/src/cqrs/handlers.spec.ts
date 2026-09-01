@@ -1,8 +1,8 @@
 import { OrderStatus } from '@app/domains';
 import type { EventBus } from '@nestjs/cqrs';
 
-import type { OrderEntity } from '../entities/order.entity';
-import type { OrdersService } from '../orders.service';
+import type { OrderEntity } from '../entities/order.entity.js';
+import type { OrdersService } from '../orders.service.js';
 import {
   CancelOrderCommand,
   CaptureByPaymentIdCommand,
@@ -10,13 +10,13 @@ import {
   CreateOrderCommand,
   PayOrderCommand,
   UpdateOrderStatusCommand,
-} from './commands';
+} from './commands.js';
 import {
   OrderCancelledEvent,
   OrderCreatedEvent,
   OrderPaidEvent,
   OrderStatusChangedEvent,
-} from './events';
+} from './events.js';
 import {
   CancelOrderHandler,
   CaptureByPaymentIdHandler,
@@ -26,19 +26,19 @@ import {
   FindOneOrderHandler,
   PayOrderHandler,
   UpdateOrderStatusHandler,
-} from './handlers';
-import { FindAllOrdersQuery, FindOneOrderQuery } from './queries';
+} from './handlers.js';
+import { FindAllOrdersQuery, FindOneOrderQuery } from './queries.js';
 
 function createServiceMock() {
   return {
-    create: jest.fn(),
-    findAll: jest.fn(),
-    findOne: jest.fn(),
-    updateStatus: jest.fn(),
-    pay: jest.fn(),
-    capturePayment: jest.fn(),
-    captureByPaymentId: jest.fn(),
-    cancel: jest.fn(),
+    create: vi.fn(),
+    findAll: vi.fn(),
+    findOne: vi.fn(),
+    updateStatus: vi.fn(),
+    pay: vi.fn(),
+    capturePayment: vi.fn(),
+    captureByPaymentId: vi.fn(),
+    cancel: vi.fn(),
   };
 }
 
@@ -49,7 +49,7 @@ function asService(mock: OrdersServiceMock): OrdersService {
 }
 
 function createEventBusMock() {
-  return { publish: jest.fn() };
+  return { publish: vi.fn() };
 }
 
 function asEventBus(mock: ReturnType<typeof createEventBusMock>): EventBus {

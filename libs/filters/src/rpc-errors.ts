@@ -2,7 +2,7 @@ import { HttpStatus } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import type { ValidationError } from 'class-validator';
 
-import type { RpcErrorPayload } from './rpc-exception.filter';
+import type { RpcErrorPayload } from './rpc-exception.filter.js';
 
 function rpcException(
   statusCode: number,

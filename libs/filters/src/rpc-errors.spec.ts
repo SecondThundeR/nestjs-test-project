@@ -2,8 +2,8 @@ import { HttpStatus } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import type { ValidationError } from 'class-validator';
 
-import { RpcErrors, rpcValidationExceptionFactory } from './rpc-errors';
-import type { RpcErrorPayload } from './rpc-exception.filter';
+import { RpcErrors, rpcValidationExceptionFactory } from './rpc-errors.js';
+import type { RpcErrorPayload } from './rpc-exception.filter.js';
 
 function payloadOf(exception: RpcException): RpcErrorPayload {
   return exception.getError() as RpcErrorPayload;

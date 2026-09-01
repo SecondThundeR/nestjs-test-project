@@ -10,7 +10,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   GlobalRpcExceptionFilter,
   type RpcErrorPayload,
-} from './rpc-exception.filter';
+} from './rpc-exception.filter.js';
 
 describe('GlobalRpcExceptionFilter', () => {
   let filter: GlobalRpcExceptionFilter;
@@ -54,9 +54,9 @@ describe('GlobalRpcExceptionFilter', () => {
     });
 
     it('returns an observable that errors rather than completing', () => {
-      const next = jest.fn();
-      const error = jest.fn();
-      const complete = jest.fn();
+      const next = vi.fn();
+      const error = vi.fn();
+      const complete = vi.fn();
 
       filter
         .catch(new RpcException('boom'), host)

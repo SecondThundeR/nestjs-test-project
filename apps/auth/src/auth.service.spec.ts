@@ -12,11 +12,12 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { of, throwError } from 'rxjs';
 import type { DataSource, Repository } from 'typeorm';
+import type { Mock } from 'vitest';
 
-import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
-import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
-import { AuthService } from './auth.service';
-import { SessionEntity } from './entities/session.entity';
+import { createInMemoryCache } from '../../../test/utils/in-memory-cache.js';
+import { createInMemoryDataSource } from '../../../test/utils/in-memory-database.js';
+import { AuthService } from './auth.service.js';
+import { SessionEntity } from './entities/session.entity.js';
 
 const USER: PublicUser = {
   id: 'u-1',
@@ -32,13 +33,13 @@ describe('AuthService', () => {
   let jwtService: JwtService;
   let dataSource: DataSource;
   let sessions: Repository<SessionEntity>;
-  let users: { send: jest.Mock };
+  let users: { send: Mock };
   let cacheStore: Map<string, unknown>;
 
   beforeEach(async () => {
     dataSource = await createInMemoryDataSource([SessionEntity]);
     sessions = dataSource.getRepository(SessionEntity);
-    users = { send: jest.fn().mockReturnValue(of(USER)) };
+    users = { send: vi.fn().mockReturnValue(of(USER)) };
     const { service: cacheService, store } = createInMemoryCache();
     cacheStore = store;
 
@@ -208,7 +209,7 @@ describe('AuthService', () => {
     it('caches the active session so repeated verifies skip the DB lookup', async () => {
       const { accessToken } = await register();
       const { sid } = jwtService.verify<JwtPayload>(accessToken);
-      const spy = jest.spyOn(sessions, 'findOneBy');
+      const spy = vi.spyOn(sessions, 'findOneBy');
 
       await service.verify(sid);
       await service.verify(sid);

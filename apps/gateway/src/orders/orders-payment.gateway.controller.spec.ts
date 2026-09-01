@@ -3,15 +3,16 @@ import { ORDERS_PATTERNS, OrderStatus } from '@app/domains';
 import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
+import type { Mock } from 'vitest';
 
-import { OrdersPaymentGatewayController } from './orders-payment.gateway.controller';
+import { OrdersPaymentGatewayController } from './orders-payment.gateway.controller.js';
 
 describe('OrdersPaymentGatewayController', () => {
   let controller: OrdersPaymentGatewayController;
-  let orders: { send: jest.Mock };
+  let orders: { send: Mock };
 
   beforeEach(async () => {
-    orders = { send: jest.fn() };
+    orders = { send: vi.fn() };
 
     const moduleRef = await Test.createTestingModule({
       controllers: [OrdersPaymentGatewayController],

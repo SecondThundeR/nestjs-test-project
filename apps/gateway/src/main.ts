@@ -15,7 +15,7 @@ import {
 } from '@nestjs/swagger';
 import { load as loadYaml } from 'js-yaml';
 
-import { GatewayModule } from './gateway.module';
+import { GatewayModule } from './gateway.module.js';
 
 function filterPathsByTag(
   paths: OpenAPIObject['paths'],

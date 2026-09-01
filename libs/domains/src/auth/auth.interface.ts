@@ -1,4 +1,4 @@
-import type { PublicUser, UserRole } from '../users';
+import type { PublicUser, UserRole } from '../users/index.js';
 
 export interface Session {
   id: string;

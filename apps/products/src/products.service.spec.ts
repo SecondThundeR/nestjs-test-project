@@ -5,10 +5,10 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { DataSource } from 'typeorm';
 
-import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
-import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
-import { ProductEntity } from './entities/product.entity';
-import { ProductsService } from './products.service';
+import { createInMemoryCache } from '../../../test/utils/in-memory-cache.js';
+import { createInMemoryDataSource } from '../../../test/utils/in-memory-database.js';
+import { ProductEntity } from './entities/product.entity.js';
+import { ProductsService } from './products.service.js';
 
 describe('ProductsService', () => {
   let service: ProductsService;
@@ -154,7 +154,7 @@ describe('ProductsService', () => {
   describe('caching', () => {
     it('serves a repeated findOne from the cache', async () => {
       const product = await create();
-      const spy = jest.spyOn(
+      const spy = vi.spyOn(
         dataSource.getRepository(ProductEntity),
         'findOneBy',
       );
@@ -168,7 +168,7 @@ describe('ProductsService', () => {
 
     it('serves a repeated findAll from the cache', async () => {
       await create();
-      const spy = jest.spyOn(dataSource.getRepository(ProductEntity), 'find');
+      const spy = vi.spyOn(dataSource.getRepository(ProductEntity), 'find');
 
       await service.findAll();
       await service.findAll();

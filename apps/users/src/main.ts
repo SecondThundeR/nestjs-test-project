@@ -10,7 +10,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
 
-import { UsersModule } from './users.module';
+import { UsersModule } from './users.module.js';
 
 async function bootstrap() {
   const { ports } = servicesConfig();

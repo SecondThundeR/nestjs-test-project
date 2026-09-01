@@ -1,5 +1,3 @@
-import { isoTransformer } from '@app/config';
-import { type User, UserRole } from '@app/domains';
 import {
   Column,
   CreateDateColumn,
@@ -7,6 +5,9 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
+import { isoTransformer } from '../../../../libs/config/src/index.js';
+import { type User, UserRole } from '../../../../libs/domains/src/index.js';
 
 @Entity('users')
 export class UserEntity implements User {

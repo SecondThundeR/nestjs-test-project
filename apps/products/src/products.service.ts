@@ -11,7 +11,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 
-import { ProductEntity } from './entities/product.entity';
+import { ProductEntity } from './entities/product.entity.js';
 
 const LIST_CACHE_KEY = 'products:all';
 

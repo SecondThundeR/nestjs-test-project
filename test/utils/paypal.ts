@@ -1,7 +1,7 @@
 import type {
   PaypalOrder,
   PaypalRefund,
-} from '../../apps/orders/src/paypal/paypal.service';
+} from '../../apps/orders/src/paypal/paypal.service.js';
 
 export function makePaypalOrder(
   overrides: Partial<PaypalOrder> = {},

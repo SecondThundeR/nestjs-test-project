@@ -1,5 +1,3 @@
-import { isoTransformer, numericTransformer } from '@app/config';
-import { type Product } from '@app/domains';
 import {
   Column,
   CreateDateColumn,
@@ -7,6 +5,12 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
+import {
+  isoTransformer,
+  numericTransformer,
+} from '../../../../libs/config/src/index.js';
+import type { Product } from '../../../../libs/domains/src/index.js';
 
 @Entity('products')
 export class ProductEntity implements Product {

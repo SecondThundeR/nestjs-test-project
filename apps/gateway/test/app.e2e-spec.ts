@@ -15,15 +15,15 @@ import { Test } from '@nestjs/testing';
 import { of, throwError } from 'rxjs';
 import request from 'supertest';
 
-import { GatewayModule } from './../src/gateway.module';
+import { GatewayModule } from './../src/gateway.module.js';
 
 describe('Gateway (e2e)', () => {
   let app: INestApplication;
-  const products = { send: jest.fn(), emit: jest.fn() };
-  const cart = { send: jest.fn(), emit: jest.fn() };
-  const orders = { send: jest.fn(), emit: jest.fn() };
-  const users = { send: jest.fn(), emit: jest.fn() };
-  const auth = { send: jest.fn(), emit: jest.fn() };
+  const products = { send: vi.fn(), emit: vi.fn() };
+  const cart = { send: vi.fn(), emit: vi.fn() };
+  const orders = { send: vi.fn(), emit: vi.fn() };
+  const users = { send: vi.fn(), emit: vi.fn() };
+  const auth = { send: vi.fn(), emit: vi.fn() };
 
   const jwtService = new JwtService({ secret: authConfig().secret });
   const aliceToken = jwtService.sign({

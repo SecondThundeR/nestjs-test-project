@@ -3,7 +3,7 @@ import 'reflect-metadata';
 import { type JwtPayload, UserRole } from '@app/domains';
 import { ExecutionContext } from '@nestjs/common';
 
-import { CurrentSessionId, CurrentUserId } from './current-user.decorator';
+import { CurrentSessionId, CurrentUserId } from './current-user.decorator.js';
 
 type ParamFactory = (data: unknown, ctx: ExecutionContext) => string;
 

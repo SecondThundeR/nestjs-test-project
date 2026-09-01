@@ -21,7 +21,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 import { IsNull, LessThan, Not, Repository } from 'typeorm';
 
-import { SessionEntity } from './entities/session.entity';
+import { SessionEntity } from './entities/session.entity.js';
 
 const REFRESH_TOKEN_BYTES = 48;
 

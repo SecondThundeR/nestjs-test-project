@@ -1,6 +1,6 @@
 import { IsEnum, IsString, MinLength } from 'class-validator';
 
-import { OrderStatus } from './order.interface';
+import { OrderStatus } from './order.interface.js';
 
 export class CreateOrderDto {
   @IsString()

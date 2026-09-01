@@ -1,9 +1,8 @@
-import type { EntityClassOrSchema } from '@nestjs/typeorm/dist/interfaces/entity-class-or-schema.type';
 import { newDb } from 'pg-mem';
-import type { DataSource } from 'typeorm';
+import type { DataSource, DataSourceOptions } from 'typeorm';
 
 export async function createInMemoryDataSource(
-  entities: EntityClassOrSchema[],
+  entities: NonNullable<DataSourceOptions['entities']>,
 ): Promise<DataSource> {
   const db = newDb();
 

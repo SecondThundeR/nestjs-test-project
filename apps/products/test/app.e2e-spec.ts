@@ -18,9 +18,9 @@ import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 
-import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
-import { ProductEntity } from './../src/entities/product.entity';
-import { ProductsModule } from './../src/products.module';
+import { createInMemoryDataSource } from './../../../test/utils/in-memory-database.js';
+import { ProductEntity } from './../src/entities/product.entity.js';
+import { ProductsModule } from './../src/products.module.js';
 
 const HOST = '127.0.0.1';
 const PORT = 4001;

@@ -13,7 +13,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { compare, hash } from 'bcrypt';
 import { Repository } from 'typeorm';
 
-import { UserEntity } from './entities/user.entity';
+import { UserEntity } from './entities/user.entity.js';
 
 const SALT_ROUNDS = 10;
 

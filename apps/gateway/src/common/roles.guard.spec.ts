@@ -2,7 +2,7 @@ import { type JwtPayload, UserRole } from '@app/domains';
 import { type ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
-import { RolesGuard } from './roles.guard';
+import { RolesGuard } from './roles.guard.js';
 
 function contextWithUser(user?: Partial<JwtPayload>): ExecutionContext {
   return {
@@ -22,9 +22,9 @@ describe('RolesGuard', () => {
   });
 
   function requireRoles(...roles: UserRole[] | []) {
-    jest
-      .spyOn(reflector, 'getAllAndOverride')
-      .mockReturnValue(roles.length ? roles : undefined);
+    vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(
+      roles.length ? roles : undefined,
+    );
   }
 
   it('allows the request when no roles are required', () => {

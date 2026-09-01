@@ -5,10 +5,10 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { DataSource } from 'typeorm';
 
-import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
-import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
-import { UserEntity } from './entities/user.entity';
-import { UsersService } from './users.service';
+import { createInMemoryCache } from '../../../test/utils/in-memory-cache.js';
+import { createInMemoryDataSource } from '../../../test/utils/in-memory-database.js';
+import { UserEntity } from './entities/user.entity.js';
+import { UsersService } from './users.service.js';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -131,7 +131,7 @@ describe('UsersService', () => {
 
     it('serves a repeated lookup from the cache', async () => {
       const created = await create();
-      const spy = jest.spyOn(dataSource.getRepository(UserEntity), 'findOneBy');
+      const spy = vi.spyOn(dataSource.getRepository(UserEntity), 'findOneBy');
 
       await service.findById(created.id);
       await service.findById(created.id);
@@ -141,7 +141,7 @@ describe('UsersService', () => {
     });
 
     it('does not cache a missing user', async () => {
-      const spy = jest.spyOn(dataSource.getRepository(UserEntity), 'findOneBy');
+      const spy = vi.spyOn(dataSource.getRepository(UserEntity), 'findOneBy');
 
       await service.findById('missing');
       await service.findById('missing');

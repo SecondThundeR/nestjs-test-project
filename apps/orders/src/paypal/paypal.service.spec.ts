@@ -1,8 +1,9 @@
 import { paypalConfig } from '@app/config';
 import { RpcException } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
+import type { Mock } from 'vitest';
 
-import { PaypalService } from './paypal.service';
+import { PaypalService } from './paypal.service.js';
 
 const API_URL = 'https://api.paypal.test';
 
@@ -30,7 +31,7 @@ function unreadableErrorResponse(status: number): Response {
 
 describe('PaypalService', () => {
   let service: PaypalService;
-  let fetchMock: jest.Mock;
+  let fetchMock: Mock;
 
   async function createService(
     config: Partial<ReturnType<typeof paypalConfig>> = {},
@@ -57,7 +58,7 @@ describe('PaypalService', () => {
   }
 
   beforeEach(async () => {
-    fetchMock = jest.fn();
+    fetchMock = vi.fn();
     global.fetch = fetchMock;
     service = await createService();
   });

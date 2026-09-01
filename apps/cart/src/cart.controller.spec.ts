@@ -1,11 +1,11 @@
 import type { OrderCreatedEventPayload } from '@app/domains';
 
-import { CartController } from './cart.controller';
-import type { CartService } from './cart.service';
+import { CartController } from './cart.controller.js';
+import type { CartService } from './cart.service.js';
 
 describe('CartController', () => {
   it('clears the user cart when an order.created event arrives', async () => {
-    const cartService = { clear: jest.fn().mockResolvedValue(undefined) };
+    const cartService = { clear: vi.fn().mockResolvedValue(undefined) };
     const controller = new CartController(
       cartService as unknown as CartService,
     );

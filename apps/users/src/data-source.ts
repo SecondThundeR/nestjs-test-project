@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 
-import { buildDataSourceOptions } from '@app/config';
 import { config as loadEnv } from 'dotenv';
 import { DataSource } from 'typeorm';
 
-import { UserEntity } from './entities/user.entity';
-import { usersMigrations } from './migrations';
+import { buildDataSourceOptions } from '../../../libs/config/src/index.js';
+import { UserEntity } from './entities/user.entity.js';
+import { usersMigrations } from './migrations/index.js';
 
 loadEnv();
 

@@ -8,15 +8,16 @@ import {
 import { JwtModule } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
+import type { Mock } from 'vitest';
 
-import { AuthGatewayController } from './auth.gateway.controller';
+import { AuthGatewayController } from './auth.gateway.controller.js';
 
 describe('AuthGatewayController', () => {
   let controller: AuthGatewayController;
-  let auth: { send: jest.Mock };
+  let auth: { send: Mock };
 
   beforeEach(async () => {
-    auth = { send: jest.fn() };
+    auth = { send: vi.fn() };
 
     const moduleRef = await Test.createTestingModule({
       imports: [JwtModule.register({ secret: authConfig().secret })],

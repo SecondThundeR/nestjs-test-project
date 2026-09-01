@@ -2,14 +2,14 @@ import { ORDER_EVENTS, OrderStatus } from '@app/domains';
 import type { ClientKafka } from '@nestjs/microservices';
 import { of, throwError } from 'rxjs';
 
-import type { OrderEntity } from '../entities/order.entity';
-import { OrderEventsPublisher } from './event-handlers';
+import type { OrderEntity } from '../entities/order.entity.js';
+import { OrderEventsPublisher } from './event-handlers.js';
 import {
   OrderCancelledEvent,
   OrderCreatedEvent,
   OrderPaidEvent,
   OrderStatusChangedEvent,
-} from './events';
+} from './events.js';
 
 function makeOrder(overrides: Partial<OrderEntity> = {}): OrderEntity {
   return {
@@ -31,9 +31,9 @@ function makeOrder(overrides: Partial<OrderEntity> = {}): OrderEntity {
 
 function createKafkaMock() {
   return {
-    emit: jest.fn(() => of(undefined)),
-    connect: jest.fn(),
-    close: jest.fn(),
+    emit: vi.fn(() => of(undefined)),
+    connect: vi.fn(),
+    close: vi.fn(),
   };
 }
 
@@ -97,9 +97,9 @@ describe('OrderEventsPublisher', () => {
       throwError(() => new Error('broker unavailable')),
     );
     const publisher = createPublisher(kafka);
-    const errorSpy = jest
+    const errorSpy = vi
       .spyOn(publisher['logger'], 'error')
-      .mockImplementation();
+      .mockImplementation(() => undefined);
 
     expect(() =>
       publisher.handle(new OrderCreatedEvent(makeOrder())),

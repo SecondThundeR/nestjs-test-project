@@ -20,11 +20,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 import { Repository } from 'typeorm';
 
-import { OrderEntity } from './entities/order.entity';
+import { OrderEntity } from './entities/order.entity.js';
 import {
   PAYPAL_ALREADY_REFUNDED_STATUS,
   PaypalService,
-} from './paypal/paypal.service';
+} from './paypal/paypal.service.js';
 
 const PAYPAL_COMPLETED_STATUS = 'COMPLETED';
 

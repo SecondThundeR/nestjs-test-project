@@ -7,22 +7,23 @@ import {
 import { JwtModule } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
+import type { Mock } from 'vitest';
 
-import { ProductsGatewayController } from './products.gateway.controller';
+import { ProductsGatewayController } from './products.gateway.controller.js';
 
 describe('ProductsGatewayController', () => {
   let controller: ProductsGatewayController;
-  let products: { send: jest.Mock };
+  let products: { send: Mock };
 
   beforeEach(async () => {
-    products = { send: jest.fn() };
+    products = { send: vi.fn() };
 
     const moduleRef = await Test.createTestingModule({
       imports: [JwtModule.register({ secret: authConfig().secret })],
       controllers: [ProductsGatewayController],
       providers: [
         { provide: SERVICE_NAMES.PRODUCTS, useValue: products },
-        { provide: SERVICE_NAMES.AUTH, useValue: { send: jest.fn() } },
+        { provide: SERVICE_NAMES.AUTH, useValue: { send: vi.fn() } },
       ],
     }).compile();
 

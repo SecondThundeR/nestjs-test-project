@@ -14,7 +14,7 @@ import {
   Transport,
 } from '@nestjs/microservices';
 
-import { CartService } from './cart.service';
+import { CartService } from './cart.service.js';
 
 @Controller()
 export class CartController {

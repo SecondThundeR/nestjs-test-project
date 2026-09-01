@@ -4,6 +4,7 @@
   "description": "",
   "author": "",
   "private": true,
+  "type": "module",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=24.20.0",
@@ -29,26 +30,27 @@
     "start:users": "nest start users --start",
     "start:auth": "nest start auth --start",
     "start:dev": "concurrently -n gateway,products,cart,orders,users,auth -c blue,green,magenta,yellow,cyan,red \"npm:start:gateway\" \"npm:start:products\" \"npm:start:cart\" \"npm:start:orders\" \"npm:start:users\" \"npm:start:auth\"",
-    "start:prod": "concurrently -n gateway,products,cart,orders,users,auth -c blue,green,magenta,yellow,cyan,red \"node dist/apps/gateway/main\" \"node dist/apps/products/main\" \"node dist/apps/cart/main\" \"node dist/apps/orders/main\" \"node dist/apps/users/main\" \"node dist/apps/auth/main\"",
+    "start:prod": "concurrently -n gateway,products,cart,orders,users,auth -c blue,green,magenta,yellow,cyan,red \"node dist/apps/gateway/main.js\" \"node dist/apps/products/main.js\" \"node dist/apps/cart/main.js\" \"node dist/apps/orders/main.js\" \"node dist/apps/users/main.js\" \"node dist/apps/auth/main.js\"",
     "lint": "eslint \"{apps,libs,test}/**/*.ts\"",
     "lint:fix": "eslint \"{apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "typeorm": "node --require ts-node/register --require tsconfig-paths/register ./node_modules/typeorm/cli.js",
-    "migration:run:products": "npm run typeorm -- migration:run -d apps/products/src/data-source.ts",
-    "migration:run:cart": "npm run typeorm -- migration:run -d apps/cart/src/data-source.ts",
-    "migration:run:orders": "npm run typeorm -- migration:run -d apps/orders/src/data-source.ts",
-    "migration:run:users": "npm run typeorm -- migration:run -d apps/users/src/data-source.ts",
-    "migration:run:auth": "npm run typeorm -- migration:run -d apps/auth/src/data-source.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage",
+    "test:debug": "vitest --inspect-brk --no-file-parallelism",
+    "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
+    "typeorm:build": "tsc --project tsconfig.typeorm.json",
+    "typeorm": "npm run typeorm:build && typeorm",
+    "migration:run:products": "npm run typeorm -- migration:run -d dist/typeorm/apps/products/src/data-source.js",
+    "migration:run:cart": "npm run typeorm -- migration:run -d dist/typeorm/apps/cart/src/data-source.js",
+    "migration:run:orders": "npm run typeorm -- migration:run -d dist/typeorm/apps/orders/src/data-source.js",
+    "migration:run:users": "npm run typeorm -- migration:run -d dist/typeorm/apps/users/src/data-source.js",
+    "migration:run:auth": "npm run typeorm -- migration:run -d dist/typeorm/apps/auth/src/data-source.js",
     "migration:run:all": "npm run migration:run:products && npm run migration:run:cart && npm run migration:run:orders && npm run migration:run:users && npm run migration:run:auth",
-    "migration:revert:products": "npm run typeorm -- migration:revert -d apps/products/src/data-source.ts",
-    "migration:revert:cart": "npm run typeorm -- migration:revert -d apps/cart/src/data-source.ts",
-    "migration:revert:orders": "npm run typeorm -- migration:revert -d apps/orders/src/data-source.ts",
-    "migration:revert:users": "npm run typeorm -- migration:revert -d apps/users/src/data-source.ts",
-    "migration:revert:auth": "npm run typeorm -- migration:revert -d apps/auth/src/data-source.ts"
+    "migration:revert:products": "npm run typeorm -- migration:revert -d dist/typeorm/apps/products/src/data-source.js",
+    "migration:revert:cart": "npm run typeorm -- migration:revert -d dist/typeorm/apps/cart/src/data-source.js",
+    "migration:revert:orders": "npm run typeorm -- migration:revert -d dist/typeorm/apps/orders/src/data-source.js",
+    "migration:revert:users": "npm run typeorm -- migration:revert -d dist/typeorm/apps/users/src/data-source.js",
+    "migration:revert:auth": "npm run typeorm -- migration:revert -d dist/typeorm/apps/auth/src/data-source.js"
   },
   "dependencies": {
     "@keyv/redis": "5.1.6",
@@ -85,73 +87,30 @@
     "@nestjs/cli": "12.0.0",
     "@nestjs/schematics": "12.0.0",
     "@nestjs/testing": "12.0.1",
+    "@rspack/core": "2.2.2",
     "@types/bcrypt": "6.0.0",
     "@types/express": "5.0.6",
-    "@types/jest": "30.0.0",
     "@types/js-yaml": "4.0.9",
     "@types/node": "26.4.1",
     "@types/supertest": "7.2.1",
+    "@vitest/coverage-v8": "4.1.11",
     "concurrently": "10.0.5",
     "eslint": "10.9.1",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-prettier": "5.5.6",
     "eslint-plugin-simple-import-sort": "14.0.0",
     "globals": "17.12.0",
-    "jest": "30.5.1",
     "jest-openapi": "0.14.2",
     "pg-mem": "3.0.14",
     "prettier": "3.9.6",
     "source-map-support": "0.5.21",
     "supertest": "7.2.2",
-    "ts-jest": "29.4.12",
     "ts-loader": "9.6.2",
-    "ts-node": "10.9.2",
-    "tsconfig-paths": "4.2.0",
+    "tsconfig-paths-webpack-plugin": "4.2.0",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.69.0"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": ".",
-    "setupFiles": [
-      "<rootDir>/test/setup-env.ts"
-    ],
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      ".+\\.(t|j)s$": "ts-jest"
-    },
-    "collectCoverageFrom": [
-      "apps/**/*.(controller|service).ts",
-      "apps/**/common/*.ts",
-      "libs/**/filters/*.ts",
-      "!apps/!(gateway)/src/*.controller.ts"
-    ],
-    "coveragePathIgnorePatterns": [
-      "/node_modules/",
-      "\\.module\\.ts$",
-      "/main\\.ts$",
-      "\\.interface\\.ts$",
-      "\\.dto\\.ts$",
-      "\\.(spec|e2e-spec)\\.ts$"
-    ],
-    "coverageDirectory": "./coverage",
-    "testEnvironment": "node",
-    "roots": [
-      "<rootDir>/apps/",
-      "<rootDir>/libs/"
-    ],
-    "moduleNameMapper": {
-      "^@app/cache(|/.*)$": "<rootDir>/libs/cache/src/$1",
-      "^@app/config(|/.*)$": "<rootDir>/libs/config/src/$1",
-      "^@app/domains(|/.*)$": "<rootDir>/libs/domains/src/$1",
-      "^@app/filters(|/.*)$": "<rootDir>/libs/filters/src/$1",
-      "^@app/logger(|/.*)$": "<rootDir>/libs/logger/src/$1",
-      "^@app/utils(|/.*)$": "<rootDir>/libs/utils/src/$1"
-    }
+    "typescript-eslint": "8.69.0",
+    "vitest": "4.1.11",
+    "webpack-node-externals": "3.0.0"
   },
   "overrides": {
     "axios": "^1.20.0",

@@ -1,4 +1,4 @@
-import type { OrderItem, OrderStatus } from './order.interface';
+import type { OrderItem, OrderStatus } from './order.interface.js';
 
 export const ORDER_EVENTS = {
   CREATED: 'order.created',

@@ -11,10 +11,10 @@ import { ConfigModule } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { CartController } from './cart.controller';
-import { CartService } from './cart.service';
-import { cartMigrations } from './migrations';
-import { CartSchema } from './schemas/cart.schema';
+import { CartController } from './cart.controller.js';
+import { CartService } from './cart.service.js';
+import { cartMigrations } from './migrations/index.js';
+import { CartSchema } from './schemas/cart.schema.js';
 
 @Module({
   imports: [

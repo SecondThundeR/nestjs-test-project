@@ -15,9 +15,9 @@ import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom, of } from 'rxjs';
 
-import { CartSchema } from '../src/schemas/cart.schema';
-import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
-import { CartModule } from './../src/cart.module';
+import { CartSchema } from '../src/schemas/cart.schema.js';
+import { createInMemoryDataSource } from './../../../test/utils/in-memory-database.js';
+import { CartModule } from './../src/cart.module.js';
 
 const HOST = '127.0.0.1';
 const PORT = 4002;
@@ -40,7 +40,7 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
 describe('Cart microservice (e2e)', () => {
   let app: INestMicroservice;
   let client: ClientProxy;
-  const productsClient = { send: jest.fn(), emit: jest.fn() };
+  const productsClient = { send: vi.fn(), emit: vi.fn() };
 
   beforeAll(async () => {
     const dataSource = await createInMemoryDataSource([CartSchema]);

@@ -1,5 +1,4 @@
 import type { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import type { EntityClassOrSchema } from '@nestjs/typeorm/dist/interfaces/entity-class-or-schema.type';
 import type { DataSourceOptions } from 'typeorm';
 
 type ServiceKey = 'PRODUCTS' | 'CART' | 'ORDERS' | 'USERS' | 'AUTH';
@@ -24,7 +23,7 @@ function connectionParams(service: ServiceKey) {
 
 export function buildDatabaseOptions(
   service: ServiceKey,
-  entities: EntityClassOrSchema[],
+  entities: TypeOrmModuleOptions['entities'],
   migrations: Migrations = [],
 ): TypeOrmModuleOptions {
   return { ...connectionParams(service), entities, migrations };

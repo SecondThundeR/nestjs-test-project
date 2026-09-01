@@ -1,4 +1,5 @@
 import type { Server } from 'node:http';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
 import { authConfig, SERVICE_NAMES } from '@app/config';
@@ -11,13 +12,17 @@ import {
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
-import jestOpenAPI from 'jest-openapi';
 import { of } from 'rxjs';
 import request from 'supertest';
 
-import { GatewayModule } from './../src/gateway.module';
+import { GatewayModule } from './../src/gateway.module.js';
 
-jestOpenAPI(join(__dirname, '../src/orders/orders.openapi.yaml'));
+const require = createRequire(import.meta.url);
+const jestOpenAPI = (
+  require('jest-openapi') as { default: (specPath: string) => void }
+).default;
+
+jestOpenAPI(join(import.meta.dirname, '../src/orders/orders.openapi.yaml'));
 
 const order: Order = {
   id: '11111111-1111-1111-1111-111111111111',
@@ -49,9 +54,9 @@ const payment: OrderPayment = {
 
 describe('Orders API contract (Schema First)', () => {
   let app: INestApplication;
-  const orders = { send: jest.fn(), emit: jest.fn() };
-  const auth = { send: jest.fn(), emit: jest.fn() };
-  const noopProxy = { send: jest.fn(), emit: jest.fn() };
+  const orders = { send: vi.fn(), emit: vi.fn() };
+  const auth = { send: vi.fn(), emit: vi.fn() };
+  const noopProxy = { send: vi.fn(), emit: vi.fn() };
 
   const jwt = new JwtService({ secret: authConfig().secret });
   const bearer = `Bearer ${jwt.sign({ sub: order.userId, email: 'u@example.com', sid: 'session-1', role: UserRole.REGULAR })}`;

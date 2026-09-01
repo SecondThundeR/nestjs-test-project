@@ -18,13 +18,13 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { ordersEventHandlers } from './cqrs/event-handlers';
-import { ordersHandlers } from './cqrs/handlers';
-import { OrderEntity } from './entities/order.entity';
-import { ordersMigrations } from './migrations';
-import { OrdersController } from './orders.controller';
-import { OrdersService } from './orders.service';
-import { PaypalService } from './paypal/paypal.service';
+import { ordersEventHandlers } from './cqrs/event-handlers.js';
+import { ordersHandlers } from './cqrs/handlers.js';
+import { OrderEntity } from './entities/order.entity.js';
+import { ordersMigrations } from './migrations/index.js';
+import { OrdersController } from './orders.controller.js';
+import { OrdersService } from './orders.service.js';
+import { PaypalService } from './paypal/paypal.service.js';
 
 @Module({
   imports: [

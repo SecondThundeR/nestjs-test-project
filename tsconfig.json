@@ -21,30 +21,22 @@
     "noImplicitAny": true,
     "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["node", "jest", "supertest", "js-yaml"],
+    "types": ["node", "vitest/globals", "supertest", "js-yaml"],
     "paths": {
-      "@app/cache": ["libs/cache/src"],
-      "@app/cache/*": ["libs/cache/src/*"],
-      "@app/config": ["libs/config/src"],
-      "@app/config/*": ["libs/config/src/*"],
-      "@app/domains": ["libs/domains/src"],
-      "@app/domains/*": ["libs/domains/src/*"],
-      "@app/filters": ["libs/filters/src"],
-      "@app/filters/*": ["libs/filters/src/*"],
-      "@app/logger": ["libs/logger/src"],
-      "@app/logger/*": ["libs/logger/src/*"],
-      "@app/utils": ["libs/utils/src"],
-      "@app/utils/*": ["libs/utils/src/*"]
+      "@app/cache": ["libs/cache/src/index.ts"],
+      "@app/cache/*": ["libs/cache/src/*.ts"],
+      "@app/config": ["libs/config/src/index.ts"],
+      "@app/config/*": ["libs/config/src/*.ts"],
+      "@app/domains": ["libs/domains/src/index.ts"],
+      "@app/domains/*": ["libs/domains/src/*.ts"],
+      "@app/filters": ["libs/filters/src/index.ts"],
+      "@app/filters/*": ["libs/filters/src/*.ts"],
+      "@app/logger": ["libs/logger/src/index.ts"],
+      "@app/logger/*": ["libs/logger/src/*.ts"],
+      "@app/utils": ["libs/utils/src/index.ts"],
+      "@app/utils/*": ["libs/utils/src/*.ts"]
     },
     "baseUrl": "./",
     "ignoreDeprecations": "6.0"
-  },
-  "ts-node": {
-    "transpileOnly": true,
-    "compilerOptions": {
-      "module": "commonjs",
-      "moduleResolution": "node",
-      "resolvePackageJsonExports": false
-    }
   }
 }

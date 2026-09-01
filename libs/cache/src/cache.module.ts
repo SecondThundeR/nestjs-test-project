@@ -10,8 +10,8 @@ import {
 import {
   type AppCacheOptions,
   buildCacheManagerOptions,
-} from './cache.options';
-import { CacheService } from './cache.service';
+} from './cache.options.js';
+import { CacheService } from './cache.service.js';
 
 export interface AppCacheAsyncOptions extends Pick<ModuleMetadata, 'imports'> {
   inject?: FactoryProvider['inject'];

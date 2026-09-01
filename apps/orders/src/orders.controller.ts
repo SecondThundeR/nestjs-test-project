@@ -15,8 +15,8 @@ import {
   CreateOrderCommand,
   PayOrderCommand,
   UpdateOrderStatusCommand,
-} from './cqrs/commands';
-import { FindAllOrdersQuery, FindOneOrderQuery } from './cqrs/queries';
+} from './cqrs/commands.js';
+import { FindAllOrdersQuery, FindOneOrderQuery } from './cqrs/queries.js';
 
 @Controller()
 export class OrdersController {

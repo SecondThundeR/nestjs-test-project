@@ -8,16 +8,17 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import type { ClientProxy } from '@nestjs/microservices';
 import { of, throwError } from 'rxjs';
+import type { Mock } from 'vitest';
 
-import { JwtAuthGuard } from './jwt-auth.guard';
+import { JwtAuthGuard } from './jwt-auth.guard.js';
 
 describe('JwtAuthGuard', () => {
   const jwtService = new JwtService({ secret: authConfig().secret });
-  let auth: { send: jest.Mock };
+  let auth: { send: Mock };
   let guard: JwtAuthGuard;
 
   beforeEach(() => {
-    auth = { send: jest.fn() };
+    auth = { send: vi.fn() };
     guard = new JwtAuthGuard(jwtService, auth as unknown as ClientProxy);
   });
 

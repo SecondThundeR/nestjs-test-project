@@ -26,15 +26,15 @@ import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom, of } from 'rxjs';
 
-import { createInMemoryDataSource } from './../../../test/utils/in-memory-database';
+import { createInMemoryDataSource } from './../../../test/utils/in-memory-database.js';
 import {
   makePaypalCapture,
   makePaypalOrder,
   makePaypalRefund,
-} from './../../../test/utils/paypal';
-import { OrderEntity } from './../src/entities/order.entity';
-import { OrdersModule } from './../src/orders.module';
-import { PaypalService } from './../src/paypal/paypal.service';
+} from './../../../test/utils/paypal.js';
+import { OrderEntity } from './../src/entities/order.entity.js';
+import { OrdersModule } from './../src/orders.module.js';
+import { PaypalService } from './../src/paypal/paypal.service.js';
 
 const HOST = '127.0.0.1';
 const PORT = 4003;
@@ -69,17 +69,17 @@ function makeCartItem(overrides: Partial<CartItem> = {}): CartItem {
 describe('Orders microservice (e2e)', () => {
   let app: INestMicroservice;
   let client: ClientProxy;
-  const productsClient = { send: jest.fn(), emit: jest.fn() };
-  const cartClient = { send: jest.fn(), emit: jest.fn() };
+  const productsClient = { send: vi.fn(), emit: vi.fn() };
+  const cartClient = { send: vi.fn(), emit: vi.fn() };
   const kafkaClient = {
-    emit: jest.fn(() => of(undefined)),
-    connect: jest.fn(),
-    close: jest.fn(),
+    emit: vi.fn(() => of(undefined)),
+    connect: vi.fn(),
+    close: vi.fn(),
   };
   const paypal = {
-    createOrder: jest.fn(),
-    captureOrder: jest.fn(),
-    refundCapture: jest.fn(),
+    createOrder: vi.fn(),
+    captureOrder: vi.fn(),
+    refundCapture: vi.fn(),
   };
 
   beforeAll(async () => {

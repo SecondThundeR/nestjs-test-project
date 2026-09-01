@@ -9,7 +9,7 @@ x-app-base: &app-base
 services:
   gateway:
     <<: *app-base
-    command: ['node', 'dist/apps/gateway/main']
+    command: ['node', 'dist/apps/gateway/main.js']
     environment:
       PRODUCTS_HOST: products
       CART_HOST: cart
@@ -27,7 +27,7 @@ services:
 
   products:
     <<: *app-base
-    command: ['node', 'dist/apps/products/main']
+    command: ['node', 'dist/apps/products/main.js']
     environment:
       DB_SYNCHRONIZE: 'false'
       DB_MIGRATIONS_RUN: 'true'
@@ -43,7 +43,7 @@ services:
 
   cart:
     <<: *app-base
-    command: ['node', 'dist/apps/cart/main']
+    command: ['node', 'dist/apps/cart/main.js']
     environment:
       DB_SYNCHRONIZE: 'false'
       DB_MIGRATIONS_RUN: 'true'
@@ -60,7 +60,7 @@ services:
 
   orders:
     <<: *app-base
-    command: ['node', 'dist/apps/orders/main']
+    command: ['node', 'dist/apps/orders/main.js']
     environment:
       DB_SYNCHRONIZE: 'false'
       DB_MIGRATIONS_RUN: 'true'
@@ -82,7 +82,7 @@ services:
 
   users:
     <<: *app-base
-    command: ['node', 'dist/apps/users/main']
+    command: ['node', 'dist/apps/users/main.js']
     environment:
       DB_SYNCHRONIZE: 'false'
       DB_MIGRATIONS_RUN: 'true'
@@ -98,7 +98,7 @@ services:
 
   auth:
     <<: *app-base
-    command: ['node', 'dist/apps/auth/main']
+    command: ['node', 'dist/apps/auth/main.js']
     environment:
       DB_SYNCHRONIZE: 'false'
       DB_MIGRATIONS_RUN: 'true'

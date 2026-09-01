@@ -9,9 +9,9 @@ import {
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 
-import { CurrentUserId } from '../common/current-user.decorator';
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { rpcSend } from '../common/rpc.util';
+import { CurrentUserId } from '../common/current-user.decorator.js';
+import { JwtAuthGuard } from '../common/jwt-auth.guard.js';
+import { rpcSend } from '../common/rpc.util.js';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)

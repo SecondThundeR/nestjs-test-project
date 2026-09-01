@@ -13,17 +13,18 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { of, throwError } from 'rxjs';
 import type { DataSource } from 'typeorm';
+import type { Mock } from 'vitest';
 
-import { createInMemoryCache } from '../../../test/utils/in-memory-cache';
-import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
+import { createInMemoryCache } from '../../../test/utils/in-memory-cache.js';
+import { createInMemoryDataSource } from '../../../test/utils/in-memory-database.js';
 import {
   makePaypalCapture,
   makePaypalOrder,
   makePaypalRefund,
-} from '../../../test/utils/paypal';
-import { OrderEntity } from './entities/order.entity';
-import { OrdersService } from './orders.service';
-import { PaypalService } from './paypal/paypal.service';
+} from '../../../test/utils/paypal.js';
+import { OrderEntity } from './entities/order.entity.js';
+import { OrdersService } from './orders.service.js';
+import { PaypalService } from './paypal/paypal.service.js';
 
 const USER = 'user-1';
 const ADDRESS = '1 Test Street';
@@ -64,23 +65,23 @@ function makeCart(items: CartItem[]): Cart {
 
 describe('OrdersService', () => {
   let service: OrdersService;
-  let productsClient: { send: jest.Mock };
-  let cartClient: { send: jest.Mock };
+  let productsClient: { send: Mock };
+  let cartClient: { send: Mock };
   let paypal: {
-    createOrder: jest.Mock;
-    captureOrder: jest.Mock;
-    refundCapture: jest.Mock;
+    createOrder: Mock;
+    captureOrder: Mock;
+    refundCapture: Mock;
   };
   let dataSource: DataSource;
   let cacheStore: Map<string, unknown>;
 
   beforeEach(async () => {
-    productsClient = { send: jest.fn() };
-    cartClient = { send: jest.fn() };
+    productsClient = { send: vi.fn() };
+    cartClient = { send: vi.fn() };
     paypal = {
-      createOrder: jest.fn(),
-      captureOrder: jest.fn(),
-      refundCapture: jest.fn(),
+      createOrder: vi.fn(),
+      captureOrder: vi.fn(),
+      refundCapture: vi.fn(),
     };
     dataSource = await createInMemoryDataSource([OrderEntity]);
     const { service: cacheService, store } = createInMemoryCache();
@@ -346,9 +347,10 @@ describe('OrdersService', () => {
     it('throws a conflict when the order is modified concurrently', async () => {
       const order = await createOrder();
       await payAndCapture(order.id);
-      jest
-        .spyOn(dataSource.getRepository(OrderEntity), 'update')
-        .mockResolvedValue({ affected: 0, raw: [], generatedMaps: [] });
+      vi.spyOn(
+        dataSource.getRepository(OrderEntity),
+        'update',
+      ).mockResolvedValue({ affected: 0, raw: [], generatedMaps: [] });
 
       const error: unknown = await service
         .updateStatus(order.id, OrderStatus.SHIPPED)
@@ -364,9 +366,10 @@ describe('OrdersService', () => {
       const order = await createOrder();
       await payAndCapture(order.id);
       await service.findOne(order.id);
-      jest
-        .spyOn(dataSource.getRepository(OrderEntity), 'findOneBy')
-        .mockResolvedValue(null);
+      vi.spyOn(
+        dataSource.getRepository(OrderEntity),
+        'findOneBy',
+      ).mockResolvedValue(null);
 
       const error: unknown = await service
         .updateStatus(order.id, OrderStatus.SHIPPED)
@@ -695,9 +698,10 @@ describe('OrdersService', () => {
 
     it('throws a conflict when the order is modified concurrently', async () => {
       const order = await createOrder();
-      jest
-        .spyOn(dataSource.getRepository(OrderEntity), 'update')
-        .mockResolvedValue({ affected: 0, raw: [], generatedMaps: [] });
+      vi.spyOn(
+        dataSource.getRepository(OrderEntity),
+        'update',
+      ).mockResolvedValue({ affected: 0, raw: [], generatedMaps: [] });
 
       const error: unknown = await service
         .cancel(order.id)
@@ -717,10 +721,7 @@ describe('OrdersService', () => {
   describe('caching', () => {
     it('serves a repeated findOne from the cache', async () => {
       const order = await createOrder();
-      const spy = jest.spyOn(
-        dataSource.getRepository(OrderEntity),
-        'findOneBy',
-      );
+      const spy = vi.spyOn(dataSource.getRepository(OrderEntity), 'findOneBy');
 
       await service.findOne(order.id);
       await service.findOne(order.id);
@@ -731,7 +732,7 @@ describe('OrdersService', () => {
 
     it('serves a repeated findAll from the cache', async () => {
       await createOrder();
-      const spy = jest.spyOn(dataSource.getRepository(OrderEntity), 'find');
+      const spy = vi.spyOn(dataSource.getRepository(OrderEntity), 'find');
 
       await service.findAll(USER);
       await service.findAll(USER);

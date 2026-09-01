@@ -1,4 +1,4 @@
-import type { OrderEntity } from '../entities/order.entity';
+import type { OrderEntity } from '../entities/order.entity.js';
 
 export class OrderCreatedEvent {
   constructor(public readonly order: OrderEntity) {}

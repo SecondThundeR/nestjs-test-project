@@ -17,10 +17,10 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { SessionEntity } from './entities/session.entity';
-import { authMigrations } from './migrations';
+import { AuthController } from './auth.controller.js';
+import { AuthService } from './auth.service.js';
+import { SessionEntity } from './entities/session.entity.js';
+import { authMigrations } from './migrations/index.js';
 
 @Module({
   imports: [

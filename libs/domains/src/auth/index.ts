@@ -1,3 +1,3 @@
-export * from './auth.dto';
-export * from './auth.interface';
-export * from './auth.patterns';
+export * from './auth.dto.js';
+export * from './auth.interface.js';
+export * from './auth.patterns.js';

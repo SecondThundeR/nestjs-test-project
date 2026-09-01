@@ -5,10 +5,11 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { of, throwError } from 'rxjs';
 import type { DataSource } from 'typeorm';
+import type { Mock } from 'vitest';
 
-import { createInMemoryDataSource } from '../../../test/utils/in-memory-database';
-import { CartService } from './cart.service';
-import { CartSchema } from './schemas/cart.schema';
+import { createInMemoryDataSource } from '../../../test/utils/in-memory-database.js';
+import { CartService } from './cart.service.js';
+import { CartSchema } from './schemas/cart.schema.js';
 
 const USER = 'user-1';
 
@@ -28,11 +29,11 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
 
 describe('CartService', () => {
   let service: CartService;
-  let productsClient: { send: jest.Mock };
+  let productsClient: { send: Mock };
   let dataSource: DataSource;
 
   beforeEach(async () => {
-    productsClient = { send: jest.fn() };
+    productsClient = { send: vi.fn() };
     dataSource = await createInMemoryDataSource([CartSchema]);
 
     const moduleRef = await Test.createTestingModule({

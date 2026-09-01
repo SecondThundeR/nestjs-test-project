@@ -1,2 +1,2 @@
-export * from './rpc-errors';
-export * from './rpc-exception.filter';
+export * from './rpc-errors.js';
+export * from './rpc-exception.filter.js';

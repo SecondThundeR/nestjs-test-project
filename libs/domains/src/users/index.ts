@@ -1,3 +1,3 @@
-export * from './user.dto';
-export * from './user.interface';
-export * from './user.patterns';
+export * from './user.dto.js';
+export * from './user.interface.js';
+export * from './user.patterns.js';

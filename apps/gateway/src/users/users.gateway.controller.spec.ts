@@ -4,22 +4,23 @@ import { NotFoundException } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
+import type { Mock } from 'vitest';
 
-import { UsersGatewayController } from './users.gateway.controller';
+import { UsersGatewayController } from './users.gateway.controller.js';
 
 describe('UsersGatewayController', () => {
   let controller: UsersGatewayController;
-  let users: { send: jest.Mock };
+  let users: { send: Mock };
 
   beforeEach(async () => {
-    users = { send: jest.fn() };
+    users = { send: vi.fn() };
 
     const moduleRef = await Test.createTestingModule({
       imports: [JwtModule.register({ secret: authConfig().secret })],
       controllers: [UsersGatewayController],
       providers: [
         { provide: SERVICE_NAMES.USERS, useValue: users },
-        { provide: SERVICE_NAMES.AUTH, useValue: { send: jest.fn() } },
+        { provide: SERVICE_NAMES.AUTH, useValue: { send: vi.fn() } },
       ],
     }).compile();
 

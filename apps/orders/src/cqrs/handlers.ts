@@ -6,7 +6,7 @@ import {
   QueryHandler,
 } from '@nestjs/cqrs';
 
-import { OrdersService } from '../orders.service';
+import { OrdersService } from '../orders.service.js';
 import {
   CancelOrderCommand,
   CaptureByPaymentIdCommand,
@@ -14,14 +14,14 @@ import {
   CreateOrderCommand,
   PayOrderCommand,
   UpdateOrderStatusCommand,
-} from './commands';
+} from './commands.js';
 import {
   OrderCancelledEvent,
   OrderCreatedEvent,
   OrderPaidEvent,
   OrderStatusChangedEvent,
-} from './events';
-import { FindAllOrdersQuery, FindOneOrderQuery } from './queries';
+} from './events.js';
+import { FindAllOrdersQuery, FindOneOrderQuery } from './queries.js';
 
 @CommandHandler(CreateOrderCommand)
 export class CreateOrderHandler implements ICommandHandler<CreateOrderCommand> {

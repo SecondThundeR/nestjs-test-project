@@ -19,11 +19,11 @@ import {
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 
-import { CurrentUserId } from '../common/current-user.decorator';
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { Roles } from '../common/roles.decorator';
-import { RolesGuard } from '../common/roles.guard';
-import { rpcSend } from '../common/rpc.util';
+import { CurrentUserId } from '../common/current-user.decorator.js';
+import { JwtAuthGuard } from '../common/jwt-auth.guard.js';
+import { Roles } from '../common/roles.decorator.js';
+import { RolesGuard } from '../common/roles.guard.js';
+import { rpcSend } from '../common/rpc.util.js';
 
 @Controller('orders')
 @UseGuards(JwtAuthGuard)

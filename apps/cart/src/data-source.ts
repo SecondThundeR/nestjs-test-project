@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 
-import { buildDataSourceOptions } from '@app/config';
 import { config as loadEnv } from 'dotenv';
 import { DataSource } from 'typeorm';
 
-import { cartMigrations } from './migrations';
-import { CartSchema } from './schemas/cart.schema';
+import { buildDataSourceOptions } from '../../../libs/config/src/index.js';
+import { cartMigrations } from './migrations/index.js';
+import { CartSchema } from './schemas/cart.schema.js';
 
 loadEnv();
 

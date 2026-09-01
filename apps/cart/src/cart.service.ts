@@ -13,7 +13,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 import { Repository } from 'typeorm';
 
-import { CartSchema } from './schemas/cart.schema';
+import { CartSchema } from './schemas/cart.schema.js';
 
 @Injectable()
 export class CartService {

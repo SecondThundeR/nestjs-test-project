@@ -13,14 +13,14 @@ import {
 import { EventsHandler, type IEventHandler } from '@nestjs/cqrs';
 import type { ClientKafka } from '@nestjs/microservices';
 
-import type { OrderEntity } from '../entities/order.entity';
+import type { OrderEntity } from '../entities/order.entity.js';
 import {
   OrderCancelledEvent,
   OrderCreatedEvent,
   type OrderEvent,
   OrderPaidEvent,
   OrderStatusChangedEvent,
-} from './events';
+} from './events.js';
 
 function orderCreatedPayload(order: OrderEntity): OrderCreatedEventPayload {
   return {

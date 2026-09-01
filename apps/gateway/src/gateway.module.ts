@@ -11,13 +11,13 @@ import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 
-import { AuthGatewayController } from './auth/auth.gateway.controller';
-import { CartGatewayController } from './cart/cart.gateway.controller';
-import { HealthController } from './health.controller';
-import { OrdersGatewayController } from './orders/orders.gateway.controller';
-import { OrdersPaymentGatewayController } from './orders/orders-payment.gateway.controller';
-import { ProductsGatewayController } from './products/products.gateway.controller';
-import { UsersGatewayController } from './users/users.gateway.controller';
+import { AuthGatewayController } from './auth/auth.gateway.controller.js';
+import { CartGatewayController } from './cart/cart.gateway.controller.js';
+import { HealthController } from './health.controller.js';
+import { OrdersGatewayController } from './orders/orders.gateway.controller.js';
+import { OrdersPaymentGatewayController } from './orders/orders-payment.gateway.controller.js';
+import { ProductsGatewayController } from './products/products.gateway.controller.js';
+import { UsersGatewayController } from './users/users.gateway.controller.js';
 
 @Module({
   imports: [

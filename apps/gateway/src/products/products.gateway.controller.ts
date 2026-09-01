@@ -29,11 +29,11 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { Roles } from '../common/roles.decorator';
-import { RolesGuard } from '../common/roles.guard';
-import { rpcSend } from '../common/rpc.util';
-import { ProductDeleteResponse, ProductResponse } from './product.response';
+import { JwtAuthGuard } from '../common/jwt-auth.guard.js';
+import { Roles } from '../common/roles.decorator.js';
+import { RolesGuard } from '../common/roles.guard.js';
+import { rpcSend } from '../common/rpc.util.js';
+import { ProductDeleteResponse, ProductResponse } from './product.response.js';
 
 @ApiTags('products')
 @Controller('product')
