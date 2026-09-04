@@ -1,11 +1,11 @@
-import { authConfig, SERVICE_NAMES } from '@app/config';
+import { SERVICE_NAMES } from '@app/config';
 import {
   AUTH_PATTERNS,
   type CreateUserDto,
   type RefreshTokenDto,
   type ValidateUserByCredentialsDto,
 } from '@app/domains';
-import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
 import type { Mock } from 'vitest';
@@ -20,7 +20,7 @@ describe('AuthGatewayController', () => {
     auth = { send: vi.fn() };
 
     const moduleRef = await Test.createTestingModule({
-      imports: [JwtModule.register({ secret: authConfig().secret })],
+      imports: [PassportModule.register({ session: false })],
       controllers: [AuthGatewayController],
       providers: [{ provide: SERVICE_NAMES.AUTH, useValue: auth }],
     }).compile();

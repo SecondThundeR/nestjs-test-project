@@ -11,6 +11,7 @@ import { of, throwError } from 'rxjs';
 import type { Mock } from 'vitest';
 
 import { JwtAuthGuard } from './jwt-auth.guard.js';
+import { JwtStrategy } from './jwt.strategy.js';
 
 describe('JwtAuthGuard', () => {
   const jwtService = new JwtService({ secret: authConfig().secret });
@@ -19,7 +20,8 @@ describe('JwtAuthGuard', () => {
 
   beforeEach(() => {
     auth = { send: vi.fn() };
-    guard = new JwtAuthGuard(jwtService, auth as unknown as ClientProxy);
+    new JwtStrategy(authConfig(), auth as unknown as ClientProxy);
+    guard = new JwtAuthGuard();
   });
 
   function signToken(): string {
@@ -34,12 +36,14 @@ describe('JwtAuthGuard', () => {
     ctx: ExecutionContext;
     request: { user?: JwtPayload };
   } {
-    const request: { user?: JwtPayload; header: (name: string) => unknown } = {
-      header: (name: string) =>
-        name === 'authorization' ? authorization : undefined,
-    };
+    const request = {
+      headers: { authorization },
+    } as { headers: { authorization?: string }; user?: JwtPayload };
     const ctx = {
-      switchToHttp: () => ({ getRequest: () => request }),
+      switchToHttp: () => ({
+        getRequest: () => request,
+        getResponse: () => ({}),
+      }),
     } as unknown as ExecutionContext;
     return { ctx, request };
   }
@@ -77,6 +81,21 @@ describe('JwtAuthGuard', () => {
 
     await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
     expect(auth.send).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['expired', () => jwtService.sign({ sid: 'session-1' }, { expiresIn: -1 })],
+    [
+      'wrong signature',
+      () =>
+        new JwtService({ secret: 'wrong-secret' }).sign({ sid: 'session-1' }),
+    ],
+  ])('rejects a token with %s before checking the session', async (_, sign) => {
+    const { ctx, request } = contextWithAuth(`Bearer ${sign()}`);
+
+    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+    expect(auth.send).not.toHaveBeenCalled();
+    expect(request.user).toBeUndefined();
   });
 
   it('throws 401 when the session has been revoked', async () => {

@@ -1,10 +1,10 @@
-import { authConfig, SERVICE_NAMES } from '@app/config';
+import { SERVICE_NAMES } from '@app/config';
 import {
   type CreateProductDto,
   PRODUCT_PATTERNS,
   type UpdateProductDto,
 } from '@app/domains';
-import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
 import type { Mock } from 'vitest';
@@ -19,7 +19,7 @@ describe('ProductsGatewayController', () => {
     products = { send: vi.fn() };
 
     const moduleRef = await Test.createTestingModule({
-      imports: [JwtModule.register({ secret: authConfig().secret })],
+      imports: [PassportModule.register({ session: false })],
       controllers: [ProductsGatewayController],
       providers: [
         { provide: SERVICE_NAMES.PRODUCTS, useValue: products },

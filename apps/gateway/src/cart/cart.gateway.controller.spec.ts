@@ -1,10 +1,10 @@
-import { authConfig, SERVICE_NAMES } from '@app/config';
+import { SERVICE_NAMES } from '@app/config';
 import {
   type AddCartItemDto,
   CART_PATTERNS,
   type UpdateCartItemDto,
 } from '@app/domains';
-import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
 import type { Mock } from 'vitest';
@@ -21,7 +21,7 @@ describe('CartGatewayController', () => {
     cart = { send: vi.fn() };
 
     const moduleRef = await Test.createTestingModule({
-      imports: [JwtModule.register({ secret: authConfig().secret })],
+      imports: [PassportModule.register({ session: false })],
       controllers: [CartGatewayController],
       providers: [
         { provide: SERVICE_NAMES.CART, useValue: cart },

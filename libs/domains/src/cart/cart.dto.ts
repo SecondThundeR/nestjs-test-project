@@ -19,10 +19,9 @@ export const addCartItemPayloadSchema = z.strictObject({
 });
 export type AddCartItemPayload = z.infer<typeof addCartItemPayloadSchema>;
 
-export const updateCartItemPayloadSchema = z.strictObject({
+export const updateCartItemPayloadSchema = updateCartItemSchema.extend({
   userId: idSchema,
   productId: idSchema,
-  quantity: z.int().nonnegative(),
 });
 export type UpdateCartItemPayload = z.infer<typeof updateCartItemPayloadSchema>;
 

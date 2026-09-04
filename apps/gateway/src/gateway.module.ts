@@ -1,5 +1,4 @@
 import {
-  type AuthConfig,
   authConfig,
   environmentSchema,
   SERVICE_NAMES,
@@ -8,11 +7,12 @@ import {
 } from '@app/config';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { PassportModule } from '@nestjs/passport';
 
 import { AuthGatewayController } from './auth/auth.gateway.controller.js';
 import { CartGatewayController } from './cart/cart.gateway.controller.js';
+import { JwtStrategy } from './common/jwt.strategy.js';
 import { HealthController } from './health.controller.js';
 import { OrdersGatewayController } from './orders/orders.gateway.controller.js';
 import { OrdersPaymentGatewayController } from './orders/orders-payment.gateway.controller.js';
@@ -26,12 +26,7 @@ import { UsersGatewayController } from './users/users.gateway.controller.js';
       load: [authConfig, servicesConfig],
       validationSchema: environmentSchema,
     }),
-    JwtModule.registerAsync({
-      inject: [authConfig.KEY],
-      useFactory: (auth: AuthConfig) => ({
-        secret: auth.secret,
-      }),
-    }),
+    PassportModule.register({ session: false }),
     ClientsModule.registerAsync([
       {
         name: SERVICE_NAMES.PRODUCTS,
@@ -81,6 +76,7 @@ import { UsersGatewayController } from './users/users.gateway.controller.js';
       },
     ]),
   ],
+  providers: [JwtStrategy],
   controllers: [
     HealthController,
     ProductsGatewayController,

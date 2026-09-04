@@ -13,9 +13,8 @@ export const updateOrderStatusSchema = z.strictObject({
 });
 export type UpdateOrderStatusDto = z.infer<typeof updateOrderStatusSchema>;
 
-export const createOrderPayloadSchema = z.strictObject({
+export const createOrderPayloadSchema = createOrderSchema.extend({
   userId: idSchema,
-  shippingAddress: z.string().min(5),
 });
 export type CreateOrderPayload = z.infer<typeof createOrderPayloadSchema>;
 
@@ -25,9 +24,8 @@ export const orderActionPayloadSchema = z.strictObject({
 });
 export type OrderActionPayload = z.infer<typeof orderActionPayloadSchema>;
 
-export const updateOrderStatusPayloadSchema = z.strictObject({
+export const updateOrderStatusPayloadSchema = updateOrderStatusSchema.extend({
   id: idSchema,
-  status: orderStatusSchema,
 });
 export type UpdateOrderStatusPayload = z.infer<
   typeof updateOrderStatusPayloadSchema

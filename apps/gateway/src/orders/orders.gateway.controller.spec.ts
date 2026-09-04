@@ -1,11 +1,11 @@
-import { authConfig, SERVICE_NAMES } from '@app/config';
+import { SERVICE_NAMES } from '@app/config';
 import {
   type CreateOrderDto,
   ORDERS_PATTERNS,
   OrderStatus,
   type UpdateOrderStatusDto,
 } from '@app/domains';
-import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
 import type { Mock } from 'vitest';
@@ -22,7 +22,7 @@ describe('OrdersGatewayController', () => {
     orders = { send: vi.fn() };
 
     const moduleRef = await Test.createTestingModule({
-      imports: [JwtModule.register({ secret: authConfig().secret })],
+      imports: [PassportModule.register({ session: false })],
       controllers: [OrdersGatewayController],
       providers: [
         { provide: SERVICE_NAMES.ORDERS, useValue: orders },

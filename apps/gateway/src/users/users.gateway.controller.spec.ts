@@ -1,7 +1,7 @@
-import { authConfig, SERVICE_NAMES } from '@app/config';
+import { SERVICE_NAMES } from '@app/config';
 import { USERS_PATTERNS } from '@app/domains';
 import { NotFoundException } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { Test } from '@nestjs/testing';
 import { of } from 'rxjs';
 import type { Mock } from 'vitest';
@@ -16,7 +16,7 @@ describe('UsersGatewayController', () => {
     users = { send: vi.fn() };
 
     const moduleRef = await Test.createTestingModule({
-      imports: [JwtModule.register({ secret: authConfig().secret })],
+      imports: [PassportModule.register({ session: false })],
       controllers: [UsersGatewayController],
       providers: [
         { provide: SERVICE_NAMES.USERS, useValue: users },
