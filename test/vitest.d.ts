@@ -1,8 +1,8 @@
 import 'vitest';
 
 declare module 'vitest' {
-  interface Assertion<T = any> {
-    toSatisfyApiSpec(): T;
-    toSatisfySchemaInApiSpec(schemaName: string): T;
+  interface Matchers<R, T> {
+    toSatisfyApiSpec(): R;
+    toSatisfySchemaInApiSpec(schemaName: string): R;
   }
 }
