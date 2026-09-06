@@ -9,6 +9,7 @@ import {
   Logger,
   StandardSchemaSerializerInterceptor,
   StandardSchemaValidationPipe,
+  VersioningType,
 } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { type NestExpressApplication } from '@nestjs/platform-express';
@@ -85,6 +86,10 @@ async function bootstrap() {
 
   app.disable('x-powered-by');
   app.setGlobalPrefix('api');
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',
+  });
   app.enableCors();
   app.useGlobalPipes(new StandardSchemaValidationPipe({ transform: true }));
   app.useGlobalInterceptors(

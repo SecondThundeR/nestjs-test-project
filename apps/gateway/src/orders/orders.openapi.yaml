@@ -5,7 +5,7 @@ info:
   description: >
     Schema First microservice API
 servers:
-  - url: /api
+  - url: /api/v1
     description: API gateway
 tags:
   - name: orders
