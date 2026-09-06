@@ -119,6 +119,21 @@ describe('ProductsService', () => {
   });
 
   describe('update', () => {
+    it('preserves product fields when the update is empty', async () => {
+      const product = await create({ description: 'A widget', stock: 3 });
+
+      const updated = await service.update(product.id, {});
+
+      expect(updated).toMatchObject({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        stock: product.stock,
+      });
+      await expect(service.findOne(product.id)).resolves.toEqual(updated);
+    });
+
     it('merges the provided fields and persists them', async () => {
       const product = await create({ price: 10, stock: 3 });
 

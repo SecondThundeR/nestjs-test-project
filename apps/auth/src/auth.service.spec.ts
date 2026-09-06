@@ -232,6 +232,23 @@ describe('AuthService', () => {
     });
   });
 
+  it('rejects a session that expires while cached without looking up the user', async () => {
+    const { accessToken } = await register();
+    const { sid } = jwtService.verify<JwtPayload>(accessToken);
+    await service.verify(sid);
+    const session = await sessions.findOneByOrFail({ id: sid });
+    session.expiresAt = new Date(Date.now() - 1000).toISOString();
+    cacheStore.set(`session:${sid}`, session);
+    const lookup = vi.spyOn(sessions, 'findOneBy');
+    users.send.mockClear();
+
+    await expect(service.verify(sid)).rejects.toThrow(
+      'Invalid or expired token',
+    );
+    expect(lookup).not.toHaveBeenCalled();
+    expect(users.send).not.toHaveBeenCalled();
+  });
+
   describe('refresh', () => {
     it('issues a new token pair for a valid refresh token', async () => {
       const { refreshToken } = await register();
@@ -373,6 +390,18 @@ describe('AuthService', () => {
         jwtService.verify<JwtPayload>(active.accessToken).sid,
       );
     });
+
+    it.each([undefined, null])(
+      'returns 0 when the driver reports %s affected rows',
+      async (affected) => {
+        vi.spyOn(sessions, 'delete').mockResolvedValueOnce({
+          raw: [],
+          affected,
+        });
+
+        await expect(service.cleanupSessions()).resolves.toBe(0);
+      },
+    );
 
     it('returns 0 when there is nothing to clean up', async () => {
       await register();

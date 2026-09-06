@@ -24,6 +24,16 @@ describe('JwtAuthGuard', () => {
     guard = new JwtAuthGuard();
   });
 
+  it('fails to initialize when the JWT secret is empty', () => {
+    expect(
+      () =>
+        new JwtStrategy(
+          { ...authConfig(), secret: '' },
+          auth as unknown as ClientProxy,
+        ),
+    ).toThrow('JWT_SECRET is required');
+  });
+
   function signToken(): string {
     return jwtService.sign({
       sub: 'alice',

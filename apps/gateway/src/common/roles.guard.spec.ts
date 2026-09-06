@@ -1,6 +1,7 @@
 import { type JwtPayload, UserRole } from '@app/domains';
 import { type ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Test } from '@nestjs/testing';
 
 import { RolesGuard } from './roles.guard.js';
 
@@ -21,6 +22,29 @@ describe('RolesGuard', () => {
     guard = new RolesGuard(reflector);
   });
 
+  it('resolves its reflector through Nest dependency injection', async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [RolesGuard],
+    }).compile();
+
+    try {
+      const injectedGuard = moduleRef.get(RolesGuard);
+      const injectedReflector = moduleRef.get(Reflector);
+      vi.spyOn(injectedReflector, 'getAllAndOverride').mockReturnValue([
+        UserRole.ADMIN,
+      ]);
+
+      expect(() =>
+        injectedGuard.canActivate(contextWithUser({ role: UserRole.REGULAR })),
+      ).toThrow(ForbiddenException);
+      expect(
+        injectedGuard.canActivate(contextWithUser({ role: UserRole.ADMIN })),
+      ).toBe(true);
+    } finally {
+      await moduleRef.close();
+    }
+  });
+
   function requireRoles(...roles: UserRole[] | []) {
     vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(
       roles.length ? roles : undefined,
@@ -33,6 +57,12 @@ describe('RolesGuard', () => {
     expect(guard.canActivate(contextWithUser({ role: UserRole.REGULAR }))).toBe(
       true,
     );
+  });
+
+  it('allows an unauthenticated request when the required roles array is empty', () => {
+    vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([]);
+
+    expect(guard.canActivate(contextWithUser())).toBe(true);
   });
 
   it('allows the request when the user has the required role', () => {
