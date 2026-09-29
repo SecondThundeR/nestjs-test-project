@@ -2,7 +2,7 @@ FROM node:26.3.0-alpine AS builder
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++
-RUN npm install --global pnpm@12.2.1
+RUN npm install --global pnpm@12.6.0
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
