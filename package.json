@@ -13,7 +13,7 @@
   },
   "scripts": {
     "docker:up": "docker compose up -d --build",
-    "docker:db": "docker compose up -d products-db cache cart-db orders-db users-db auth-db",
+    "docker:db": "docker compose up -d --wait products-db cache cart-db orders-db users-db auth-db kafka",
     "docker:down": "docker compose down",
     "build": "nest build --all --parallel",
     "build:gateway": "nest build gateway",

@@ -19,6 +19,7 @@ import {
   type INestApplication,
   StandardSchemaSerializerInterceptor,
   StandardSchemaValidationPipe,
+  VersioningType,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
@@ -138,6 +139,7 @@ describe('Gateway (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api');
+    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
     app.useGlobalPipes(new StandardSchemaValidationPipe({ transform: true }));
     app.useGlobalInterceptors(
       new StandardSchemaSerializerInterceptor(app.get(Reflector)),
@@ -160,31 +162,31 @@ describe('Gateway (e2e)', () => {
   const http = () => request(app.getHttpServer() as Server);
 
   describe('health', () => {
-    it('GET /api/health reports ok', async () => {
-      const res = await http().get('/api/health').expect(200);
+    it('GET /api/v1/health reports ok', async () => {
+      const res = await http().get('/api/v1/health').expect(200);
 
       expect(res.body).toMatchObject({ status: 'ok', service: 'gateway' });
     });
   });
 
   describe('products', () => {
-    it('GET /api/product forwards FIND_ALL and returns the result', async () => {
+    it('GET /api/v1/product forwards FIND_ALL and returns the result', async () => {
       const list = [makeProduct()];
       products.send.mockReturnValue(of(list));
 
-      const res = await http().get('/api/product').expect(200);
+      const res = await http().get('/api/v1/product').expect(200);
 
       expect(res.body).toEqual(list);
       expect(products.send).toHaveBeenCalledWith(PRODUCT_PATTERNS.FIND_ALL, {});
     });
 
-    it('POST /api/product forwards a valid CREATE payload', async () => {
+    it('POST /api/v1/product forwards a valid CREATE payload', async () => {
       const created = makeProduct();
       auth.send.mockReturnValue(of({ id: 'admin' }));
       products.send.mockReturnValue(of(created));
 
       const res = await http()
-        .post('/api/product')
+        .post('/api/v1/product')
         .set('authorization', adminBearer)
         .send({ name: 'Widget', price: 10 })
         .expect(201);
@@ -200,7 +202,7 @@ describe('Gateway (e2e)', () => {
       const product = makeProduct();
       products.send.mockReturnValue(of({ ...product, internalOnly: 'secret' }));
 
-      const res = await http().get('/api/product/p-1').expect(200);
+      const res = await http().get('/api/v1/product/p-1').expect(200);
 
       expect(res.body).toEqual(product);
       expect(res.body).not.toHaveProperty('internalOnly');
@@ -213,7 +215,7 @@ describe('Gateway (e2e)', () => {
         standardSchemaDocumentOptions,
       );
 
-      expect(document.paths['/api/product']?.post).toMatchObject({
+      expect(document.paths['/api/v1/product']?.post).toMatchObject({
         requestBody: {
           content: {
             'application/json': {
@@ -243,20 +245,20 @@ describe('Gateway (e2e)', () => {
       });
     });
 
-    it('POST /api/product requires authentication', async () => {
+    it('POST /api/v1/product requires authentication', async () => {
       await http()
-        .post('/api/product')
+        .post('/api/v1/product')
         .send({ name: 'Widget', price: 10 })
         .expect(401);
 
       expect(products.send).not.toHaveBeenCalled();
     });
 
-    it('POST /api/product forbids a non-admin user', async () => {
+    it('POST /api/v1/product forbids a non-admin user', async () => {
       auth.send.mockReturnValue(of({ id: 'alice' }));
 
       await http()
-        .post('/api/product')
+        .post('/api/v1/product')
         .set('authorization', bearer)
         .send({ name: 'Widget', price: 10 })
         .expect(403);
@@ -264,11 +266,11 @@ describe('Gateway (e2e)', () => {
       expect(products.send).not.toHaveBeenCalled();
     });
 
-    it('POST /api/product rejects an invalid body with 400', async () => {
+    it('POST /api/v1/product rejects an invalid body with 400', async () => {
       auth.send.mockReturnValue(of({ id: 'admin' }));
 
       await http()
-        .post('/api/product')
+        .post('/api/v1/product')
         .set('authorization', adminBearer)
         .send({ name: 'x', price: -1 })
         .expect(400);
@@ -276,11 +278,11 @@ describe('Gateway (e2e)', () => {
       expect(products.send).not.toHaveBeenCalled();
     });
 
-    it('POST /api/product rejects unknown properties with 400', async () => {
+    it('POST /api/v1/product rejects unknown properties with 400', async () => {
       auth.send.mockReturnValue(of({ id: 'admin' }));
 
       await http()
-        .post('/api/product')
+        .post('/api/v1/product')
         .set('authorization', adminBearer)
         .send({ name: 'Widget', price: 10, hacked: true })
         .expect(400);
@@ -297,7 +299,7 @@ describe('Gateway (e2e)', () => {
         })),
       );
 
-      const res = await http().get('/api/product/missing').expect(404);
+      const res = await http().get('/api/v1/product/missing').expect(404);
 
       expect(res.body).toMatchObject({
         statusCode: 404,
@@ -312,7 +314,7 @@ describe('Gateway (e2e)', () => {
       auth.send.mockReturnValue(of({ id: 'alice' }));
       cart.send.mockReturnValue(of(makeCart()));
 
-      await http().get('/api/cart').set('authorization', bearer).expect(200);
+      await http().get('/api/v1/cart').set('authorization', bearer).expect(200);
 
       expect(auth.send).toHaveBeenCalledWith(AUTH_PATTERNS.VERIFY, 'session-1');
       expect(cart.send).toHaveBeenCalledWith(CART_PATTERNS.GET, 'alice');
@@ -327,20 +329,20 @@ describe('Gateway (e2e)', () => {
         })),
       );
 
-      await http().get('/api/cart').set('authorization', bearer).expect(401);
+      await http().get('/api/v1/cart').set('authorization', bearer).expect(401);
 
       expect(cart.send).not.toHaveBeenCalled();
     });
 
     it('rejects an unauthenticated request with 401', async () => {
-      await http().get('/api/cart').expect(401);
+      await http().get('/api/v1/cart').expect(401);
 
       expect(cart.send).not.toHaveBeenCalled();
     });
 
     it('rejects a request with an invalid token with 401', async () => {
       await http()
-        .get('/api/cart')
+        .get('/api/v1/cart')
         .set('authorization', 'Bearer not-a-token')
         .expect(401);
 
@@ -354,7 +356,7 @@ describe('Gateway (e2e)', () => {
       orders.send.mockReturnValue(of(makeOrder()));
 
       await http()
-        .post('/api/orders')
+        .post('/api/v1/orders')
         .set('authorization', bearer)
         .send({ shippingAddress: '1 Test Street' })
         .expect(201);
@@ -367,21 +369,21 @@ describe('Gateway (e2e)', () => {
 
     it('rejects an unauthenticated request with 401', async () => {
       await http()
-        .post('/api/orders')
+        .post('/api/v1/orders')
         .send({ shippingAddress: '1 Test Street' })
         .expect(401);
 
       expect(orders.send).not.toHaveBeenCalled();
     });
 
-    it('PATCH /api/orders/:id/status lets an admin change any order, unscoped to an owner', async () => {
+    it('PATCH /api/v1/orders/:id/status lets an admin change any order, unscoped to an owner', async () => {
       auth.send.mockReturnValue(of({ id: 'admin' }));
       orders.send.mockReturnValue(
         of(makeOrder({ status: OrderStatus.SHIPPED })),
       );
 
       await http()
-        .patch('/api/orders/o-1/status')
+        .patch('/api/v1/orders/o-1/status')
         .set('authorization', adminBearer)
         .send({ status: 'SHIPPED' })
         .expect(200);
@@ -392,11 +394,11 @@ describe('Gateway (e2e)', () => {
       });
     });
 
-    it('PATCH /api/orders/:id/status forbids a non-admin user', async () => {
+    it('PATCH /api/v1/orders/:id/status forbids a non-admin user', async () => {
       auth.send.mockReturnValue(of({ id: 'alice' }));
 
       await http()
-        .patch('/api/orders/o-1/status')
+        .patch('/api/v1/orders/o-1/status')
         .set('authorization', bearer)
         .send({ status: 'SHIPPED' })
         .expect(403);
@@ -404,9 +406,9 @@ describe('Gateway (e2e)', () => {
       expect(orders.send).not.toHaveBeenCalled();
     });
 
-    it('PATCH /api/orders/:id/status rejects an unauthenticated request with 401', async () => {
+    it('PATCH /api/v1/orders/:id/status rejects an unauthenticated request with 401', async () => {
       await http()
-        .patch('/api/orders/o-1/status')
+        .patch('/api/v1/orders/o-1/status')
         .send({ status: 'SHIPPED' })
         .expect(401);
 
@@ -415,12 +417,12 @@ describe('Gateway (e2e)', () => {
   });
 
   describe('auth (public auth routes)', () => {
-    it('POST /api/auth/register forwards the body and returns the auth result', async () => {
+    it('POST /api/v1/auth/register forwards the body and returns the auth result', async () => {
       const result = makeAuthResult();
       auth.send.mockReturnValue(of(result));
 
       const res = await http()
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           email: 'jane@example.com',
           name: 'Jane',
@@ -436,12 +438,12 @@ describe('Gateway (e2e)', () => {
       });
     });
 
-    it('POST /api/auth/login is reachable without a token', async () => {
+    it('POST /api/v1/auth/login is reachable without a token', async () => {
       const result = makeAuthResult();
       auth.send.mockReturnValue(of(result));
 
       await http()
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: 'jane@example.com', password: 'password123' })
         .expect(201);
 
@@ -451,7 +453,7 @@ describe('Gateway (e2e)', () => {
       });
     });
 
-    it('POST /api/auth/refresh is reachable without a token', async () => {
+    it('POST /api/v1/auth/refresh is reachable without a token', async () => {
       const result = makeAuthResult({
         accessToken: 'new-jwt-token',
         refreshToken: 'new-refresh-token',
@@ -459,7 +461,7 @@ describe('Gateway (e2e)', () => {
       auth.send.mockReturnValue(of(result));
 
       const res = await http()
-        .post('/api/auth/refresh')
+        .post('/api/v1/auth/refresh')
         .send({ refreshToken: 'old-refresh-token' })
         .expect(201);
 
@@ -469,13 +471,13 @@ describe('Gateway (e2e)', () => {
       });
     });
 
-    it('POST /api/auth/refresh rejects an empty body with 400', async () => {
-      await http().post('/api/auth/refresh').send({}).expect(400);
+    it('POST /api/v1/auth/refresh rejects an empty body with 400', async () => {
+      await http().post('/api/v1/auth/refresh').send({}).expect(400);
 
       expect(auth.send).not.toHaveBeenCalled();
     });
 
-    it('POST /api/auth/logout forwards the session id from the token', async () => {
+    it('POST /api/v1/auth/logout forwards the session id from the token', async () => {
       auth.send.mockImplementation((pattern: string) =>
         pattern === AUTH_PATTERNS.VERIFY
           ? of({ id: 'alice' })
@@ -483,7 +485,7 @@ describe('Gateway (e2e)', () => {
       );
 
       const res = await http()
-        .post('/api/auth/logout')
+        .post('/api/v1/auth/logout')
         .set('authorization', bearer)
         .expect(201);
 
@@ -491,21 +493,21 @@ describe('Gateway (e2e)', () => {
       expect(auth.send).toHaveBeenCalledWith(AUTH_PATTERNS.LOGOUT, 'session-1');
     });
 
-    it('POST /api/auth/logout rejects an unauthenticated request with 401', async () => {
-      await http().post('/api/auth/logout').expect(401);
+    it('POST /api/v1/auth/logout rejects an unauthenticated request with 401', async () => {
+      await http().post('/api/v1/auth/logout').expect(401);
 
       expect(auth.send).not.toHaveBeenCalled();
     });
   });
 
   describe('users (whoami)', () => {
-    it('GET /api/users/me returns the current user', async () => {
+    it('GET /api/v1/users/me returns the current user', async () => {
       const user = makePublicUser();
       auth.send.mockReturnValue(of(user));
       users.send.mockReturnValue(of(user));
 
       const res = await http()
-        .get('/api/users/me')
+        .get('/api/v1/users/me')
         .set('authorization', bearer)
         .expect(200);
 
@@ -516,18 +518,18 @@ describe('Gateway (e2e)', () => {
       );
     });
 
-    it('GET /api/users/me responds 404 when the user no longer exists', async () => {
+    it('GET /api/v1/users/me responds 404 when the user no longer exists', async () => {
       auth.send.mockReturnValue(of({ id: 'alice' }));
       users.send.mockReturnValue(of(null));
 
       await http()
-        .get('/api/users/me')
+        .get('/api/v1/users/me')
         .set('authorization', bearer)
         .expect(404);
     });
 
-    it('GET /api/users/me rejects an unauthenticated request with 401', async () => {
-      await http().get('/api/users/me').expect(401);
+    it('GET /api/v1/users/me rejects an unauthenticated request with 401', async () => {
+      await http().get('/api/v1/users/me').expect(401);
 
       expect(users.send).not.toHaveBeenCalled();
     });

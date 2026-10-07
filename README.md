@@ -68,6 +68,7 @@ pnpm run docker:up        # поднимет все сервисы, БД, Redis 
 ### Локально (dev)
 
 ```bash
+cp .env.example .env      # для первого запуска; задайте JWT_SECRET
 corepack enable
 pnpm install
 pnpm run docker:db        # только инфраструктура (БД + Redis + Kafka)
@@ -76,21 +77,21 @@ pnpm run start:dev        # все сервисы через concurrently (synch
 
 После запуска:
 
-- REST API: `http://localhost:3000/api`
+- REST API: `http://localhost:3000/api/v1`
 - Code First docs: `http://localhost:3000/api/docs/products`
 - Schema First docs: `http://localhost:3000/api/docs/orders`
-- Healthcheck: `http://localhost:3000/api/health`
+- Healthcheck: `http://localhost:3000/api/v1/health`
 
 ## Основные эндпоинты
 
-| Метод/путь                                                     | Доступ                            | Описание             |
-| -------------------------------------------------------------- | --------------------------------- | -------------------- |
-| `POST /api/auth/register` \| `login` \| `refresh`              | публично                          | получение токенов    |
-| `POST /api/auth/logout`                                        | JWT                               | завершение сессии    |
-| `GET/POST/PATCH/DELETE /api/product`                           | чтение - публично, запись - admin | CRUD продуктов       |
-| `GET/POST/PATCH/DELETE /api/cart`                              | JWT                               | управление корзиной  |
-| `POST/GET /api/orders`, `.../pay`, `.../capture`, `.../cancel` | JWT                               | заказы и оплата      |
-| `PATCH /api/orders/:id/status`                                 | admin                             | смена статуса заказа |
+| Метод/путь                                                        | Доступ                            | Описание             |
+| ----------------------------------------------------------------- | --------------------------------- | -------------------- |
+| `POST /api/v1/auth/register` \| `login` \| `refresh`              | публично                          | получение токенов    |
+| `POST /api/v1/auth/logout`                                        | JWT                               | завершение сессии    |
+| `GET/POST/PATCH/DELETE /api/v1/product`                           | чтение - публично, запись - admin | CRUD продуктов       |
+| `GET/POST/PATCH/DELETE /api/v1/cart`                              | JWT                               | управление корзиной  |
+| `POST/GET /api/v1/orders`, `.../pay`, `.../capture`, `.../cancel` | JWT                               | заказы и оплата      |
+| `PATCH /api/v1/orders/:id/status`                                 | admin                             | смена статуса заказа |
 
 ## Миграции
 

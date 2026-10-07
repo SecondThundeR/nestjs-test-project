@@ -13,6 +13,7 @@ import {
   type INestApplication,
   StandardSchemaSerializerInterceptor,
   StandardSchemaValidationPipe,
+  VersioningType,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
@@ -85,6 +86,7 @@ describe('Orders API contract (Schema First)', () => {
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api');
+    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
     app.useGlobalPipes(new StandardSchemaValidationPipe({ transform: true }));
     app.useGlobalInterceptors(
       new StandardSchemaSerializerInterceptor(app.get(Reflector)),
@@ -104,11 +106,11 @@ describe('Orders API contract (Schema First)', () => {
 
   const http = () => request(app.getHttpServer() as Server);
 
-  it('POST /api/orders satisfies the contract', async () => {
+  it('POST /api/v1/orders satisfies the contract', async () => {
     orders.send.mockReturnValue(of(order));
 
     const res = await http()
-      .post('/api/orders')
+      .post('/api/v1/orders')
       .set('authorization', bearer)
       .send({ shippingAddress: order.shippingAddress })
       .expect(201);
@@ -116,34 +118,34 @@ describe('Orders API contract (Schema First)', () => {
     expect(res).toSatisfyApiSpec();
   });
 
-  it('GET /api/orders satisfies the contract', async () => {
+  it('GET /api/v1/orders satisfies the contract', async () => {
     orders.send.mockReturnValue(of([order]));
 
     const res = await http()
-      .get('/api/orders')
+      .get('/api/v1/orders')
       .set('authorization', bearer)
       .expect(200);
 
     expect(res).toSatisfyApiSpec();
   });
 
-  it('GET /api/orders/{id} satisfies the contract', async () => {
+  it('GET /api/v1/orders/{id} satisfies the contract', async () => {
     orders.send.mockReturnValue(of(order));
 
     const res = await http()
-      .get(`/api/orders/${order.id}`)
+      .get(`/api/v1/orders/${order.id}`)
       .set('authorization', bearer)
       .expect(200);
 
     expect(res).toSatisfyApiSpec();
   });
 
-  it('PATCH /api/orders/{id}/status satisfies the contract', async () => {
+  it('PATCH /api/v1/orders/{id}/status satisfies the contract', async () => {
     auth.send.mockReturnValue(of({ id: 'admin' }));
     orders.send.mockReturnValue(of({ ...order, status: OrderStatus.SHIPPED }));
 
     const res = await http()
-      .patch(`/api/orders/${order.id}/status`)
+      .patch(`/api/v1/orders/${order.id}/status`)
       .set('authorization', adminBearer)
       .send({ status: OrderStatus.SHIPPED })
       .expect(200);
@@ -151,54 +153,54 @@ describe('Orders API contract (Schema First)', () => {
     expect(res).toSatisfyApiSpec();
   });
 
-  it('PATCH /api/orders/{id}/cancel satisfies the contract', async () => {
+  it('PATCH /api/v1/orders/{id}/cancel satisfies the contract', async () => {
     orders.send.mockReturnValue(
       of({ ...order, status: OrderStatus.CANCELLED }),
     );
 
     const res = await http()
-      .patch(`/api/orders/${order.id}/cancel`)
+      .patch(`/api/v1/orders/${order.id}/cancel`)
       .set('authorization', bearer)
       .expect(200);
 
     expect(res).toSatisfyApiSpec();
   });
 
-  it('POST /api/orders/{id}/pay satisfies the contract', async () => {
+  it('POST /api/v1/orders/{id}/pay satisfies the contract', async () => {
     orders.send.mockReturnValue(of(payment));
 
     const res = await http()
-      .post(`/api/orders/${order.id}/pay`)
+      .post(`/api/v1/orders/${order.id}/pay`)
       .set('authorization', bearer)
       .expect(201);
 
     expect(res).toSatisfyApiSpec();
   });
 
-  it('POST /api/orders/{id}/capture satisfies the contract', async () => {
+  it('POST /api/v1/orders/{id}/capture satisfies the contract', async () => {
     orders.send.mockReturnValue(of({ ...order, status: OrderStatus.PAID }));
 
     const res = await http()
-      .post(`/api/orders/${order.id}/capture`)
+      .post(`/api/v1/orders/${order.id}/capture`)
       .set('authorization', bearer)
       .expect(201);
 
     expect(res).toSatisfyApiSpec();
   });
 
-  it('GET /api/orders/payment/return satisfies the contract', async () => {
+  it('GET /api/v1/orders/payment/return satisfies the contract', async () => {
     orders.send.mockReturnValue(of({ ...order, status: OrderStatus.PAID }));
 
     const res = await http()
-      .get('/api/orders/payment/return')
+      .get('/api/v1/orders/payment/return')
       .query({ token: 'pp-1' })
       .expect(200);
 
     expect(res).toSatisfyApiSpec();
   });
 
-  it('GET /api/orders/payment/cancel satisfies the contract', async () => {
-    const res = await http().get('/api/orders/payment/cancel').expect(200);
+  it('GET /api/v1/orders/payment/cancel satisfies the contract', async () => {
+    const res = await http().get('/api/v1/orders/payment/cancel').expect(200);
 
     expect(res).toSatisfyApiSpec();
   });
