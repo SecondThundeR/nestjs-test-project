@@ -1,4 +1,4 @@
-FROM node:26.3.0-alpine AS builder
+FROM node:24.22.0-alpine AS builder
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++
@@ -10,7 +10,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm run build && pnpm prune --prod
 
-FROM node:26.3.0-alpine AS runner
+FROM node:24.22.0-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
