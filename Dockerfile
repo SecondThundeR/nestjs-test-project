@@ -1,8 +1,8 @@
-FROM node:24.22.0-alpine AS builder
+FROM node:24.22.2-alpine AS builder
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++
-RUN npm install --global pnpm@12.14.0
+RUN npm install --global pnpm@12.16.1
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
@@ -10,7 +10,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm run build && pnpm prune --prod
 
-FROM node:24.22.0-alpine AS runner
+FROM node:24.22.2-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
