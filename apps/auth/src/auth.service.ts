@@ -19,7 +19,7 @@ import { type ClientProxy, RpcException } from '@nestjs/microservices';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
-import { IsNull, LessThan, Not, Repository } from 'typeorm';
+import { IsNull, LessThan, MoreThan, Not, Repository } from 'typeorm';
 
 import { SessionEntity } from './entities/session.entity.js';
 
@@ -107,9 +107,25 @@ export class AuthService {
     }
 
     const refreshToken = this.generateRefreshToken();
-    session.refreshTokenHash = hashRefreshToken(refreshToken);
-    session.expiresAt = this.nextExpiresAt();
-    await this.sessions.save(session);
+    // Compare-and-swap consumes the old token exactly once, even across replicas.
+    // Checking revocation here also fences a concurrent logout.
+    const patch = {
+      refreshTokenHash: hashRefreshToken(refreshToken),
+      expiresAt: this.nextExpiresAt(),
+    };
+    const { affected } = await this.sessions.update(
+      {
+        id: session.id,
+        refreshTokenHash: session.refreshTokenHash,
+        revokedAt: IsNull(),
+        expiresAt: MoreThan(new Date().toISOString()),
+      },
+      patch,
+    );
+    if (!affected) {
+      throw RpcErrors.unauthorized('Invalid or expired refresh token');
+    }
+    Object.assign(session, patch);
     await this.cache.del(sessionCacheKey(session.id));
 
     this.logger.log(`Rotated session ${session.id} for user ${user.id}`);
@@ -117,14 +133,12 @@ export class AuthService {
   }
 
   async logout(sessionId: string): Promise<LogoutResult> {
-    const session = await this.sessions.findOneBy({ id: sessionId });
-
-    if (session && this.isSessionActive(session)) {
-      session.revokedAt = new Date().toISOString();
-      await this.sessions.save(session);
-      this.logger.log(`Revoked session ${session.id}`);
-    } else {
-      this.logger.debug(`Logout for missing or inactive session ${sessionId}`);
+    const { affected } = await this.sessions.update(
+      { id: sessionId, revokedAt: IsNull() },
+      { revokedAt: new Date().toISOString() },
+    );
+    if (affected) {
+      this.logger.log(`Revoked session ${sessionId}`);
     }
 
     await this.cache.del(sessionCacheKey(sessionId));

@@ -69,10 +69,9 @@ describe('CartService', () => {
   });
 
   it('does not publish when persistence fails', async () => {
-    vi.spyOn(
-      dataSource.getRepository(CartSchema),
-      'save',
-    ).mockRejectedValueOnce(new Error('database unavailable'));
+    vi.spyOn(dataSource.manager, 'transaction').mockRejectedValueOnce(
+      new Error('database unavailable'),
+    );
     await expect(service.clear(USER)).rejects.toThrow('database unavailable');
     expect(events.updated).not.toHaveBeenCalled();
   });

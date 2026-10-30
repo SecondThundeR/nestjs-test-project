@@ -10,7 +10,7 @@ import { JwtModule, JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { of, throwError } from 'rxjs';
+import { from, of, throwError } from 'rxjs';
 import type { DataSource, Repository } from 'typeorm';
 import type { Mock } from 'vitest';
 
@@ -274,6 +274,39 @@ describe('AuthService', () => {
       await expect(
         service.refresh({ refreshToken: refreshed.refreshToken }),
       ).resolves.toBeDefined();
+    });
+
+    it('allows only one concurrent refresh with the same token', async () => {
+      const { refreshToken } = await register();
+      const results = await Promise.allSettled([
+        service.refresh({ refreshToken }),
+        service.refresh({ refreshToken }),
+      ]);
+      expect(
+        results.filter((result) => result.status === 'fulfilled'),
+      ).toHaveLength(1);
+      expect(
+        results.filter((result) => result.status === 'rejected'),
+      ).toHaveLength(1);
+      const winner = results.find((result) => result.status === 'fulfilled');
+      if (winner?.status !== 'fulfilled')
+        throw new Error('No successful refresh');
+      await expect(
+        service.refresh({ refreshToken: winner.value.refreshToken }),
+      ).resolves.toBeDefined();
+    });
+
+    it('rejects refresh if logout happens during the user lookup', async () => {
+      const { accessToken, refreshToken } = await register();
+      const { sid } = jwtService.verify<JwtPayload>(accessToken);
+      users.send.mockImplementationOnce(() =>
+        from(service.logout(sid).then(() => USER)),
+      );
+      await expect(service.refresh({ refreshToken })).rejects.toThrow(
+        RpcException,
+      );
+      const session = await sessions.findOneByOrFail({ id: sid });
+      expect(session.revokedAt).not.toBeNull();
     });
 
     it('slides the session expiration forward on refresh', async () => {

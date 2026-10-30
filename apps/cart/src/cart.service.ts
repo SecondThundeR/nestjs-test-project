@@ -43,38 +43,35 @@ export class CartService {
     );
 
     const product = await this.fetchProduct(dto.productId);
-    const cart =
-      (await this.carts.findOneBy({ userId })) ?? this.createNewCart(userId);
-
-    const existing = cart.items.find(
-      ({ productId }) => productId === product.id,
-    );
-    const nextQuantity = (existing?.quantity ?? 0) + dto.quantity;
-
-    if (product.stock < nextQuantity) {
-      this.logger.warn(
-        `Rejected add for user ${userId}: only ${product.stock} of "${product.name}" in stock (requested ${nextQuantity})`,
+    return this.mutateCart(userId, true, (cart) => {
+      const existing = cart.items.find(
+        ({ productId }) => productId === product.id,
       );
-      throw RpcErrors.badRequest(
-        `Only ${product.stock} units of "${product.name}" are in stock`,
-      );
-    }
+      const nextQuantity = (existing?.quantity ?? 0) + dto.quantity;
 
-    if (existing) {
-      existing.quantity = nextQuantity;
-      existing.price = product.price;
-      existing.name = product.name;
-    } else {
-      cart.items.push({
-        productId: product.id,
-        name: product.name,
-        price: product.price,
-        quantity: dto.quantity,
-        subtotal: 0,
-      });
-    }
+      if (product.stock < nextQuantity) {
+        this.logger.warn(
+          `Rejected add for user ${userId}: only ${product.stock} of "${product.name}" in stock (requested ${nextQuantity})`,
+        );
+        throw RpcErrors.badRequest(
+          `Only ${product.stock} units of "${product.name}" are in stock`,
+        );
+      }
 
-    return this.persistCart(cart);
+      if (existing) {
+        existing.quantity = nextQuantity;
+        existing.price = product.price;
+        existing.name = product.name;
+      } else {
+        cart.items.push({
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: dto.quantity,
+          subtotal: 0,
+        });
+      }
+    });
   }
 
   async updateItem(
@@ -86,54 +83,43 @@ export class CartService {
       `User ${userId} setting product ${productId} quantity to ${quantity}`,
     );
 
-    const cart = await this.carts.findOneBy({ userId });
-    const item = cart?.items.find((item) => item.productId === productId);
-    if (!cart || !item) {
-      this.logger.warn(
-        `User ${userId} cannot update item ${productId}: not in cart`,
-      );
-      throw RpcErrors.notFound(`Item ${productId} is not in the cart`);
-    }
-
     if (quantity === 0) {
-      return this.removeItem(userId, productId);
+      return this.mutateCart(userId, false, (cart) => {
+        if (!cart.items.some((item) => item.productId === productId)) {
+          throw RpcErrors.notFound(`Item ${productId} is not in the cart`);
+        }
+        cart.items = cart.items.filter((item) => item.productId !== productId);
+      });
     }
-
     const product = await this.fetchProduct(productId);
-    if (product.stock < quantity) {
-      this.logger.warn(
-        `Rejected update for user ${userId}: only ${product.stock} of "${product.name}" in stock (requested ${quantity})`,
-      );
-      throw RpcErrors.badRequest(
-        `Only ${product.stock} units of "${product.name}" are in stock`,
-      );
-    }
-
-    item.quantity = quantity;
-    item.price = product.price;
-    return this.persistCart(cart);
+    return this.mutateCart(userId, false, (cart) => {
+      const item = cart.items.find((item) => item.productId === productId);
+      if (!item) {
+        throw RpcErrors.notFound(`Item ${productId} is not in the cart`);
+      }
+      if (product.stock < quantity) {
+        throw RpcErrors.badRequest(
+          `Only ${product.stock} units of "${product.name}" are in stock`,
+        );
+      }
+      item.quantity = quantity;
+      item.price = product.price;
+    });
   }
 
   async removeItem(userId: string, productId: string): Promise<Cart> {
     this.logger.log(`User ${userId} removing product ${productId} from cart`);
 
-    const cart = await this.carts.findOneBy({ userId });
-    if (!cart) {
-      this.logger.warn(`User ${userId} cannot remove item: cart is empty`);
-      throw RpcErrors.notFound('Cart is empty');
-    }
-
-    cart.items = cart.items.filter((item) => item.productId !== productId);
-    return this.persistCart(cart);
+    return this.mutateCart(userId, false, (cart) => {
+      cart.items = cart.items.filter((item) => item.productId !== productId);
+    });
   }
 
   async clear(userId: string): Promise<Cart> {
     this.logger.log(`Clearing cart for user ${userId}`);
-    const cart =
-      (await this.carts.findOneBy({ userId })) ?? this.createNewCart(userId);
-    cart.items = [];
-    cart.total = 0;
-    return this.persistCart(cart);
+    return this.mutateCart(userId, true, (cart) => {
+      cart.items = [];
+    });
   }
 
   private async fetchProduct(productId: string): Promise<Product> {
@@ -150,14 +136,33 @@ export class CartService {
     return product;
   }
 
-  private async persistCart(cart: Cart): Promise<Cart> {
-    this.recalculateCartPrices(cart);
-    const saved = await this.carts.save(cart);
+  private async mutateCart(
+    userId: string,
+    create: boolean,
+    mutate: (cart: Cart) => void,
+  ): Promise<Cart> {
+    const saved = await this.carts.manager.transaction(async (manager) => {
+      const carts = manager.getRepository(CartSchema);
+      if (create) {
+        // Concurrent first writes must lock the same row too.
+        await carts
+          .createQueryBuilder()
+          .insert()
+          .values({ userId, items: [], total: 0 })
+          .orIgnore()
+          .execute();
+      }
+      const cart = await carts.findOne({
+        where: { userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!cart) throw RpcErrors.notFound('Cart is empty');
+      mutate(cart);
+      this.recalculateCartPrices(cart);
+      return carts.save(cart);
+    });
+    // Publish only after COMMIT succeeds.
     this.events.updated(saved.userId);
-
-    this.logger.debug(
-      `Persisted cart for user ${cart.userId}: ${cart.items.length} item(s), total ${cart.total}`,
-    );
     return saved;
   }
 
@@ -169,10 +174,6 @@ export class CartService {
       total += item.subtotal;
     }
     cart.total = roundPrice(total);
-  }
-
-  private createNewCart(userId: string): Cart {
-    return this.carts.create({ userId, items: [], total: 0 });
   }
 
   private createEmptyCart(userId: string): Cart {
