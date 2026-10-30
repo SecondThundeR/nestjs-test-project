@@ -1,3 +1,4 @@
+import { StockIntentEntity } from './../src/entities/stock-intent.entity.js';
 import { KAFKA_CLIENT, SERVICE_NAMES } from '@app/config';
 import {
   type Cart,
@@ -86,7 +87,10 @@ describe('Orders microservice (e2e)', () => {
   };
 
   beforeAll(async () => {
-    const dataSource = await createInMemoryDataSource([OrderEntity]);
+    const dataSource = await createInMemoryDataSource([
+      OrderEntity,
+      StockIntentEntity,
+    ]);
 
     const moduleFixture = await Test.createTestingModule({
       imports: [OrdersModule],

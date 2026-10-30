@@ -1,3 +1,4 @@
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppCacheModule } from '@app/cache';
 import {
   buildDatabaseOptions,
@@ -20,6 +21,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { ordersEventHandlers } from './cqrs/event-handlers.js';
 import { ordersHandlers } from './cqrs/handlers.js';
+import { StockIntentEntity } from './entities/stock-intent.entity.js';
 import { OrderEntity } from './entities/order.entity.js';
 import { ordersMigrations } from './migrations/index.js';
 import { OrdersController } from './orders.controller.js';
@@ -28,6 +30,7 @@ import { PaypalService } from './paypal/paypal.service.js';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [servicesConfig, cacheConfig, paypalConfig, kafkaConfig],
@@ -44,7 +47,11 @@ import { PaypalService } from './paypal/paypal.service.js';
     }),
     TypeOrmModule.forRootAsync({
       useFactory: () =>
-        buildDatabaseOptions('ORDERS', [OrderEntity], ordersMigrations),
+        buildDatabaseOptions(
+          'ORDERS',
+          [OrderEntity, StockIntentEntity],
+          ordersMigrations,
+        ),
     }),
     TypeOrmModule.forFeature([OrderEntity]),
     ClientsModule.registerAsync([

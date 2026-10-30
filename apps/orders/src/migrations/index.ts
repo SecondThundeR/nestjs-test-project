@@ -1,3 +1,4 @@
+import { AddStockIntents1793534400000 } from './1793534400000-AddStockIntents.js';
 import type { DataSourceOptions } from 'typeorm';
 
 import { InitOrders1781193213309 } from './1781193213309-InitOrders.js';
@@ -8,4 +9,5 @@ export const ordersMigrations: NonNullable<DataSourceOptions['migrations']> = [
   InitOrders1781193213309,
   AddOrderPaymentId1781481600000,
   AddOrderCaptureId1781568000000,
+  AddStockIntents1793534400000,
 ];

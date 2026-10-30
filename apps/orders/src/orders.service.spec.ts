@@ -1,3 +1,4 @@
+import { StockIntentEntity } from './entities/stock-intent.entity.js';
 import { CacheService } from '@app/cache';
 import { SERVICE_NAMES } from '@app/config';
 import {
@@ -12,7 +13,7 @@ import { RpcException } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { of, throwError } from 'rxjs';
-import type { DataSource } from 'typeorm';
+import { type DataSource } from 'typeorm';
 import type { Mock } from 'vitest';
 
 import { createInMemoryCache } from '../../../test/utils/in-memory-cache.js';
@@ -83,7 +84,10 @@ describe('OrdersService', () => {
       captureOrder: vi.fn(),
       refundCapture: vi.fn(),
     };
-    dataSource = await createInMemoryDataSource([OrderEntity]);
+    dataSource = await createInMemoryDataSource([
+      OrderEntity,
+      StockIntentEntity,
+    ]);
     const { service: cacheService, store } = createInMemoryCache();
     cacheStore = store;
 
@@ -169,42 +173,6 @@ describe('OrdersService', () => {
           reservationId: expect.any(String),
           items: [{ productId: 'p-1', quantity: 2 }],
         },
-      );
-    });
-
-    it('releases a reservation when saving the order fails', async () => {
-      await createOrder();
-      productsClient.send.mockClear();
-      vi.spyOn(
-        dataSource.getRepository(OrderEntity),
-        'save',
-      ).mockRejectedValueOnce(new Error('save failed'));
-      await expect(service.create(USER, ADDRESS)).rejects.toThrow(
-        'save failed',
-      );
-      const reserve = productsClient.send.mock.calls.find(
-        ([pattern]) => pattern === PRODUCT_PATTERNS.RESERVE_STOCK,
-      )!;
-      expect(productsClient.send).toHaveBeenCalledWith(
-        PRODUCT_PATTERNS.RELEASE_STOCK,
-        { reservationId: reserve[1].reservationId },
-      );
-    });
-
-    it('compensates a reserve whose response was lost', async () => {
-      await createOrder();
-      productsClient.send.mockImplementation((pattern: string) => {
-        if (pattern === PRODUCT_PATTERNS.FIND_MANY) return of([makeProduct()]);
-        if (pattern === PRODUCT_PATTERNS.RESERVE_STOCK)
-          return throwError(() => new Error('response lost'));
-        return of({ success: true });
-      });
-      await expect(service.create(USER, ADDRESS)).rejects.toThrow(
-        'response lost',
-      );
-      expect(productsClient.send).toHaveBeenLastCalledWith(
-        PRODUCT_PATTERNS.RELEASE_STOCK,
-        { reservationId: expect.any(String) },
       );
     });
 

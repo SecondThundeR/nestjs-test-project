@@ -17,9 +17,11 @@ import { roundPrice } from '@app/utils';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
+import { Cron } from '@nestjs/schedule';
 import { Repository } from 'typeorm';
 
+import { StockIntentEntity } from './entities/stock-intent.entity.js';
 import { OrderEntity } from './entities/order.entity.js';
 import {
   PAYPAL_ALREADY_REFUNDED_STATUS,
@@ -99,36 +101,50 @@ export class OrdersService {
     const id = randomUUID();
     const total = items.reduce((sum, { subtotal }) => sum + subtotal, 0);
     let order: OrderEntity;
-    // Releasing by the same ID is safe even if the reserve response was lost.
+    // Persist recovery work BEFORE contacting Products. The row lock fences
+    // recovery against an in-flight creator, including across Orders replicas.
+    await this.orders.manager.getRepository(StockIntentEntity).insert({ id });
     try {
-      await firstValueFrom(
-        this.productsClient.send(PRODUCT_PATTERNS.RESERVE_STOCK, {
-          reservationId: id,
-          items: items.map(({ productId, quantity }) => ({
-            productId,
-            quantity,
-          })),
-        }),
-      );
+      order = await this.orders.manager.transaction(async (manager) => {
+        const intents = manager.getRepository(StockIntentEntity);
+        await intents.findOneOrFail({
+          where: { id },
+          lock: { mode: 'pessimistic_write' },
+        });
+        await firstValueFrom(
+          this.productsClient
+            .send(PRODUCT_PATTERNS.RESERVE_STOCK, {
+              reservationId: id,
+              items: items.map(({ productId, quantity }) => ({
+                productId,
+                quantity,
+              })),
+            })
+            .pipe(timeout(5000)),
+        );
+        const saved = await manager.getRepository(OrderEntity).save(
+          manager.getRepository(OrderEntity).create({
+            id,
+            userId,
+            items,
+            total: roundPrice(total),
+            status: OrderStatus.PENDING,
+            shippingAddress,
+          }),
+        );
+        await intents.delete(id);
+        return saved;
+      });
     } catch (error) {
-      await this.releaseStock(id);
-      throw error;
-    }
-    try {
-      order = await this.orders.save(
-        this.orders.create({
-          id,
-          userId,
-          items,
-          total: roundPrice(total),
-          status: OrderStatus.PENDING,
-          shippingAddress,
-        }),
-      );
-    } catch (error) {
-      // A save error can follow a successful commit; never release a saved order.
-      const persisted = await this.orders.findOneBy({ id });
-      if (!persisted) await this.releaseStock(id);
+      // If COMMIT succeeded but its acknowledgement was lost, the intent was
+      // deleted atomically with the order: recovery will not release its stock.
+      try {
+        await this.recoverStockIntent(id);
+      } catch (recoveryError) {
+        this.logger.error(
+          `Stock recovery deferred for ${id}: ${String(recoveryError)}`,
+        );
+      }
       throw error;
     }
 
@@ -138,6 +154,42 @@ export class OrdersService {
       `Created order ${order.id} for user ${userId}: ${items.length} item(s), total ${order.total}`,
     );
     return order;
+  }
+
+  @Cron('*/30 * * * * *', { waitForCompletion: true })
+  async recoverStock(): Promise<void> {
+    try {
+      const intents = await this.orders.manager
+        .getRepository(StockIntentEntity)
+        .find({ order: { createdAt: 'ASC', id: 'ASC' }, take: 100 });
+      for (const intent of intents) {
+        try {
+          await this.recoverStockIntent(intent.id);
+        } catch (error) {
+          this.logger.error(
+            `Stock recovery deferred for ${intent.id}: ${String(error)}`,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Stock recovery scan failed: ${String(error)}`);
+    }
+  }
+
+  private async recoverStockIntent(id: string): Promise<void> {
+    await this.orders.manager.transaction(async (manager) => {
+      const intents = manager.getRepository(StockIntentEntity);
+      const intent = await intents.findOne({
+        where: { id },
+        lock: { mode: 'pessimistic_write', onLocked: 'skip_locked' },
+      });
+      if (!intent) return;
+      // Defensive check for records from manual recovery or older deployments.
+      if (!(await manager.getRepository(OrderEntity).existsBy({ id }))) {
+        await this.releaseStock(id);
+      }
+      await intents.delete(id);
+    });
   }
 
   async findAll(userId?: string): Promise<OrderEntity[]> {
@@ -445,17 +497,19 @@ export class OrdersService {
     legacyItems?: OrderItem[],
   ): Promise<void> {
     await firstValueFrom(
-      this.productsClient.send(PRODUCT_PATTERNS.RELEASE_STOCK, {
-        reservationId: id,
-        ...(legacyItems
-          ? {
-              legacyItems: legacyItems.map(({ productId, quantity }) => ({
-                productId,
-                quantity,
-              })),
-            }
-          : {}),
-      }),
+      this.productsClient
+        .send(PRODUCT_PATTERNS.RELEASE_STOCK, {
+          reservationId: id,
+          ...(legacyItems
+            ? {
+                legacyItems: legacyItems.map(({ productId, quantity }) => ({
+                  productId,
+                  quantity,
+                })),
+              }
+            : {}),
+        })
+        .pipe(timeout(5000)),
     );
   }
 }
