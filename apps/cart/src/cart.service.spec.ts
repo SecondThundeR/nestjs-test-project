@@ -1,5 +1,5 @@
 import { SERVICE_NAMES } from '@app/config';
-import { type Product, PRODUCT_PATTERNS } from '@app/domains';
+import { cartSchema, type Product, PRODUCT_PATTERNS } from '@app/domains';
 import { RpcException } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -271,6 +271,36 @@ describe('CartService', () => {
   });
 
   describe('clear', () => {
+    it('creates and persists an empty cart when none exists', async () => {
+      const cart = await service.clear(USER);
+
+      expect(cart).toMatchObject({ userId: USER, items: [], total: 0 });
+      expect(cartSchema.safeParse(cart).success).toBe(true);
+      await expect(service.get(USER)).resolves.toStrictEqual(cart);
+    });
+
+    it('returns a valid cart after two consecutive clears', async () => {
+      const first = await service.clear(USER);
+      const second = await service.clear(USER);
+
+      expect(cartSchema.safeParse(first).success).toBe(true);
+      expect(cartSchema.safeParse(second).success).toBe(true);
+      expect(second).toMatchObject({ userId: USER, items: [], total: 0 });
+      await expect(service.get(USER)).resolves.toStrictEqual(second);
+    });
+
+    it('returns a valid cart when clearing after the last item is removed', async () => {
+      productsClient.send.mockReturnValue(of(makeProduct()));
+      await service.addItem(USER, { productId: 'p-1', quantity: 1 });
+      await service.removeItem(USER, 'p-1');
+
+      const cart = await service.clear(USER);
+
+      expect(cartSchema.safeParse(cart).success).toBe(true);
+      expect(cart).toMatchObject({ userId: USER, items: [], total: 0 });
+      await expect(service.get(USER)).resolves.toStrictEqual(cart);
+    });
+
     it('empties an existing cart', async () => {
       productsClient.send.mockReturnValue(of(makeProduct()));
       await service.addItem(USER, { productId: 'p-1', quantity: 1 });

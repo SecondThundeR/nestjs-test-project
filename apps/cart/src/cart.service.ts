@@ -127,9 +127,13 @@ export class CartService {
     return this.persistCart(cart);
   }
 
-  clear(userId: string): Promise<Cart> {
+  async clear(userId: string): Promise<Cart> {
     this.logger.log(`Clearing cart for user ${userId}`);
-    return this.persistCart(this.createNewCart(userId));
+    const cart =
+      (await this.carts.findOneBy({ userId })) ?? this.createNewCart(userId);
+    cart.items = [];
+    cart.total = 0;
+    return this.persistCart(cart);
   }
 
   private async fetchProduct(productId: string): Promise<Product> {
