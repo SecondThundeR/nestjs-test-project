@@ -1,3 +1,6 @@
+overrides:
+  'openapi-validator>axios': '0.34.0'
+
 allowBuilds:
   '@nestjs/core': true
   '@parcel/watcher': true
