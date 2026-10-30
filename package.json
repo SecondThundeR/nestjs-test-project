@@ -12,6 +12,7 @@
     "pnpm": ">=12.16.1"
   },
   "scripts": {
+    "admin:create": "pnpm run typeorm:build && node dist/typeorm/apps/users/src/scripts/create-admin.cli.js",
     "docker:up": "docker compose up -d --build",
     "docker:db": "docker compose up -d --wait products-db cache cart-db orders-db users-db auth-db kafka",
     "docker:down": "docker compose down",

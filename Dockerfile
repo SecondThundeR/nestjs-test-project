@@ -8,7 +8,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN pnpm run build && pnpm prune --prod
+RUN pnpm run build && pnpm run typeorm:build && pnpm prune --prod
 
 FROM node:24.22.2-alpine AS runner
 WORKDIR /app

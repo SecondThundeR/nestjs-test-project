@@ -12,6 +12,7 @@
     "apps/*/src/entities/**/*.ts",
     "apps/*/src/schemas/**/*.ts",
     "apps/*/src/migrations/**/*.ts",
+    "apps/users/src/scripts/**/*.ts",
     "libs/config/src/**/*.ts",
     "libs/domains/src/**/*.ts"
   ],

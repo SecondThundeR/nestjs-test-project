@@ -1,12 +1,13 @@
 # Bruno SSE walkthrough
 
 1. Start the backend from the repository root: `pnpm docker:up`.
-2. In Bruno, choose **Open Collection** and select this `bruno` folder.
-3. Select the **Local** environment. Update its email/password if the default seeded admin credentials were changed.
-4. Send **01 Login**. Its script captures the access/refresh tokens as runtime variables, without saving them to collection files.
-5. Send **02 Watch SSE** and leave it running. Expect `ready`, then `heartbeat` about every 15 seconds.
-6. In other request tabs, send **03–11** in order. These requests clear the current cart, create test data, place and cancel an order, and delete the test product. Product/order IDs are captured automatically.
-7. Send **12 Logout** last to verify that the stream closes. **13 Reject unauthenticated SSE** independently checks HTTP 401.
+2. In Bruno, choose **Open Collection** and select this `bruno-sse` folder.
+3. Create a dedicated test administrator using `pnpm admin:create` from the repository root with `ADMIN_EMAIL`, `ADMIN_NAME`, and `ADMIN_PASSWORD` set. For Docker, follow the [project instructions](../README.md#авторизация). No default administrator is created automatically.
+4. Copy `environments/Local.bru` to `environments/Private.bru`. Set `email` and `password` in the copy to your administrator credentials, adjust `baseUrl` if needed, and select **Private** in Bruno. `Private.bru` is ignored by Git; `Local.bru` is a credential-free template. Do not commit passwords.
+5. Send **01 Login**. Its script captures the access/refresh tokens as runtime variables, without saving them to collection files.
+6. Send **02 Watch SSE** and leave it running. Expect `ready`, then `heartbeat` about every 15 seconds.
+7. In other request tabs, send **03–11** in order. These requests clear the current cart, create test data, place and cancel an order, and delete the test product. Product/order IDs are captured automatically.
+8. Send **12 Logout** last to verify that the stream closes. **13 Reject unauthenticated SSE** independently checks HTTP 401.
 
 The stream uses `Accept: text/event-stream` and disables its request timeout.
 Bruno displays notifications in the response panel; use **Cancel** to stop it.

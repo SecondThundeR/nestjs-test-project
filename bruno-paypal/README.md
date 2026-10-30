@@ -1,6 +1,10 @@
 # PayPal sandbox: ручные сценарии
 
-Откройте эту папку как отдельную коллекцию, выберите Local. Нужны запущенные сервисы и PAYPAL_CLIENT_ID/PAYPAL_CLIENT_SECRET sandbox. Настройте PAYPAL_RETURN_URL и PAYPAL_CANCEL_URL с `/api/v1/orders/payment/return` и `/api/v1/orders/payment/cancel`.
+Откройте эту папку как отдельную коллекцию, выберите **Private**. Нужны запущенные сервисы и PAYPAL_CLIENT_ID/PAYPAL_CLIENT_SECRET sandbox. Настройте PAYPAL_RETURN_URL и PAYPAL_CANCEL_URL с `/api/v1/orders/payment/return` и `/api/v1/orders/payment/cancel`.
+
+Перед запуском создайте тестового администратора через `pnpm admin:create` из корня проекта, задав `ADMIN_EMAIL`, `ADMIN_NAME`, `ADMIN_PASSWORD` (для Docker см. [инструкцию проекта](../README.md#авторизация)). Автоматического администратора больше нет.
+
+Скопируйте `environments/Local.bru` в `environments/Private.bru` и заполните в копии `email` и `password` созданного администратора. При необходимости измените `baseUrl`. `Private.bru` исключён из Git; шаблон `Local.bru` не содержит реквизитов. Не сохраняйте пароли в отслеживаемых файлах.
 
 Не запускайте всю коллекцию Runner: между запросами требуется действие покупателя, а доставка и возврат — альтернативные ветки.
 
