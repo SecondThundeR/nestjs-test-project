@@ -240,17 +240,46 @@ describe('PaypalService', () => {
     });
   });
 
+  it('uses the same idempotency key when retrying a refund', async () => {
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url.endsWith('/v1/oauth2/token')
+          ? tokenResponse()
+          : jsonResponse({ id: 'ref-1', status: 'COMPLETED' }),
+      ),
+    );
+    await service.refundCapture('cap-1');
+    await service.refundCapture('cap-1');
+    const calls = fetchMock.mock.calls.filter(([url]) =>
+      String(url).endsWith('/refund'),
+    );
+    expect(calls).toHaveLength(2);
+    const headers = calls.map(
+      ([, options]) =>
+        (options as RequestInit).headers as Record<string, string>,
+    );
+    expect(headers[0]['PayPal-Request-Id']).toHaveLength(38);
+    expect(headers[0]['PayPal-Request-Id']).toBe(
+      headers[1]['PayPal-Request-Id'],
+    );
+  });
+
   describe('captureOrder', () => {
     it('captures the PayPal order and returns its status and capture id', async () => {
-      fetchMock.mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(
-        jsonResponse({
-          id: 'pp-1',
-          status: 'COMPLETED',
-          purchase_units: [
-            { payments: { captures: [{ id: 'cap-1', status: 'COMPLETED' }] } },
-          ],
-        }),
-      );
+      fetchMock
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce(jsonResponse({ id: 'pp-1', status: 'APPROVED' }))
+        .mockResolvedValueOnce(
+          jsonResponse({
+            id: 'pp-1',
+            status: 'COMPLETED',
+            purchase_units: [
+              {
+                payments: { captures: [{ id: 'cap-1', status: 'COMPLETED' }] },
+              },
+            ],
+          }),
+        );
 
       await expect(service.captureOrder('pp-1')).resolves.toEqual({
         id: 'pp-1',
@@ -261,6 +290,26 @@ describe('PaypalService', () => {
       expect(fetchMock).toHaveBeenCalledWith(
         `${API_URL}/v2/checkout/orders/pp-1/capture`,
         expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    it('reconciles an already captured order without another capture POST', async () => {
+      fetchMock.mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(
+        jsonResponse({
+          id: 'pp-1',
+          status: 'COMPLETED',
+          purchase_units: [
+            { payments: { captures: [{ id: 'cap-1', status: 'COMPLETED' }] } },
+          ],
+        }),
+      );
+      await expect(service.captureOrder('pp-1')).resolves.toMatchObject({
+        captureId: 'cap-1',
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock).toHaveBeenLastCalledWith(
+        `${API_URL}/v2/checkout/orders/pp-1`,
+        expect.objectContaining({ method: 'GET' }),
       );
     });
 

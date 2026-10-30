@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { type PaypalConfig, paypalConfig } from '@app/config';
 import { RpcErrors } from '@app/filters';
 import { Inject, Injectable, Logger } from '@nestjs/common';
@@ -97,6 +98,12 @@ export class PaypalService {
   async captureOrder(paypalOrderId: string): Promise<PaypalOrder> {
     this.logger.log(`Capturing PayPal order ${paypalOrderId}`);
 
+    // Reconcile a capture whose response or local COMMIT may have been lost.
+    const current = await this.request<PaypalOrderResponse>(
+      'GET',
+      `/v2/checkout/orders/${paypalOrderId}`,
+    );
+    if (current.status === 'COMPLETED') return this.toPaypalOrder(current);
     const response = await this.request<PaypalOrderResponse>(
       'POST',
       `/v2/checkout/orders/${paypalOrderId}/capture`,
@@ -174,7 +181,16 @@ export class PaypalService {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        ...(method === 'POST'
+          ? {
+              'PayPal-Request-Id': createHash('sha256')
+                .update(path + JSON.stringify(body ?? null))
+                .digest('hex')
+                .slice(0, 38),
+            }
+          : {}),
       },
+      signal: AbortSignal.timeout(10_000),
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   }
@@ -220,6 +236,7 @@ export class PaypalService {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: 'grant_type=client_credentials',
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!response.ok) {

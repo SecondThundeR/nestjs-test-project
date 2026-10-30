@@ -1,3 +1,4 @@
+import { OrderOperationEntity } from './entities/order-operation.entity.js';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppCacheModule } from '@app/cache';
 import {
@@ -49,7 +50,7 @@ import { PaypalService } from './paypal/paypal.service.js';
       useFactory: () =>
         buildDatabaseOptions(
           'ORDERS',
-          [OrderEntity, StockIntentEntity],
+          [OrderEntity, StockIntentEntity, OrderOperationEntity],
           ordersMigrations,
         ),
     }),

@@ -1,3 +1,4 @@
+import { OrderOperationEntity } from './entities/order-operation.entity.js';
 import 'reflect-metadata';
 
 import { config as loadEnv } from 'dotenv';
@@ -13,7 +14,7 @@ loadEnv();
 export default new DataSource(
   buildDataSourceOptions(
     'ORDERS',
-    [OrderEntity, StockIntentEntity],
+    [OrderEntity, StockIntentEntity, OrderOperationEntity],
     ordersMigrations,
   ),
 );

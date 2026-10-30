@@ -1,3 +1,4 @@
+import { OrderOperationEntity } from './entities/order-operation.entity.js';
 import { StockIntentEntity } from './entities/stock-intent.entity.js';
 import { CacheService } from '@app/cache';
 import { SERVICE_NAMES } from '@app/config';
@@ -87,6 +88,7 @@ describe('OrdersService', () => {
     dataSource = await createInMemoryDataSource([
       OrderEntity,
       StockIntentEntity,
+      OrderOperationEntity,
     ]);
     const { service: cacheService, store } = createInMemoryCache();
     cacheStore = store;
@@ -348,41 +350,27 @@ describe('OrdersService', () => {
       ).rejects.toThrow(RpcException);
     });
 
-    it('throws a conflict when the order is modified concurrently', async () => {
+    it('blocks shipping while a refund is pending', async () => {
       const order = await createOrder();
       await payAndCapture(order.id);
-      vi.spyOn(
-        dataSource.getRepository(OrderEntity),
-        'update',
-      ).mockResolvedValue({ affected: 0, raw: [], generatedMaps: [] });
-
-      const error: unknown = await service
-        .updateStatus(order.id, OrderStatus.SHIPPED)
-        .catch((e: unknown) => e);
-
-      expect(error).toBeInstanceOf(RpcException);
-      expect((error as RpcException).getError()).toMatchObject({
-        statusCode: 409,
-      });
+      paypal.refundCapture.mockRejectedValue(new Error('offline'));
+      await expect(service.cancel(order.id)).rejects.toThrow('offline');
+      await expect(
+        service.updateStatus(order.id, OrderStatus.SHIPPED),
+      ).rejects.toThrow(RpcException);
+      await expect(
+        dataSource.getRepository(OrderEntity).findOneByOrFail({ id: order.id }),
+      ).resolves.toMatchObject({ status: OrderStatus.PAID });
     });
 
-    it('throws not found when the order disappears mid-transition', async () => {
+    it('rejects a cached order that disappeared before transition', async () => {
       const order = await createOrder();
       await payAndCapture(order.id);
       await service.findOne(order.id);
-      vi.spyOn(
-        dataSource.getRepository(OrderEntity),
-        'findOneBy',
-      ).mockResolvedValue(null);
-
-      const error: unknown = await service
-        .updateStatus(order.id, OrderStatus.SHIPPED)
-        .catch((e: unknown) => e);
-
-      expect(error).toBeInstanceOf(RpcException);
-      expect((error as RpcException).getError()).toMatchObject({
-        statusCode: 404,
-      });
+      await dataSource.getRepository(OrderEntity).delete(order.id);
+      await expect(
+        service.updateStatus(order.id, OrderStatus.SHIPPED),
+      ).rejects.toThrow(RpcException);
     });
   });
 
@@ -509,36 +497,37 @@ describe('OrdersService', () => {
       );
     });
 
-    it('refunds the charge when the order changes mid-capture', async () => {
+    it('blocks cancellation while capture is pending', async () => {
       const order = await createPaidForOrder();
-      productsClient.send.mockImplementation(() => of(makeProduct()));
       paypal.captureOrder.mockImplementation(async () => {
-        await service.cancel(order.id);
+        await expect(service.cancel(order.id)).rejects.toThrow(RpcException);
         return makePaypalCapture();
       });
-      paypal.refundCapture.mockResolvedValue(makePaypalRefund());
-
-      await expect(service.capturePayment(order.id)).rejects.toBeInstanceOf(
-        RpcException,
-      );
-      expect(paypal.refundCapture).toHaveBeenCalledWith('cap-1');
-      await expect(service.findOne(order.id)).resolves.toMatchObject({
-        status: OrderStatus.CANCELLED,
+      await expect(service.capturePayment(order.id)).resolves.toMatchObject({
+        status: OrderStatus.PAID,
       });
+      expect(paypal.refundCapture).not.toHaveBeenCalled();
     });
 
-    it('does not refund a conflicting capture that has no capture id', async () => {
+    it('recovers a capture after a lost response', async () => {
       const order = await createPaidForOrder();
-      productsClient.send.mockImplementation(() => of(makeProduct()));
-      paypal.captureOrder.mockImplementation(async () => {
-        await service.cancel(order.id);
-        return makePaypalCapture({ captureId: null });
-      });
-
-      await expect(service.capturePayment(order.id)).rejects.toBeInstanceOf(
-        RpcException,
+      paypal.captureOrder.mockRejectedValueOnce(new Error('response lost'));
+      await expect(service.capturePayment(order.id)).rejects.toThrow(
+        'response lost',
       );
-      expect(paypal.refundCapture).not.toHaveBeenCalled();
+      expect(
+        await dataSource
+          .getRepository(OrderOperationEntity)
+          .findOneBy({ id: order.id }),
+      ).toMatchObject({ kind: 'capture' });
+      paypal.captureOrder.mockResolvedValue(makePaypalCapture());
+      await service.recoverOperations();
+      await expect(service.findOne(order.id)).resolves.toMatchObject({
+        status: OrderStatus.PAID,
+      });
+      expect(await dataSource.getRepository(OrderOperationEntity).count()).toBe(
+        0,
+      );
     });
   });
 
@@ -704,24 +693,24 @@ describe('OrdersService', () => {
       );
     });
 
-    it('throws a conflict when the order is modified concurrently', async () => {
+    it('recovers stock release without another cancellation request', async () => {
       const order = await createOrder();
-      vi.spyOn(
-        dataSource.getRepository(OrderEntity),
-        'update',
-      ).mockResolvedValue({ affected: 0, raw: [], generatedMaps: [] });
-
-      const error: unknown = await service
-        .cancel(order.id)
-        .catch((e: unknown) => e);
-
-      expect(error).toBeInstanceOf(RpcException);
-      expect((error as RpcException).getError()).toMatchObject({
-        statusCode: 409,
-      });
-      expect(productsClient.send).not.toHaveBeenCalledWith(
-        PRODUCT_PATTERNS.FIND_ONE,
-        expect.anything(),
+      productsClient.send.mockReturnValueOnce(
+        throwError(() => new Error('offline')),
+      );
+      await expect(service.cancel(order.id)).rejects.toThrow('offline');
+      expect(
+        await dataSource.getRepository(OrderEntity).findOneBy({ id: order.id }),
+      ).toMatchObject({ status: OrderStatus.CANCELLED });
+      expect(
+        await dataSource
+          .getRepository(OrderOperationEntity)
+          .findOneBy({ id: order.id }),
+      ).toMatchObject({ kind: 'release' });
+      productsClient.send.mockReturnValue(of({ success: true }));
+      await service.recoverOperations();
+      expect(await dataSource.getRepository(OrderOperationEntity).count()).toBe(
+        0,
       );
     });
   });

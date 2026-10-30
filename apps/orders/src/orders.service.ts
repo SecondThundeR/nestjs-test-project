@@ -1,3 +1,6 @@
+import { EventBus } from '@nestjs/cqrs';
+import { OrderPaidEvent, OrderCancelledEvent } from './cqrs/events.js';
+import { OrderOperationEntity } from './entities/order-operation.entity.js';
 import { randomUUID } from 'node:crypto';
 
 import { CacheService } from '@app/cache';
@@ -14,12 +17,12 @@ import {
 } from '@app/domains';
 import { RpcErrors } from '@app/filters';
 import { roundPrice } from '@app/utils';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { firstValueFrom, timeout } from 'rxjs';
 import { Cron } from '@nestjs/schedule';
-import { Repository } from 'typeorm';
+import { LessThanOrEqual, Repository } from 'typeorm';
 
 import { StockIntentEntity } from './entities/stock-intent.entity.js';
 import { OrderEntity } from './entities/order.entity.js';
@@ -66,6 +69,7 @@ export class OrdersService {
     @Inject(SERVICE_NAMES.CART) private readonly cartClient: ClientProxy,
     private readonly cache: CacheService,
     private readonly paypal: PaypalService,
+    @Optional() private readonly eventBus?: EventBus,
   ) {}
 
   async create(userId: string, shippingAddress: string): Promise<OrderEntity> {
@@ -309,58 +313,9 @@ export class OrdersService {
   async capturePayment(id: string, userId?: string): Promise<OrderEntity> {
     this.logger.log(`Capturing PayPal payment for order ${id}`);
 
-    const order = await this.findOne(id, userId);
-    if (order.status === OrderStatus.PAID) {
-      this.logger.debug(`Order ${id} is already paid`);
-      return order;
-    }
-
-    if (order.status !== OrderStatus.PENDING) {
-      this.logger.warn(
-        `Order ${id} is ${order.status} and cannot capture a payment`,
-      );
-      throw RpcErrors.badRequest(
-        `Only a ${OrderStatus.PENDING} order can capture a payment, order ${id} is ${order.status}`,
-      );
-    }
-
-    if (!order.paymentId) {
-      this.logger.warn(`Order ${id} has no PayPal payment to capture`);
-      throw RpcErrors.badRequest(
-        `Order ${id} has no payment to capture, start a payment first`,
-      );
-    }
-
-    const payment = await this.paypal.captureOrder(order.paymentId);
-    if (payment.status !== PAYPAL_COMPLETED_STATUS) {
-      this.logger.warn(
-        `PayPal payment ${order.paymentId} for order ${id} is not completed: ${payment.status}`,
-      );
-      throw RpcErrors.badRequest(
-        `PayPal payment is not completed, its status is ${payment.status}`,
-      );
-    }
-
-    const updated = await this.transition(id, OrderStatus.PENDING, {
-      status: OrderStatus.PAID,
-      captureId: payment.captureId ?? null,
-    });
-    if (!updated) {
-      this.logger.warn(
-        `Order ${id} changed while its payment was captured, refunding`,
-      );
-      if (payment.captureId) {
-        await this.paypal.refundCapture(payment.captureId);
-      }
-      throw RpcErrors.conflict(
-        `Order ${id} changed while capturing the payment, the charge was refunded`,
-      );
-    }
-
-    this.logger.log(
-      `Order ${id} paid with PayPal payment ${order.paymentId} (total ${order.total})`,
-    );
-    return updated;
+    await this.startOperation(id, 'capture', userId);
+    await this.processOperation(id);
+    return this.orders.findOneByOrFail({ id });
   }
 
   async captureByPaymentId(paymentId: string): Promise<OrderEntity> {
@@ -376,41 +331,144 @@ export class OrdersService {
   async cancel(id: string, userId?: string): Promise<OrderEntity> {
     this.logger.log(`Cancelling order ${id}`);
 
-    const order = await this.findOne(id, userId);
-    if (order.status === OrderStatus.CANCELLED) {
-      this.logger.debug(`Order ${id} is already cancelled`);
-      await this.releaseStock(order.id, order.items);
+    await this.startOperation(id, 'cancel', userId);
+    // Refund and stock release are separate durable steps.
+    await this.processOperation(id);
+    await this.processOperation(id);
+    return this.orders.findOneByOrFail({ id });
+  }
+
+  private async startOperation(
+    id: string,
+    action: 'capture' | 'cancel',
+    userId?: string,
+  ): Promise<void> {
+    const order = await this.orders.manager.transaction(async (manager) => {
+      const orders = manager.getRepository(OrderEntity);
+      const order = await orders.findOne({
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!order || (userId !== undefined && order.userId !== userId)) {
+        throw RpcErrors.notFound(`Order ${id} not found`);
+      }
+      const operations = manager.getRepository(OrderOperationEntity);
+      const existing = await operations.findOneBy({ id });
+      if (existing) {
+        const same =
+          action === 'capture'
+            ? existing.kind === 'capture'
+            : existing.kind === 'refund' || existing.kind === 'release';
+        if (!same)
+          throw RpcErrors.conflict('Another order operation is pending');
+        return order;
+      }
+      if (action === 'capture') {
+        if (order.status === OrderStatus.PAID) return order;
+        if (order.status !== OrderStatus.PENDING || !order.paymentId) {
+          throw RpcErrors.badRequest('Order is not pending or has no payment');
+        }
+        await operations.insert({ id, kind: 'capture' });
+      } else {
+        if (
+          order.status === OrderStatus.SHIPPED ||
+          order.status === OrderStatus.DELIVERED
+        ) {
+          throw RpcErrors.badRequest('Cannot cancel an order that has shipped');
+        }
+        if (order.status === OrderStatus.PAID) {
+          if (!order.captureId)
+            throw RpcErrors.badRequest('Order has no capture to refund');
+          await operations.insert({ id, kind: 'refund' });
+        } else {
+          // Status and the release job commit together.
+          await orders.update(id, { status: OrderStatus.CANCELLED });
+          order.status = OrderStatus.CANCELLED;
+          await operations.insert({ id, kind: 'release' });
+        }
+      }
       return order;
-    }
-
-    if (
-      order.status === OrderStatus.SHIPPED ||
-      order.status === OrderStatus.DELIVERED
-    ) {
-      this.logger.warn(`Cannot cancel order ${id}: already ${order.status}`);
-      throw RpcErrors.badRequest(
-        `Cannot cancel an order that is already ${order.status}`,
-      );
-    }
-
-    if (order.status === OrderStatus.PAID) {
-      await this.refundPayment(order);
-    }
-
-    const updated = await this.transition(id, order.status, {
-      status: OrderStatus.CANCELLED,
     });
-    if (!updated) {
-      this.logger.warn(`Order ${id} changed while it was being cancelled`);
-      throw RpcErrors.conflict(
-        `Order ${id} changed while it was being cancelled, try again`,
-      );
+    await this.invalidate(order);
+  }
+
+  @Cron('*/30 * * * * *', { waitForCompletion: true })
+  async recoverOperations(): Promise<void> {
+    try {
+      const operations = await this.orders.manager
+        .getRepository(OrderOperationEntity)
+        .find({
+          where: { nextAttemptAt: LessThanOrEqual(new Date()) },
+          order: { nextAttemptAt: 'ASC', id: 'ASC' },
+          take: 100,
+        });
+      for (const operation of operations) {
+        try {
+          await this.processOperation(operation.id);
+          const order = await this.orders.findOneByOrFail({ id: operation.id });
+          if (
+            operation.kind === 'capture' &&
+            order.status === OrderStatus.PAID
+          ) {
+            this.eventBus?.publish(new OrderPaidEvent(order));
+          } else if (order.status === OrderStatus.CANCELLED) {
+            this.eventBus?.publish(new OrderCancelledEvent(order));
+          }
+        } catch (error) {
+          await this.orders.manager
+            .getRepository(OrderOperationEntity)
+            .update(operation.id, {
+              nextAttemptAt: new Date(Date.now() + 30_000),
+            });
+          this.logger.error(
+            `Order operation deferred for ${operation.id}: ${String(error)}`,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Order operation scan failed: ${String(error)}`);
     }
+  }
 
-    await this.releaseStock(order.id, order.items);
-
-    this.logger.log(`Order ${id} cancelled and stock restored`);
-    return updated;
+  private async processOperation(id: string): Promise<void> {
+    const updated = await this.orders.manager.transaction(async (manager) => {
+      // All writers lock orders first. Holding this lock fences workers across
+      // replicas; the previously committed job survives any external-call failure.
+      const orders = manager.getRepository(OrderEntity);
+      const order = await orders.findOne({
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!order) throw RpcErrors.notFound(`Order ${id} not found`);
+      const operations = manager.getRepository(OrderOperationEntity);
+      const operation = await operations.findOneBy({ id });
+      if (!operation) return order;
+      if (operation.kind === 'capture') {
+        const payment = await this.paypal.captureOrder(order.paymentId!);
+        if (payment.status !== PAYPAL_COMPLETED_STATUS) {
+          throw RpcErrors.badRequest(
+            `PayPal payment is not completed: ${payment.status}`,
+          );
+        }
+        await orders.update(id, {
+          status: OrderStatus.PAID,
+          captureId: payment.captureId,
+        });
+        order.status = OrderStatus.PAID;
+        order.captureId = payment.captureId;
+        await operations.delete(id);
+      } else if (operation.kind === 'refund') {
+        await this.refundPayment(order);
+        await orders.update(id, { status: OrderStatus.CANCELLED });
+        order.status = OrderStatus.CANCELLED;
+        await operations.update(id, { kind: 'release' });
+      } else {
+        await this.releaseStock(id, order.items);
+        await operations.delete(id);
+      }
+      return order;
+    });
+    await this.invalidate(updated);
   }
 
   private async refundPayment(order: OrderEntity): Promise<void> {
@@ -443,17 +501,21 @@ export class OrdersService {
     from: OrderStatus,
     patch: Partial<OrderEntity>,
   ): Promise<OrderEntity | null> {
-    // Updates order by criteria (id, status) with partial patch object
-    // If affected is 0, it means that that order was changed concurrently
-    const result = await this.orders.update({ id, status: from }, patch);
-    if (!result.affected) {
-      return null;
-    }
-
-    const updated = await this.orders.findOneBy({ id });
-    if (!updated) {
-      throw RpcErrors.notFound(`Order ${id} not found`);
-    }
+    const updated = await this.orders.manager.transaction(async (manager) => {
+      const orders = manager.getRepository(OrderEntity);
+      const order = await orders.findOne({
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!order) throw RpcErrors.notFound(`Order ${id} not found`);
+      if (order.status !== from) return null;
+      if (await manager.getRepository(OrderOperationEntity).existsBy({ id })) {
+        throw RpcErrors.conflict('Another order operation is pending');
+      }
+      await orders.update(id, patch);
+      return orders.findOneByOrFail({ id });
+    });
+    if (!updated) return null;
 
     await this.invalidate(updated);
     return updated;

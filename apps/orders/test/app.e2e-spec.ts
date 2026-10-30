@@ -1,3 +1,4 @@
+import { OrderOperationEntity } from '../src/entities/order-operation.entity.js';
 import { StockIntentEntity } from './../src/entities/stock-intent.entity.js';
 import { KAFKA_CLIENT, SERVICE_NAMES } from '@app/config';
 import {
@@ -90,6 +91,7 @@ describe('Orders microservice (e2e)', () => {
     const dataSource = await createInMemoryDataSource([
       OrderEntity,
       StockIntentEntity,
+      OrderOperationEntity,
     ]);
 
     const moduleFixture = await Test.createTestingModule({
