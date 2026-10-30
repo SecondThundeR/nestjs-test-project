@@ -1,0 +1,25 @@
+meta {
+  name: Get order
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/orders/{{orderId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Fetch the current state after receiving an order refresh hint.
+}

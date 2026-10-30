@@ -1,0 +1,16 @@
+meta {
+  name: No token 10
+  type: http
+  seq: 19
+}
+
+delete {
+  url: {{baseUrl}}/cart
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 401", function () { expect(res.getStatus()).to.equal(401); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(401); expect(res.getBody().message).to.exist; });
+}

@@ -1,0 +1,33 @@
+meta {
+  name: Add cart item
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/cart/items
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "productId": "{{productId}}",
+    "quantity": 1
+  }
+}
+
+tests {
+  test("HTTP 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  Expect cart.updated.
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Other user read
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{baseUrl}}/orders/{{orderId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{otherToken}}
+}
+
+tests {
+  test("HTTP 404", function () { expect(res.getStatus()).to.equal(404); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(404); expect(res.getBody().message).to.exist; });
+}

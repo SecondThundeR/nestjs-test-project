@@ -1,0 +1,27 @@
+meta {
+  name: Invalid login email
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "bad",
+    "password": "x"
+  }
+}
+
+tests {
+  test("HTTP 400", function () { expect(res.getStatus()).to.equal(400); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(400); expect(res.getBody().message).to.exist; });
+}

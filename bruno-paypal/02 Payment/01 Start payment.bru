@@ -1,0 +1,24 @@
+meta {
+  name: Start payment
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/orders/{{orderId}}/pay
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+}
+
+script:post-response {
+  if (res.getStatus() === 201) { bru.setVar("paymentId", res.getBody().paymentId); bru.setVar("approveUrl", res.getBody().approveUrl); }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.paymentId).to.be.a("string"); expect(b.approveUrl).to.be.a("string"); });
+}

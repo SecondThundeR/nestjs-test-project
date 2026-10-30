@@ -1,0 +1,24 @@
+meta {
+  name: Empty patch accepted
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/product/{{productId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+}

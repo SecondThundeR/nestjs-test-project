@@ -1,0 +1,32 @@
+meta {
+  name: Create zero price defaults
+  type: http
+  seq: 34
+}
+
+post {
+  url: {{baseUrl}}/product
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Free product",
+    "price": 0
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) { bru.setVar("zeroProductId", res.getBody().id); }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.stock).to.equal(0); expect(b.description).to.equal(""); });
+}

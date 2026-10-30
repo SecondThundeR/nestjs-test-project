@@ -1,0 +1,31 @@
+meta {
+  name: Admin login
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{email}}",
+    "password": "{{password}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) { bru.setVar("adminToken", res.getBody().accessToken); bru.setVar("adminRefresh", res.getBody().refreshToken); bru.setVar("adminId", res.getBody().user.id); }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.user.role).to.equal("admin"); });
+}

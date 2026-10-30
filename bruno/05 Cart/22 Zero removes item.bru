@@ -1,0 +1,27 @@
+meta {
+  name: Zero removes item
+  type: http
+  seq: 22
+}
+
+patch {
+  url: {{baseUrl}}/cart/items/{{productId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "quantity": 0
+  }
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.items).to.deep.equal([]); expect(b.total).to.equal(0); });
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Other user pay
+  type: http
+  seq: 19
+}
+
+post {
+  url: {{baseUrl}}/orders/{{orderId}}/pay
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{otherToken}}
+}
+
+tests {
+  test("HTTP 404", function () { expect(res.getStatus()).to.equal(404); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(404); expect(res.getBody().message).to.exist; });
+}

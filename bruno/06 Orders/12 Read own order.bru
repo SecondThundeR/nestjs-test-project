@@ -1,0 +1,20 @@
+meta {
+  name: Read own order
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/orders/{{orderId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{userToken}}
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.id).to.equal(bru.getVar("orderId")); });
+}

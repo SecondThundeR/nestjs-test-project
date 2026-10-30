@@ -1,0 +1,28 @@
+meta {
+  name: Update product
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/product/{{productId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Updated Bruno product",
+    "price": 10.25
+  }
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.price).to.equal(10.25); expect(b.name).to.equal("Updated Bruno product"); });
+}

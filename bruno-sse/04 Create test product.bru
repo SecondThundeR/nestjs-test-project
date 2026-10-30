@@ -1,0 +1,40 @@
+meta {
+  name: Create test product
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/product
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Bruno SSE test product",
+    "price": 10,
+    "stock": 20
+  }
+}
+
+script:post-response {
+  if (res.getStatus() >= 200 && res.getStatus() < 300) {
+    bru.setVar("productId", res.getBody().id);
+  }
+}
+
+tests {
+  test("HTTP 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  Requires admin. Captures productId. Product creation itself does not emit SSE notifications.
+}

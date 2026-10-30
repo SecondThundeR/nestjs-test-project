@@ -1,0 +1,28 @@
+meta {
+  name: Malformed token 03
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/product
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer invalid.jwt.token
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Test",
+    "price": 1
+  }
+}
+
+tests {
+  test("HTTP 401", function () { expect(res.getStatus()).to.equal(401); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(401); expect(res.getBody().message).to.exist; });
+}

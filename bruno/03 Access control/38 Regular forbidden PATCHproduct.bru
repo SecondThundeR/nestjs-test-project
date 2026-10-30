@@ -1,0 +1,25 @@
+meta {
+  name: Regular forbidden PATCHproduct
+  type: http
+  seq: 38
+}
+
+patch {
+  url: {{baseUrl}}/product/{{missingId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("HTTP 403", function () { expect(res.getStatus()).to.equal(403); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(403); expect(res.getBody().message).to.exist; });
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Revoked access user
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/users/me
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{userToken}}
+}
+
+tests {
+  test("HTTP 401", function () { expect(res.getStatus()).to.equal(401); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(401); expect(res.getBody().message).to.exist; });
+}

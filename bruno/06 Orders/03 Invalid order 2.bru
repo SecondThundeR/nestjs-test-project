@@ -1,0 +1,27 @@
+meta {
+  name: Invalid order 2
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "shippingAddress": "abc"
+  }
+}
+
+tests {
+  test("HTTP 400", function () { expect(res.getStatus()).to.equal(400); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(400); expect(res.getBody().message).to.exist; });
+}

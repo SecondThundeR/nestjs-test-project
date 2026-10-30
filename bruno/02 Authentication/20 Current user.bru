@@ -1,0 +1,20 @@
+meta {
+  name: Current user
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{baseUrl}}/users/me
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{userToken}}
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.id).to.equal(bru.getVar("userId")); expect(b).not.to.have.property("passwordHash"); expect(b).not.to.have.property("password"); });
+}

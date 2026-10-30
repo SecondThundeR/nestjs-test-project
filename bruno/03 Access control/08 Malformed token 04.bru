@@ -1,0 +1,25 @@
+meta {
+  name: Malformed token 04
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/product/{{missingId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer invalid.jwt.token
+  Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("HTTP 401", function () { expect(res.getStatus()).to.equal(401); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(401); expect(res.getBody().message).to.exist; });
+}

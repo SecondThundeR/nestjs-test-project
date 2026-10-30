@@ -1,0 +1,20 @@
+meta {
+  name: Regular forbidden DELETEproduct
+  type: http
+  seq: 39
+}
+
+delete {
+  url: {{baseUrl}}/product/{{missingId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{userToken}}
+}
+
+tests {
+  test("HTTP 403", function () { expect(res.getStatus()).to.equal(403); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(403); expect(res.getBody().message).to.exist; });
+}

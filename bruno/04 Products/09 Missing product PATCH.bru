@@ -1,0 +1,25 @@
+meta {
+  name: Missing product PATCH
+  type: http
+  seq: 9
+}
+
+patch {
+  url: {{baseUrl}}/product/{{missingId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("HTTP 404", function () { expect(res.getStatus()).to.equal(404); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(404); expect(res.getBody().message).to.exist; });
+}

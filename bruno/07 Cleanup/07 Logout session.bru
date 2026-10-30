@@ -1,0 +1,20 @@
+meta {
+  name: Logout session
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/auth/logout
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{sessionToken}}
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.success).to.equal(true); });
+}

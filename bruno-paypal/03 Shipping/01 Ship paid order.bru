@@ -1,0 +1,27 @@
+meta {
+  name: Ship paid order
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/orders/{{orderId}}/status
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "status": "SHIPPED"
+  }
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.status).to.equal("SHIPPED"); });
+}

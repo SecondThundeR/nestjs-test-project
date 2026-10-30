@@ -1,0 +1,27 @@
+meta {
+  name: Unknown user
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "missing-{{otherEmail}}",
+    "password": "x"
+  }
+}
+
+tests {
+  test("HTTP 401", function () { expect(res.getStatus()).to.equal(401); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(401); expect(res.getBody().message).to.exist; });
+}

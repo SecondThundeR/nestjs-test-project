@@ -1,0 +1,27 @@
+meta {
+  name: Add item
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/cart/items
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "productId": "{{productId}}",
+    "quantity": 1
+  }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+}

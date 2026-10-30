@@ -1,0 +1,27 @@
+meta {
+  name: Missing item update
+  type: http
+  seq: 20
+}
+
+patch {
+  url: {{baseUrl}}/cart/items/{{missingId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "quantity": 1
+  }
+}
+
+tests {
+  test("HTTP 404", function () { expect(res.getStatus()).to.equal(404); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(404); expect(res.getBody().message).to.exist; });
+}

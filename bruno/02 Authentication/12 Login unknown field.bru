@@ -1,0 +1,28 @@
+meta {
+  name: Login unknown field
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{userEmail}}",
+    "password": "x",
+    "extra": 1
+  }
+}
+
+tests {
+  test("HTTP 400", function () { expect(res.getStatus()).to.equal(400); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(400); expect(res.getBody().message).to.exist; });
+}

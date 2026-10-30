@@ -1,0 +1,16 @@
+meta {
+  name: Deleted missing zeroProductId
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/product/{{zeroProductId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 404", function () { expect(res.getStatus()).to.equal(404); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(404); expect(res.getBody().message).to.exist; });
+}

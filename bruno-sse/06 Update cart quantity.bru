@@ -1,0 +1,32 @@
+meta {
+  name: Update cart quantity
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/cart/items/{{productId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "quantity": 2
+  }
+}
+
+tests {
+  test("HTTP 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Expect cart.updated.
+}

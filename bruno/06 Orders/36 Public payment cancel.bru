@@ -1,0 +1,16 @@
+meta {
+  name: Public payment cancel
+  type: http
+  seq: 36
+}
+
+get {
+  url: {{baseUrl}}/orders/payment/cancel
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.message).to.be.a("string"); });
+}

@@ -1,0 +1,26 @@
+meta {
+  name: No token 14
+  type: http
+  seq: 27
+}
+
+patch {
+  url: {{baseUrl}}/orders/{{missingId}}/status
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "status": "SHIPPED"
+  }
+}
+
+tests {
+  test("HTTP 401", function () { expect(res.getStatus()).to.equal(401); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(401); expect(res.getBody().message).to.exist; });
+}

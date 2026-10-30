@@ -1,0 +1,32 @@
+meta {
+  name: Register user
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/auth/register
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{userEmail}}",
+    "name": "Bruno user",
+    "password": "{{testPassword}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) { bru.setVar("userToken", res.getBody().accessToken); bru.setVar("userRefresh", res.getBody().refreshToken); bru.setVar("userId", res.getBody().user.id); }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.accessToken).to.be.a("string"); expect(b.refreshToken).to.be.a("string"); expect(b.user).not.to.have.property("passwordHash"); });
+}

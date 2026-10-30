@@ -1,0 +1,27 @@
+meta {
+  name: Invalid price 4 PATCH
+  type: http
+  seq: 24
+}
+
+patch {
+  url: {{baseUrl}}/product/{{productId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "price": null
+  }
+}
+
+tests {
+  test("HTTP 400", function () { expect(res.getStatus()).to.equal(400); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(400); expect(res.getBody().message).to.exist; });
+}

@@ -1,0 +1,28 @@
+meta {
+  name: Invalid name 3 POST
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/product
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": 1,
+    "price": 1
+  }
+}
+
+tests {
+  test("HTTP 400", function () { expect(res.getStatus()).to.equal(400); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(400); expect(res.getBody().message).to.exist; });
+}

@@ -206,3 +206,9 @@ Gateway получает события Kafka и отправляет их то�
 docker compose up -d --wait kafka
 SSE_KAFKA_SMOKE=1 pnpm exec vitest run --config vitest.config.e2e.ts apps/gateway/test/events.e2e-spec.ts
 ```
+
+## Bruno
+
+Полная инструкция по API-сценариям: [bruno/README.md](bruno/README.md).
+Основная коллекция содержит 180 запросов; ручные сценарии находятся в
+[bruno-sse](bruno-sse/README.md) и [bruno-paypal](bruno-paypal/README.md).

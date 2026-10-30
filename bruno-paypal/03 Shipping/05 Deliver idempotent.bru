@@ -1,0 +1,26 @@
+meta {
+  name: Deliver idempotent
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/orders/{{orderId}}/status
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "status": "DELIVERED"
+  }
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+}

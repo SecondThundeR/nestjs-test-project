@@ -1,0 +1,28 @@
+meta {
+  name: Zero quantity
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/cart/items
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "productId": "{{productId}}",
+    "quantity": 0
+  }
+}
+
+tests {
+  test("HTTP 400", function () { expect(res.getStatus()).to.equal(400); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(400); expect(res.getBody().message).to.exist; });
+}

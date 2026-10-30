@@ -1,0 +1,20 @@
+meta {
+  name: Malformed token 17
+  type: http
+  seq: 34
+}
+
+post {
+  url: {{baseUrl}}/orders/{{missingId}}/capture
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer invalid.jwt.token
+}
+
+tests {
+  test("HTTP 401", function () { expect(res.getStatus()).to.equal(401); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(401); expect(res.getBody().message).to.exist; });
+}

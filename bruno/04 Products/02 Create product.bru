@@ -1,0 +1,34 @@
+meta {
+  name: Create product
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/product
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Bruno product",
+    "description": "Regression fixture",
+    "price": 12.34,
+    "stock": 10
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) { bru.setVar("productId", res.getBody().id); }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.price).to.equal(12.34); expect(b.stock).to.equal(10); });
+}

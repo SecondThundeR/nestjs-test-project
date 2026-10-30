@@ -1,0 +1,25 @@
+meta {
+  name: Logout
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/auth/logout
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  Run last. All SSE connections for this session close immediately after successful logout. Other sessions remain connected. Login again and manually resend Watch SSE to reconnect.
+}

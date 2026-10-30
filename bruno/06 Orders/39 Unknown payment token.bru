@@ -1,0 +1,16 @@
+meta {
+  name: Unknown payment token
+  type: http
+  seq: 39
+}
+
+get {
+  url: {{baseUrl}}/orders/payment/return?token=bruno-missing
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 404", function () { expect(res.getStatus()).to.equal(404); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(404); expect(res.getBody().message).to.exist; });
+}

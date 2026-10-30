@@ -1,0 +1,34 @@
+meta {
+  name: Login uppercase email
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{userEmail}}",
+    "password": "{{testPassword}}"
+  }
+}
+
+script:pre-request {
+  req.setBody({email: bru.getVar("userEmail").toUpperCase(), password: bru.getEnvVar("testPassword")});
+}
+
+script:post-response {
+  if (res.getStatus() === 201) { bru.setVar("sessionToken", res.getBody().accessToken); bru.setVar("sessionRefresh", res.getBody().refreshToken); bru.setVar("sessionId", res.getBody().user.id); }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+}

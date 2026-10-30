@@ -1,0 +1,27 @@
+meta {
+  name: Malformed token 12
+  type: http
+  seq: 24
+}
+
+post {
+  url: {{baseUrl}}/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer invalid.jwt.token
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "shippingAddress": "Minsk test street"
+  }
+}
+
+tests {
+  test("HTTP 401", function () { expect(res.getStatus()).to.equal(401); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(401); expect(res.getBody().message).to.exist; });
+}

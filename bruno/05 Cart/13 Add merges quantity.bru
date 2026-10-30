@@ -1,0 +1,28 @@
+meta {
+  name: Add merges quantity
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/cart/items
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "productId": "{{productId}}",
+    "quantity": 1
+  }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.items).to.have.length(1); expect(b.items[0].quantity).to.equal(3); expect(b.total).to.equal(30.75); });
+}

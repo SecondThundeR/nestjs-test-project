@@ -1,0 +1,16 @@
+meta {
+  name: No token 05
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{baseUrl}}/product/{{missingId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 401", function () { expect(res.getStatus()).to.equal(401); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(401); expect(res.getBody().message).to.exist; });
+}

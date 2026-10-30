@@ -1,0 +1,20 @@
+meta {
+  name: Missing order capture
+  type: http
+  seq: 22
+}
+
+post {
+  url: {{baseUrl}}/orders/{{missingId}}/capture
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{userToken}}
+}
+
+tests {
+  test("HTTP 404", function () { expect(res.getStatus()).to.equal(404); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(404); expect(res.getBody().message).to.exist; });
+}

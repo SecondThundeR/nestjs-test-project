@@ -1,0 +1,21 @@
+meta {
+  name: Reject unauthenticated SSE
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/events
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 401", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+docs {
+  Intentionally omits Authorization. Expects HTTP 401 rather than an open stream.
+}

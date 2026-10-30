@@ -1,0 +1,20 @@
+meta {
+  name: New cart
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/cart
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{userToken}}
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.items).to.deep.equal([]); expect(b.total).to.equal(0); });
+}

@@ -1,0 +1,16 @@
+meta {
+  name: Deleted absent from list
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/product
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.some(p => p.id === bru.getVar("productId") || p.id === bru.getVar("zeroProductId"))).to.equal(false); });
+}

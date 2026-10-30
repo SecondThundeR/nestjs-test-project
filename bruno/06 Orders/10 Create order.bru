@@ -1,0 +1,31 @@
+meta {
+  name: Create order
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{userToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "shippingAddress": "Minsk test street"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) { bru.setVar("orderId", res.getBody().id); }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.status).to.equal("PENDING"); expect(b.total).to.equal(20.5); expect(b.userId).to.equal(bru.getVar("userId")); expect(b.items[0].quantity).to.equal(2); });
+}

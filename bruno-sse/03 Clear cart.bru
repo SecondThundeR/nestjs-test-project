@@ -1,0 +1,25 @@
+meta {
+  name: Clear cart
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/cart
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Expect cart.updated in the SSE tab. This clears the current user cart, including any existing items.
+}

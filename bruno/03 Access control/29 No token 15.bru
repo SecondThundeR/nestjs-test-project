@@ -1,0 +1,16 @@
+meta {
+  name: No token 15
+  type: http
+  seq: 29
+}
+
+patch {
+  url: {{baseUrl}}/orders/{{missingId}}/cancel
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 401", function () { expect(res.getStatus()).to.equal(401); });
+  test("Error payload", function () { expect(res.getBody().statusCode).to.equal(401); expect(res.getBody().message).to.exist; });
+}

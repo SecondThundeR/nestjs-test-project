@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "NestJS PayPal sandbox manual",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

@@ -1,0 +1,32 @@
+meta {
+  name: Create product
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/product
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "PayPal Bruno fixture",
+    "price": 1,
+    "stock": 10
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) { bru.setVar("productId", res.getBody().id); }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Capture idempotent
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/orders/{{orderId}}/capture
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+  test("Response contract", function () { const b = res.getBody(); expect(b.status).to.equal("PAID"); });
+}

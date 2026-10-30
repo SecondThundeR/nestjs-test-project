@@ -1,0 +1,33 @@
+meta {
+  name: Rotate refresh
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/auth/refresh
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "refreshToken": "{{sessionRefresh}}"
+  }
+}
+
+script:pre-request {
+  bru.setVar("oldRefresh", bru.getVar("sessionRefresh"));
+}
+
+script:post-response {
+  if (res.getStatus() === 201) { bru.setVar("sessionToken", res.getBody().accessToken); bru.setVar("sessionRefresh", res.getBody().refreshToken); bru.setVar("sessionId", res.getBody().user.id); }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+}

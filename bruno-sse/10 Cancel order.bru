@@ -1,0 +1,25 @@
+meta {
+  name: Cancel order
+  type: http
+  seq: 10
+}
+
+patch {
+  url: {{baseUrl}}/orders/{{orderId}}/cancel
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Expect order.cancelled. Cancels the test order and restores reserved stock; no PayPal setup is needed for this pending order.
+}

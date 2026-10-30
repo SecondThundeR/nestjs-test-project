@@ -1,0 +1,19 @@
+meta {
+  name: Clear admin cart
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/cart
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+}
+
+tests {
+  test("HTTP 200", function () { expect(res.getStatus()).to.equal(200); });
+}

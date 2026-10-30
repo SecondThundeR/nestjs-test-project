@@ -1,0 +1,30 @@
+meta {
+  name: Create order
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{adminToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "shippingAddress": "Bruno sandbox street"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) { bru.setVar("orderId", res.getBody().id); }
+}
+
+tests {
+  test("HTTP 201", function () { expect(res.getStatus()).to.equal(201); });
+}

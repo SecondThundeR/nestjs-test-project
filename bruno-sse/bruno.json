@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "NestJS SSE walkthrough",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
