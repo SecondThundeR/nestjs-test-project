@@ -7,22 +7,28 @@ import {
 } from '@app/domains';
 import { PassportModule } from '@nestjs/passport';
 import { Test } from '@nestjs/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import type { Mock } from 'vitest';
 
+import { EventsService } from '../events/events.service.js';
 import { AuthGatewayController } from './auth.gateway.controller.js';
 
 describe('AuthGatewayController', () => {
   let controller: AuthGatewayController;
+  const events = { closeSession: vi.fn() };
   let auth: { send: Mock };
 
   beforeEach(async () => {
     auth = { send: vi.fn() };
+    events.closeSession.mockClear();
 
     const moduleRef = await Test.createTestingModule({
       imports: [PassportModule.register({ session: false })],
       controllers: [AuthGatewayController],
-      providers: [{ provide: SERVICE_NAMES.AUTH, useValue: auth }],
+      providers: [
+        { provide: SERVICE_NAMES.AUTH, useValue: auth },
+        { provide: EventsService, useValue: events },
+      ],
     }).compile();
 
     controller = moduleRef.get(AuthGatewayController);
@@ -68,5 +74,13 @@ describe('AuthGatewayController', () => {
 
     await expect(controller.logout('session-1')).resolves.toBe(result);
     expect(auth.send).toHaveBeenCalledWith(AUTH_PATTERNS.LOGOUT, 'session-1');
+    expect(events.closeSession).toHaveBeenCalledWith('session-1');
+  });
+  it('keeps streams open if logout fails', async () => {
+    auth.send.mockReturnValue(throwError(() => new Error('auth unavailable')));
+    await expect(controller.logout('session-1')).rejects.toThrow(
+      'auth unavailable',
+    );
+    expect(events.closeSession).not.toHaveBeenCalled();
   });
 });

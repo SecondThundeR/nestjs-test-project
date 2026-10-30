@@ -1,4 +1,4 @@
-import { SERVICE_NAMES } from '@app/config';
+import { KAFKA_CLIENT, SERVICE_NAMES } from '@app/config';
 import { type Cart, CART_PATTERNS, type Product } from '@app/domains';
 import {
   GlobalRpcExceptionFilter,
@@ -51,6 +51,12 @@ describe('Cart microservice (e2e)', () => {
     const moduleFixture = await Test.createTestingModule({
       imports: [CartModule],
     })
+      .overrideProvider(KAFKA_CLIENT)
+      .useValue({
+        connect: vi.fn(),
+        close: vi.fn(),
+        emit: vi.fn(() => of(undefined)),
+      })
       .overrideProvider(getDataSourceToken())
       .useValue(dataSource)
       .overrideProvider(SERVICE_NAMES.PRODUCTS)

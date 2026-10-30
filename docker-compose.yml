@@ -11,6 +11,7 @@ services:
     <<: *app-base
     command: ['node', 'dist/apps/gateway/main.js']
     environment:
+      KAFKA_BROKERS: kafka:9092
       PRODUCTS_HOST: products
       CART_HOST: cart
       ORDERS_HOST: orders
@@ -19,6 +20,7 @@ services:
     ports:
       - '${GATEWAY_PORT:-3000}:${GATEWAY_PORT:-3000}'
     depends_on:
+      - kafka
       - products
       - cart
       - orders

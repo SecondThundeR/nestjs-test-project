@@ -13,6 +13,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 import { Repository } from 'typeorm';
 
+import { CartEventsPublisher } from './cart-events.publisher.js';
+
 import { CartSchema } from './schemas/cart.schema.js';
 
 @Injectable()
@@ -24,6 +26,7 @@ export class CartService {
     private readonly carts: Repository<Cart>,
     @Inject(SERVICE_NAMES.PRODUCTS)
     private readonly productsClient: ClientProxy,
+    private readonly events: CartEventsPublisher,
   ) {}
 
   async get(userId: string): Promise<Cart> {
@@ -126,7 +129,7 @@ export class CartService {
 
   clear(userId: string): Promise<Cart> {
     this.logger.log(`Clearing cart for user ${userId}`);
-    return this.carts.save(this.createNewCart(userId));
+    return this.persistCart(this.createNewCart(userId));
   }
 
   private async fetchProduct(productId: string): Promise<Product> {
@@ -146,6 +149,7 @@ export class CartService {
   private async persistCart(cart: Cart): Promise<Cart> {
     this.recalculateCartPrices(cart);
     const saved = await this.carts.save(cart);
+    this.events.updated(saved.userId);
 
     this.logger.debug(
       `Persisted cart for user ${cart.userId}: ${cart.items.length} item(s), total ${cart.total}`,

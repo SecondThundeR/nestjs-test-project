@@ -8,6 +8,7 @@ import type { DataSource } from 'typeorm';
 import type { Mock } from 'vitest';
 
 import { createInMemoryDataSource } from '../../../test/utils/in-memory-database.js';
+import { CartEventsPublisher } from './cart-events.publisher.js';
 import { CartService } from './cart.service.js';
 import { CartSchema } from './schemas/cart.schema.js';
 
@@ -29,16 +30,19 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
 
 describe('CartService', () => {
   let service: CartService;
+  const events = { updated: vi.fn() };
   let productsClient: { send: Mock };
   let dataSource: DataSource;
 
   beforeEach(async () => {
+    events.updated.mockClear();
     productsClient = { send: vi.fn() };
     dataSource = await createInMemoryDataSource([CartSchema]);
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         CartService,
+        { provide: CartEventsPublisher, useValue: events },
         {
           provide: getRepositoryToken(CartSchema),
           useValue: dataSource.getRepository(CartSchema),
@@ -52,6 +56,25 @@ describe('CartService', () => {
 
   afterEach(async () => {
     await dataSource.destroy();
+  });
+
+  it('publishes after all successful mutation paths, including clearing', async () => {
+    productsClient.send.mockReturnValue(of(makeProduct()));
+    await service.addItem(USER, { productId: 'p-1', quantity: 2 });
+    await service.updateItem(USER, 'p-1', 3);
+    await service.removeItem(USER, 'p-1');
+    await service.clear(USER);
+    expect(events.updated).toHaveBeenCalledTimes(4);
+    expect(events.updated).toHaveBeenLastCalledWith(USER);
+  });
+
+  it('does not publish when persistence fails', async () => {
+    vi.spyOn(
+      dataSource.getRepository(CartSchema),
+      'save',
+    ).mockRejectedValueOnce(new Error('database unavailable'));
+    await expect(service.clear(USER)).rejects.toThrow('database unavailable');
+    expect(events.updated).not.toHaveBeenCalled();
   });
 
   describe('get', () => {

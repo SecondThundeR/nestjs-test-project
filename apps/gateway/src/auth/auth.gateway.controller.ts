@@ -24,11 +24,15 @@ import type { ClientProxy } from '@nestjs/microservices';
 
 import { CurrentSessionId } from '../common/current-user.decorator.js';
 import { JwtAuthGuard } from '../common/jwt-auth.guard.js';
+import { EventsService } from '../events/events.service.js';
 import { rpcSend } from '../common/rpc.util.js';
 
 @Controller('auth')
 export class AuthGatewayController {
-  constructor(@Inject(SERVICE_NAMES.AUTH) private readonly auth: ClientProxy) {}
+  constructor(
+    @Inject(SERVICE_NAMES.AUTH) private readonly auth: ClientProxy,
+    private readonly events: EventsService,
+  ) {}
 
   @Post('register')
   @SerializeOptions({ schema: authResultSchema })
@@ -54,7 +58,13 @@ export class AuthGatewayController {
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @SerializeOptions({ schema: logoutResultSchema })
-  logout(@CurrentSessionId() sessionId: string) {
-    return rpcSend<LogoutResult>(this.auth, AUTH_PATTERNS.LOGOUT, sessionId);
+  async logout(@CurrentSessionId() sessionId: string) {
+    const result = await rpcSend<LogoutResult>(
+      this.auth,
+      AUTH_PATTERNS.LOGOUT,
+      sessionId,
+    );
+    if (result.success) this.events.closeSession(sessionId);
+    return result;
   }
 }

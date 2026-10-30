@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { type ServicesConfig, servicesConfig } from '@app/config';
+import { kafkaConfig, type ServicesConfig, servicesConfig } from '@app/config';
 import { createWinstonLogger } from '@app/logger';
 import {
   Logger,
@@ -11,6 +11,7 @@ import {
   StandardSchemaValidationPipe,
   VersioningType,
 } from '@nestjs/common';
+import { Transport, type MicroserviceOptions } from '@nestjs/microservices';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import {
@@ -99,7 +100,15 @@ async function bootstrap() {
   setupCodeFirstDocs(app);
   setupSchemaFirstDocs(app);
 
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.KAFKA,
+    options: {
+      client: { clientId: 'gateway-events', brokers: kafkaConfig().brokers },
+      consumer: { groupId: 'gateway-events', allowAutoTopicCreation: true },
+    },
+  });
   app.enableShutdownHooks();
+  await app.startAllMicroservices();
 
   await app.listen(services.ports.gateway);
   Logger.log(

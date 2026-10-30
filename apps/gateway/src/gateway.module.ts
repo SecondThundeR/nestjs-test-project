@@ -1,5 +1,6 @@
 import {
   authConfig,
+  kafkaConfig,
   environmentSchema,
   SERVICE_NAMES,
   type ServicesConfig,
@@ -13,6 +14,8 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthGatewayController } from './auth/auth.gateway.controller.js';
 import { CartGatewayController } from './cart/cart.gateway.controller.js';
 import { JwtStrategy } from './common/jwt.strategy.js';
+import { EventsController } from './events/events.controller.js';
+import { EventsService } from './events/events.service.js';
 import { HealthController } from './health.controller.js';
 import { OrdersGatewayController } from './orders/orders.gateway.controller.js';
 import { OrdersPaymentGatewayController } from './orders/orders-payment.gateway.controller.js';
@@ -23,7 +26,7 @@ import { UsersGatewayController } from './users/users.gateway.controller.js';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [authConfig, servicesConfig],
+      load: [authConfig, servicesConfig, kafkaConfig],
       validationSchema: environmentSchema,
     }),
     PassportModule.register({ session: false }),
@@ -76,9 +79,10 @@ import { UsersGatewayController } from './users/users.gateway.controller.js';
       },
     ]),
   ],
-  providers: [JwtStrategy],
+  providers: [JwtStrategy, EventsService],
   controllers: [
     HealthController,
+    EventsController,
     ProductsGatewayController,
     CartGatewayController,
     OrdersGatewayController,
