@@ -96,21 +96,41 @@ export class OrdersService {
       `Reserving stock for ${items.length} product(s) on user ${userId}'s order`,
     );
 
-    const orderItemStockDecreaseMapper =
-      this.createOrderItemStockDecreaseMapper(productsMap);
-    await Promise.all(items.map(orderItemStockDecreaseMapper));
-
+    const id = randomUUID();
     const total = items.reduce((sum, { subtotal }) => sum + subtotal, 0);
-    const order = await this.orders.save(
-      this.orders.create({
-        id: randomUUID(),
-        userId,
-        items,
-        total: roundPrice(total),
-        status: OrderStatus.PENDING,
-        shippingAddress,
-      }),
-    );
+    let order: OrderEntity;
+    // Releasing by the same ID is safe even if the reserve response was lost.
+    try {
+      await firstValueFrom(
+        this.productsClient.send(PRODUCT_PATTERNS.RESERVE_STOCK, {
+          reservationId: id,
+          items: items.map(({ productId, quantity }) => ({
+            productId,
+            quantity,
+          })),
+        }),
+      );
+    } catch (error) {
+      await this.releaseStock(id);
+      throw error;
+    }
+    try {
+      order = await this.orders.save(
+        this.orders.create({
+          id,
+          userId,
+          items,
+          total: roundPrice(total),
+          status: OrderStatus.PENDING,
+          shippingAddress,
+        }),
+      );
+    } catch (error) {
+      // A save error can follow a successful commit; never release a saved order.
+      const persisted = await this.orders.findOneBy({ id });
+      if (!persisted) await this.releaseStock(id);
+      throw error;
+    }
 
     await this.invalidate(order);
 
@@ -307,6 +327,7 @@ export class OrdersService {
     const order = await this.findOne(id, userId);
     if (order.status === OrderStatus.CANCELLED) {
       this.logger.debug(`Order ${id} is already cancelled`);
+      await this.releaseStock(order.id, order.items);
       return order;
     }
 
@@ -334,7 +355,7 @@ export class OrdersService {
       );
     }
 
-    await Promise.all(order.items.map(this.rollbackOrderItemStock.bind(this)));
+    await this.releaseStock(order.id, order.items);
 
     this.logger.log(`Order ${id} cancelled and stock restored`);
     return updated;
@@ -419,41 +440,22 @@ export class OrdersService {
     };
   }
 
-  private createOrderItemStockDecreaseMapper(
-    productsMap: Map<string, Product>,
-  ) {
-    return (item: OrderItem): Promise<Product> => {
-      const product = productsMap.get(item.productId)!;
-      const payload = {
-        id: item.productId,
-        data: { stock: product.stock - item.quantity },
-      };
-
-      return firstValueFrom(
-        this.productsClient.send(PRODUCT_PATTERNS.UPDATE, payload),
-      );
-    };
-  }
-
-  private async rollbackOrderItemStock(item: OrderItem) {
-    const product = await firstValueFrom(
-      this.productsClient.send<Product | null>(
-        PRODUCT_PATTERNS.FIND_ONE,
-        item.productId,
-      ),
-    ).catch(() => null);
-
-    if (!product) {
-      return;
-    }
-
-    const payload = {
-      id: item.productId,
-      data: { stock: product.stock + item.quantity },
-    };
-
-    return firstValueFrom(
-      this.productsClient.send<Product>(PRODUCT_PATTERNS.UPDATE, payload),
+  private async releaseStock(
+    id: string,
+    legacyItems?: OrderItem[],
+  ): Promise<void> {
+    await firstValueFrom(
+      this.productsClient.send(PRODUCT_PATTERNS.RELEASE_STOCK, {
+        reservationId: id,
+        ...(legacyItems
+          ? {
+              legacyItems: legacyItems.map(({ productId, quantity }) => ({
+                productId,
+                quantity,
+              })),
+            }
+          : {}),
+      }),
     );
   }
 }

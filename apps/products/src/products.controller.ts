@@ -1,4 +1,8 @@
 import {
+  type ReserveStockDto,
+  type ReleaseStockDto,
+  reserveStockSchema,
+  releaseStockSchema,
   type CreateProductDto,
   createProductSchema,
   idListSchema,
@@ -15,6 +19,16 @@ import { ProductsService } from './products.service.js';
 @Controller()
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
+
+  @MessagePattern(PRODUCT_PATTERNS.RESERVE_STOCK)
+  reserveStock(@Payload({ schema: reserveStockSchema }) dto: ReserveStockDto) {
+    return this.productsService.reserveStock(dto);
+  }
+
+  @MessagePattern(PRODUCT_PATTERNS.RELEASE_STOCK)
+  releaseStock(@Payload({ schema: releaseStockSchema }) dto: ReleaseStockDto) {
+    return this.productsService.releaseStock(dto);
+  }
 
   @MessagePattern(PRODUCT_PATTERNS.CREATE)
   create(@Payload({ schema: createProductSchema }) dto: CreateProductDto) {

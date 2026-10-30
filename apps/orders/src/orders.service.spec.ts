@@ -160,15 +160,51 @@ describe('OrdersService', () => {
       expect(cartClient.send).toHaveBeenCalledWith(CART_PATTERNS.GET, USER);
     });
 
-    it('decrements product stock for each ordered item', async () => {
+    it('reserves all ordered items in one operation', async () => {
       await createOrder();
 
       expect(productsClient.send).toHaveBeenCalledWith(
-        PRODUCT_PATTERNS.UPDATE,
+        PRODUCT_PATTERNS.RESERVE_STOCK,
         {
-          id: 'p-1',
-          data: { stock: 3 },
+          reservationId: expect.any(String),
+          items: [{ productId: 'p-1', quantity: 2 }],
         },
+      );
+    });
+
+    it('releases a reservation when saving the order fails', async () => {
+      await createOrder();
+      productsClient.send.mockClear();
+      vi.spyOn(
+        dataSource.getRepository(OrderEntity),
+        'save',
+      ).mockRejectedValueOnce(new Error('save failed'));
+      await expect(service.create(USER, ADDRESS)).rejects.toThrow(
+        'save failed',
+      );
+      const reserve = productsClient.send.mock.calls.find(
+        ([pattern]) => pattern === PRODUCT_PATTERNS.RESERVE_STOCK,
+      )!;
+      expect(productsClient.send).toHaveBeenCalledWith(
+        PRODUCT_PATTERNS.RELEASE_STOCK,
+        { reservationId: reserve[1].reservationId },
+      );
+    });
+
+    it('compensates a reserve whose response was lost', async () => {
+      await createOrder();
+      productsClient.send.mockImplementation((pattern: string) => {
+        if (pattern === PRODUCT_PATTERNS.FIND_MANY) return of([makeProduct()]);
+        if (pattern === PRODUCT_PATTERNS.RESERVE_STOCK)
+          return throwError(() => new Error('response lost'));
+        return of({ success: true });
+      });
+      await expect(service.create(USER, ADDRESS)).rejects.toThrow(
+        'response lost',
+      );
+      expect(productsClient.send).toHaveBeenLastCalledWith(
+        PRODUCT_PATTERNS.RELEASE_STOCK,
+        { reservationId: expect.any(String) },
       );
     });
 
@@ -575,29 +611,30 @@ describe('OrdersService', () => {
 
       expect(cancelled.status).toBe(OrderStatus.CANCELLED);
       expect(productsClient.send).toHaveBeenCalledWith(
-        PRODUCT_PATTERNS.UPDATE,
+        PRODUCT_PATTERNS.RELEASE_STOCK,
         {
-          id: 'p-1',
-          data: { stock: 5 },
+          reservationId: order.id,
+          legacyItems: [{ productId: 'p-1', quantity: 2 }],
         },
       );
     });
 
-    it('skips restock for items whose product can no longer be fetched', async () => {
+    it('retries a failed stock release when cancellation is repeated', async () => {
       const order = await createOrder();
-      productsClient.send.mockClear();
-      productsClient.send.mockReturnValue(throwError(() => new Error('down')));
-
-      const cancelled = await service.cancel(order.id);
-
-      expect(cancelled.status).toBe(OrderStatus.CANCELLED);
-      expect(productsClient.send).toHaveBeenCalledWith(
-        PRODUCT_PATTERNS.FIND_ONE,
-        'p-1',
+      productsClient.send.mockReturnValueOnce(
+        throwError(() => new Error('down')),
       );
-      expect(productsClient.send).not.toHaveBeenCalledWith(
-        PRODUCT_PATTERNS.UPDATE,
-        expect.anything(),
+      await expect(service.cancel(order.id)).rejects.toThrow('down');
+      productsClient.send.mockReturnValue(of({ success: true }));
+      await expect(service.cancel(order.id)).resolves.toMatchObject({
+        status: OrderStatus.CANCELLED,
+      });
+      expect(productsClient.send).toHaveBeenLastCalledWith(
+        PRODUCT_PATTERNS.RELEASE_STOCK,
+        {
+          reservationId: order.id,
+          legacyItems: [{ productId: 'p-1', quantity: 2 }],
+        },
       );
     });
 
@@ -677,7 +714,10 @@ describe('OrdersService', () => {
       const result = await service.cancel(order.id);
 
       expect(result.status).toBe(OrderStatus.CANCELLED);
-      expect(productsClient.send).not.toHaveBeenCalled();
+      expect(productsClient.send).toHaveBeenCalledWith(
+        PRODUCT_PATTERNS.RELEASE_STOCK,
+        expect.objectContaining({ reservationId: order.id }),
+      );
     });
 
     it('throws RpcException when the order is already shipped', async () => {

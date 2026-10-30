@@ -9,6 +9,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { StockReservationEntity } from './entities/stock-reservation.entity.js';
 import { ProductEntity } from './entities/product.entity.js';
 import { productsMigrations } from './migrations/index.js';
 import { ProductsController } from './products.controller.js';
@@ -31,7 +32,11 @@ import { ProductsService } from './products.service.js';
     }),
     TypeOrmModule.forRootAsync({
       useFactory: () =>
-        buildDatabaseOptions('PRODUCTS', [ProductEntity], productsMigrations),
+        buildDatabaseOptions(
+          'PRODUCTS',
+          [ProductEntity, StockReservationEntity],
+          productsMigrations,
+        ),
     }),
     TypeOrmModule.forFeature([ProductEntity]),
   ],
