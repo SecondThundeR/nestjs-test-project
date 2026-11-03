@@ -1,5 +1,5 @@
 overrides:
-  'openapi-validator>axios': '0.34.0'
+  'openapi-validator>axios': '0.35.0'
 
 allowBuilds:
   '@nestjs/core': true
@@ -8,3 +8,42 @@ allowBuilds:
   bcrypt: true
   fsevents: true
   unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - '@oxlint/binding-android-arm-eabi@1.91.0'
+  - '@oxlint/binding-android-arm64@1.91.0'
+  - '@oxlint/binding-darwin-arm64@1.91.0'
+  - '@oxlint/binding-darwin-x64@1.91.0'
+  - '@oxlint/binding-freebsd-x64@1.91.0'
+  - '@oxlint/binding-linux-arm-gnueabihf@1.91.0'
+  - '@oxlint/binding-linux-arm-musleabihf@1.91.0'
+  - '@oxlint/binding-linux-arm64-gnu@1.91.0'
+  - '@oxlint/binding-linux-arm64-musl@1.91.0'
+  - '@oxlint/binding-linux-ppc64-gnu@1.91.0'
+  - '@oxlint/binding-linux-riscv64-gnu@1.91.0'
+  - '@oxlint/binding-linux-riscv64-musl@1.91.0'
+  - '@oxlint/binding-linux-s390x-gnu@1.91.0'
+  - '@oxlint/binding-linux-x64-gnu@1.91.0'
+  - '@oxlint/binding-linux-x64-musl@1.91.0'
+  - '@oxlint/binding-openharmony-arm64@1.91.0'
+  - '@oxlint/binding-win32-arm64-msvc@1.91.0'
+  - '@oxlint/binding-win32-ia32-msvc@1.91.0'
+  - '@oxlint/binding-win32-x64-msvc@1.91.0'
+  - '@rspack/binding-darwin-arm64@2.3.1'
+  - '@rspack/binding-darwin-x64@2.3.1'
+  - '@rspack/binding-linux-arm64-gnu@2.3.1'
+  - '@rspack/binding-linux-arm64-musl@2.3.1'
+  - '@rspack/binding-linux-ppc64-gnu@2.3.1'
+  - '@rspack/binding-linux-riscv64-gnu@2.3.1'
+  - '@rspack/binding-linux-riscv64-musl@2.3.1'
+  - '@rspack/binding-linux-s390x-gnu@2.3.1'
+  - '@rspack/binding-linux-x64-gnu@2.3.1'
+  - '@rspack/binding-linux-x64-musl@2.3.1'
+  - '@rspack/binding-wasm32-wasi@2.3.1'
+  - '@rspack/binding-win32-arm64-msvc@2.3.1'
+  - '@rspack/binding-win32-ia32-msvc@2.3.1'
+  - '@rspack/binding-win32-x64-msvc@2.3.1'
+  - '@rspack/binding@2.3.1'
+  - '@rspack/core@2.3.1'
+  - oxlint@1.91.0
+  - axios@0.35.0
