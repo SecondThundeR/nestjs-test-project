@@ -14,8 +14,26 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  checks:
-    name: Linting, tests and build
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run format:check
+      - run: pnpm run lint
+      - run: pnpm run typecheck
+
+  tests:
+    name: Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -51,16 +69,11 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run format:check
-      - run: pnpm run lint
-      - run: pnpm run typecheck
       - run: pnpm run test:cov
       - run: pnpm run test:e2e
         env:
           STOCK_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/stock_test
           RECOVERY_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5433/recovery_test
-      - run: pnpm run build
-      - run: pnpm run typeorm:build
       - name: Upload coverage
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -70,9 +83,26 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - run: pnpm run typeorm:build
+
   image:
     name: Build and publish container
-    needs: checks
+    needs: [lint, tests, build]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
