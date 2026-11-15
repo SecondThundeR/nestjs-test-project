@@ -16,7 +16,7 @@ export class CartEventsPublisher
 {
   private readonly logger = new Logger(CartEventsPublisher.name);
 
-  constructor(@Inject(KAFKA_CLIENT) private readonly kafka: ClientKafka) { }
+  constructor(@Inject(KAFKA_CLIENT) private readonly kafka: ClientKafka) {}
 
   async onModuleInit() {
     await this.kafka.connect();
