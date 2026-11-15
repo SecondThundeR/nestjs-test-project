@@ -9,8 +9,17 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 RUN pnpm run build && pnpm run typeorm:build && pnpm prune --prod
+# Dependencies run as JavaScript; retain application maps in dist for debugging.
+RUN find node_modules -type f \( -name '*.map' -o -name '*.d.ts' -o -name '*.d.cts' -o -name '*.d.mts' \) -delete
 
-FROM node:24.22.3-alpine AS runner
+# Match the Alpine release used by the Node builder, without its package managers
+# and development headers. Copy the same Node binary used to build native addons.
+FROM alpine:3.24.4 AS runner
+RUN apk add --no-cache libstdc++ \
+    && addgroup -S -g 1000 node \
+    && adduser -S -D -u 1000 -G node node
+COPY --from=builder /usr/local/bin/node /usr/local/bin/node
+COPY --from=builder /usr/local/LICENSE /usr/local/share/licenses/node/LICENSE
 WORKDIR /app
 ENV NODE_ENV=production
 
