@@ -36,7 +36,7 @@ export class ProductsService {
 
   async reserveStock(input: ReserveStockDto): Promise<{ success: true }> {
     const dto = reserveStockSchema.parse(input);
-    const items = [...dto.items].sort((a, b) =>
+    const items = dto.items.toSorted((a, b) =>
       a.productId.localeCompare(b.productId),
     );
     await this.products.manager.transaction(async (manager) => {
@@ -108,7 +108,7 @@ export class ProductsService {
         lock: { mode: 'pessimistic_write' },
       });
       if (reservation.status !== 'released') {
-        for (const item of [...reservation.items].sort((a, b) =>
+        for (const item of reservation.items.toSorted((a, b) =>
           a.productId.localeCompare(b.productId),
         )) {
           await manager

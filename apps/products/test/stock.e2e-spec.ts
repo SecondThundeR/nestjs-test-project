@@ -62,7 +62,7 @@ describe.skipIf(!process.env.STOCK_TEST_DATABASE_URL)(
     it('rolls back the entire batch if a later item has insufficient stock', async () => {
       const a = await service.create({ name: 'First', price: 10, stock: 5 });
       const b = await service.create({ name: 'Second', price: 10, stock: 0 });
-      const sorted = [a, b].sort((x, y) => x.id.localeCompare(y.id));
+      const sorted = [a, b].toSorted((x, y) => x.id.localeCompare(y.id));
       await db.getRepository(ProductEntity).update(sorted[0].id, { stock: 5 });
       await db.getRepository(ProductEntity).update(sorted[1].id, { stock: 0 });
       await expect(
