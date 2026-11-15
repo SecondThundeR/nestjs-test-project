@@ -23,7 +23,7 @@
     "noImplicitAny": true,
     "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["node", "vitest/globals", "supertest", "js-yaml"],
+    "types": ["node", "vitest/globals", "supertest"],
     "paths": {
       "@app/cache": ["./libs/cache/src/index.ts"],
       "@app/cache/*": ["./libs/cache/src/*.ts"],

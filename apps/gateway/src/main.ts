@@ -19,7 +19,7 @@ import {
   type OpenAPIObject,
   SwaggerModule,
 } from '@nestjs/swagger';
-import { load as loadYaml } from 'js-yaml';
+import { parse as parseYaml } from 'yaml';
 
 import { standardSchemaDocumentOptions } from './common/openapi.js';
 import { GatewayModule } from './gateway.module.js';
@@ -69,7 +69,7 @@ function setupSchemaFirstDocs(app: NestExpressApplication): void {
     process.cwd(),
     'apps/gateway/src/orders/orders.openapi.yaml',
   );
-  const document = loadYaml(
+  const document = parseYaml(
     readFileSync(contractPath, 'utf8'),
   ) as OpenAPIObject;
 
