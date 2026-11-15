@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { hash } from 'bcrypt';
+import { argon2id, hash } from 'argon2';
 import type { Repository } from 'typeorm';
 import { z } from 'zod';
 
@@ -10,10 +10,7 @@ import { UserEntity } from '../entities/user.entity.js';
 export const adminCredentialsSchema = z.object({
   email: z.email().transform((email) => email.toLowerCase()),
   name: z.string().trim().min(2),
-  password: z
-    .string()
-    .min(12)
-    .refine((value) => Buffer.byteLength(value, 'utf8') <= 72),
+  password: z.string().min(12),
 });
 
 export async function createAdmin(
@@ -28,7 +25,7 @@ export async function createAdmin(
     id: randomUUID(),
     email: dto.email,
     name: dto.name,
-    passwordHash: await hash(dto.password, 10),
+    passwordHash: await hash(dto.password, { type: argon2id }),
     role: UserRole.ADMIN,
   });
 }

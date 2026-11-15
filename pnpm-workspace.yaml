@@ -5,6 +5,6 @@ allowBuilds:
   '@nestjs/core': true
   '@parcel/watcher': true
   '@scarf/scarf': true
-  bcrypt: true
+  argon2: true
   fsevents: true
   unrs-resolver: true

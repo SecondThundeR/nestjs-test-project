@@ -1,4 +1,4 @@
-import { compare, hash } from 'bcrypt';
+import { hash, verify } from 'argon2';
 import type { DataSource } from 'typeorm';
 
 import { createInMemoryDataSource } from '../../../../test/utils/in-memory-database.js';
@@ -28,8 +28,8 @@ describe('Administrator provisioning', () => {
     await createAdmin(users, credentials);
     const user = await users.findOneByOrFail({ email: 'owner@example.com' });
     expect(user.role).toBe(UserRole.ADMIN);
-    expect(user.passwordHash).not.toBe(credentials.password);
-    expect(await compare(credentials.password, user.passwordHash)).toBe(true);
+    expect(user.passwordHash).toMatch(/^\$argon2id\$/);
+    expect(await verify(user.passwordHash, credentials.password)).toBe(true);
   });
 
   it('does not promote or overwrite an existing account', async () => {
@@ -50,12 +50,20 @@ describe('Administrator provisioning', () => {
     });
   });
 
-  it('rejects short passwords and passwords exceeding the bcrypt byte limit', () => {
-    for (const password of ['short', 'я'.repeat(37)]) {
-      expect(
-        adminCredentialsSchema.safeParse({ ...credentials, password }).success,
-      ).toBe(false);
-    }
+  it('rejects short passwords', () => {
+    expect(
+      adminCredentialsSchema.safeParse({ ...credentials, password: 'short' })
+        .success,
+    ).toBe(false);
+  });
+
+  it('preserves passwords longer than 72 UTF-8 bytes', async () => {
+    const password = 'я'.repeat(40);
+    const users = db.getRepository(UserEntity);
+    await createAdmin(users, { ...credentials, password });
+    const user = await users.findOneByOrFail({ email: 'owner@example.com' });
+    expect(await verify(user.passwordHash, password)).toBe(true);
+    expect(await verify(user.passwordHash, password.slice(0, 36))).toBe(false);
   });
 
   it('does not seed an account or restore one on rollback', async () => {
@@ -78,7 +86,7 @@ describe('Administrator provisioning', () => {
     };
     await users.insert({
       ...legacy,
-      passwordHash: await hash(credentials.password, 4),
+      passwordHash: await hash(credentials.password),
     });
     await migration.up(runner);
     expect(await users.count()).toBe(1);

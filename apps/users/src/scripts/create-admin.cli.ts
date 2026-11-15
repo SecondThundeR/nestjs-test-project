@@ -11,7 +11,7 @@ async function main(): Promise<void> {
   delete process.env.ADMIN_PASSWORD;
   if (!credentials.success) {
     throw new Error(
-      'Set ADMIN_EMAIL, ADMIN_NAME (at least 2 characters) and ADMIN_PASSWORD (at least 12 characters, at most 72 UTF-8 bytes)',
+      'Set ADMIN_EMAIL, ADMIN_NAME (at least 2 characters) and ADMIN_PASSWORD (at least 12 characters)',
     );
   }
 

@@ -10,12 +10,10 @@ import {
 import { RpcErrors } from '@app/filters';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { compare, hash } from 'bcrypt';
+import { argon2id, hash, verify } from 'argon2';
 import { Repository } from 'typeorm';
 
 import { UserEntity } from './entities/user.entity.js';
-
-const SALT_ROUNDS = 10;
 
 function userCacheKey(id: string): string {
   return `user:${id}`;
@@ -46,7 +44,7 @@ export class UsersService {
         id: randomUUID(),
         email,
         name: dto.name,
-        passwordHash: await hash(dto.password, SALT_ROUNDS),
+        passwordHash: await hash(dto.password, { type: argon2id }),
         role: UserRole.REGULAR,
       }),
     );
@@ -63,7 +61,7 @@ export class UsersService {
     this.logger.log(`Trying to check credentials for ${email}`);
     const user = await this.users.findOneBy({ email });
 
-    if (!user || !(await compare(dto.password, user.passwordHash))) {
+    if (!user || !(await verify(user.passwordHash, dto.password))) {
       this.logger.warn(`Failed check credentials for ${email}`);
       throw RpcErrors.unauthorized('Invalid email or password');
     }
