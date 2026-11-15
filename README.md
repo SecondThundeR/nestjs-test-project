@@ -124,11 +124,12 @@ pnpm run migration:run:products  # либо по одному сервису
 ## Тесты
 
 ```bash
-pnpm test           # unit-тесты (Vitest)
-pnpm run test:e2e   # e2e и контракт-тесты
-pnpm run test:cov   # unit-тесты с покрытием
-pnpm run lint       # type-aware oxlint + проверка Prettier
-pnpm run typecheck  # TypeScript 6 без генерации файлов
+pnpm test             # unit-тесты (Vitest)
+pnpm run test:e2e     # e2e и контракт-тесты
+pnpm run test:cov     # unit-тесты с покрытием
+pnpm run lint         # type-aware oxlint
+pnpm run format:check # проверка Prettier
+pnpm run typecheck    # TypeScript 6 без генерации файлов
 ```
 
 Внешние зависимости (PayPal, Redis) в тестах замоканы, поэтому реальная инфраструктура не нужна
