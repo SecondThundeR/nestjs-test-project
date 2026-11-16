@@ -1,15 +1,18 @@
 import { SERVICE_NAMES } from '@app/config';
 import { cartSchema, type Product, PRODUCT_PATTERNS } from '@app/domains';
-import { RpcException } from '@nestjs/microservices';
-import { Test } from '@nestjs/testing';
+import { RpcException, type ClientProxy } from '@nestjs/microservices';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import type { MongoMemoryServer } from 'mongodb-memory-server';
 import { of, throwError } from 'rxjs';
-import type { DataSource } from 'typeorm';
 import type { Mock } from 'vitest';
 
-import { createInMemoryDataSource } from '../../../test/utils/in-memory-database.js';
+import { createTestMongo } from '../../../test/utils/mongodb.js';
 import { CartEventsPublisher } from './cart-events.publisher.js';
 import { CartService } from './cart.service.js';
+import { CartStore } from './cart.store.js';
+import { cartDatabaseOptions } from './cart.database.js';
 import { CartSchema } from './schemas/cart.schema.js';
 
 const USER = 'user-1';
@@ -30,28 +33,43 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
 
 describe('CartService', () => {
   let service: CartService;
+  let moduleRef: TestingModule;
   const events = { updated: vi.fn() };
   let productsClient: { send: Mock };
+  let mongo: MongoMemoryServer;
+  let store: CartStore;
+  let database = 0;
   let dataSource: DataSource;
+
+  beforeAll(async () => {
+    mongo = await createTestMongo();
+  }, 120000);
+  afterAll(async () => {
+    await mongo.stop();
+  });
 
   beforeEach(async () => {
     events.updated.mockClear();
     productsClient = { send: vi.fn() };
-    dataSource = await createInMemoryDataSource([CartSchema]);
+    dataSource = await new DataSource(
+      cartDatabaseOptions(mongo.getUri(`cart_${database++}`)),
+    ).initialize();
 
-    const moduleRef = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       providers: [
         CartService,
+        CartStore,
         { provide: CartEventsPublisher, useValue: events },
         {
           provide: getRepositoryToken(CartSchema),
-          useValue: dataSource.getRepository(CartSchema),
+          useValue: dataSource.getMongoRepository(CartSchema),
         },
         { provide: SERVICE_NAMES.PRODUCTS, useValue: productsClient },
       ],
     }).compile();
 
     service = moduleRef.get(CartService);
+    store = moduleRef.get(CartStore);
   });
 
   afterEach(async () => {
@@ -69,11 +87,64 @@ describe('CartService', () => {
   });
 
   it('does not publish when persistence fails', async () => {
-    vi.spyOn(dataSource.manager, 'transaction').mockRejectedValueOnce(
+    vi.spyOn(store, 'mutate').mockRejectedValueOnce(
       new Error('database unavailable'),
     );
     await expect(service.clear(USER)).rejects.toThrow('database unavailable');
     expect(events.updated).not.toHaveBeenCalled();
+  });
+
+  it('preserves simultaneous first additions from independent service instances', async () => {
+    productsClient.send.mockReturnValue(of(makeProduct()));
+    const secondDataSource = await new DataSource(
+      cartDatabaseOptions(mongo.getUri(`cart_${database - 1}`)),
+    ).initialize();
+    const secondStore = new CartStore(
+      secondDataSource.getMongoRepository(CartSchema),
+    );
+    try {
+      const second = new CartService(
+        secondStore,
+        moduleRef.get<ClientProxy>(SERVICE_NAMES.PRODUCTS),
+        moduleRef.get(CartEventsPublisher),
+      );
+      await Promise.all(
+        Array.from({ length: 12 }, (_, index) =>
+          (index % 2 ? second : service).addItem(USER, {
+            productId: 'p-1',
+            quantity: 1,
+          }),
+        ),
+      );
+      const cart = await service.get(USER);
+      expect(cart.items).toHaveLength(1);
+      expect(cart.items[0].quantity).toBe(12);
+      expect(cart.total).toBe(119.88);
+      expect(Object.keys(cart).sort()).toEqual([
+        'items',
+        'total',
+        'updatedAt',
+        'userId',
+      ]);
+      expect(events.updated).toHaveBeenCalledTimes(12);
+    } finally {
+      await secondDataSource.destroy();
+    }
+  });
+
+  it('rechecks stock after competing writes and publishes only successful updates', async () => {
+    productsClient.send.mockReturnValue(of(makeProduct({ stock: 3 })));
+    const results = await Promise.allSettled(
+      Array.from({ length: 8 }, () =>
+        service.addItem(USER, { productId: 'p-1', quantity: 1 }),
+      ),
+    );
+    expect(
+      results.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(3);
+    const cart = await service.get(USER);
+    expect(cart.items[0].quantity).toBe(3);
+    expect(events.updated).toHaveBeenCalledTimes(3);
   });
 
   describe('get', () => {

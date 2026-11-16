@@ -15,11 +15,11 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
-import { getDataSourceToken } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
+import type { MongoMemoryServer } from 'mongodb-memory-server';
 import { firstValueFrom, of } from 'rxjs';
 
-import { CartSchema } from '../src/schemas/cart.schema.js';
-import { createInMemoryDataSource } from './../../../test/utils/in-memory-database.js';
+import { createTestMongo } from '../../../test/utils/mongodb.js';
 import { CartModule } from './../src/cart.module.js';
 
 const HOST = '127.0.0.1';
@@ -41,13 +41,13 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
 }
 
 describe('Cart microservice (e2e)', () => {
+  let mongo: MongoMemoryServer;
   let app: INestMicroservice;
   let client: ClientProxy;
   const productsClient = { send: vi.fn(), emit: vi.fn() };
 
   beforeAll(async () => {
-    const dataSource = await createInMemoryDataSource([CartSchema]);
-
+    mongo = await createTestMongo();
     const moduleFixture = await Test.createTestingModule({
       imports: [CartModule],
     })
@@ -57,8 +57,8 @@ describe('Cart microservice (e2e)', () => {
         close: vi.fn(),
         emit: vi.fn(() => of(undefined)),
       })
-      .overrideProvider(getDataSourceToken())
-      .useValue(dataSource)
+      .overrideProvider(ConfigService)
+      .useValue(new ConfigService({ CART_MONGODB_URI: mongo.getUri('cart') }))
       .overrideProvider(SERVICE_NAMES.PRODUCTS)
       .useValue(productsClient)
       .compile();
@@ -81,11 +81,12 @@ describe('Cart microservice (e2e)', () => {
       options: { host: HOST, port: PORT },
     });
     await client.connect();
-  });
+  }, 120000);
 
   afterAll(async () => {
     await client.close();
     await app.close();
+    await mongo.stop();
   });
 
   beforeEach(() => {

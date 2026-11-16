@@ -1,5 +1,4 @@
 import {
-  buildDatabaseOptions,
   environmentSchema,
   kafkaConfig,
   KAFKA_CLIENT,
@@ -9,14 +8,15 @@ import {
   servicesConfig,
 } from '@app/config';
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { CartEventsPublisher } from './cart-events.publisher.js';
 import { CartController } from './cart.controller.js';
 import { CartService } from './cart.service.js';
-import { cartMigrations } from './migrations/index.js';
+import { CartStore } from './cart.store.js';
+import { cartDatabaseOptions } from './cart.database.js';
 import { CartSchema } from './schemas/cart.schema.js';
 
 @Module({
@@ -27,8 +27,9 @@ import { CartSchema } from './schemas/cart.schema.js';
       validationSchema: environmentSchema,
     }),
     TypeOrmModule.forRootAsync({
-      useFactory: () =>
-        buildDatabaseOptions('CART', [CartSchema], cartMigrations),
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) =>
+        cartDatabaseOptions(config.get<string>('CART_MONGODB_URI')),
     }),
     TypeOrmModule.forFeature([CartSchema]),
     ClientsModule.registerAsync([
@@ -58,6 +59,6 @@ import { CartSchema } from './schemas/cart.schema.js';
     ]),
   ],
   controllers: [CartController],
-  providers: [CartService, CartEventsPublisher],
+  providers: [CartService, CartEventsPublisher, CartStore],
 })
 export class CartModule {}

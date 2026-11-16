@@ -9,28 +9,25 @@ import { RpcErrors } from '@app/filters';
 import { roundPrice } from '@app/utils';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
-import { InjectRepository } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
-import { Repository } from 'typeorm';
 
 import { CartEventsPublisher } from './cart-events.publisher.js';
 
-import { CartSchema } from './schemas/cart.schema.js';
+import { CartStore } from './cart.store.js';
 
 @Injectable()
 export class CartService {
   private readonly logger = new Logger(CartService.name);
 
   constructor(
-    @InjectRepository(CartSchema)
-    private readonly carts: Repository<Cart>,
+    private readonly carts: CartStore,
     @Inject(SERVICE_NAMES.PRODUCTS)
     private readonly productsClient: ClientProxy,
     private readonly events: CartEventsPublisher,
   ) {}
 
   async get(userId: string): Promise<Cart> {
-    const cart = await this.carts.findOneBy({ userId });
+    const cart = await this.carts.get(userId);
     this.logger.debug(
       `Cart for user ${userId} has ${cart?.items.length ?? 0} item(s)`,
     );
@@ -141,27 +138,11 @@ export class CartService {
     create: boolean,
     mutate: (cart: Cart) => void,
   ): Promise<Cart> {
-    const saved = await this.carts.manager.transaction(async (manager) => {
-      const carts = manager.getRepository(CartSchema);
-      if (create) {
-        // Concurrent first writes must lock the same row too.
-        await carts
-          .createQueryBuilder()
-          .insert()
-          .values({ userId, items: [], total: 0 })
-          .orIgnore()
-          .execute();
-      }
-      const cart = await carts.findOne({
-        where: { userId },
-        lock: { mode: 'pessimistic_write' },
-      });
-      if (!cart) throw RpcErrors.notFound('Cart is empty');
+    const saved = await this.carts.mutate(userId, create, (cart) => {
       mutate(cart);
       this.recalculateCartPrices(cart);
-      return carts.save(cart);
     });
-    // Publish only after COMMIT succeeds.
+    // Publish only after the document has been persisted.
     this.events.updated(saved.userId);
     return saved;
   }

@@ -49,11 +49,11 @@ export const environmentSchema = z.object({
   PRODUCTS_DB_USERNAME: optionalNonEmptyString,
   PRODUCTS_DB_PASSWORD: optionalNonEmptyString,
   PRODUCTS_DB_NAME: optionalNonEmptyString,
-  CART_DB_HOST: optionalNonEmptyString,
-  CART_DB_PORT: optionalPort,
-  CART_DB_USERNAME: optionalNonEmptyString,
-  CART_DB_PASSWORD: optionalNonEmptyString,
-  CART_DB_NAME: optionalNonEmptyString,
+  CART_MONGODB_URI: z
+    .string()
+    .regex(/^mongodb(?:\+srv)?:\/\//)
+    .optional(),
+  CART_MONGODB_PORT: optionalPort,
   ORDERS_DB_HOST: optionalNonEmptyString,
   ORDERS_DB_PORT: optionalPort,
   ORDERS_DB_USERNAME: optionalNonEmptyString,

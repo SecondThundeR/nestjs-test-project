@@ -1,7 +1,7 @@
 import type { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import type { DataSourceOptions } from 'typeorm';
 
-type ServiceKey = 'PRODUCTS' | 'CART' | 'ORDERS' | 'USERS' | 'AUTH';
+type ServiceKey = 'PRODUCTS' | 'ORDERS' | 'USERS' | 'AUTH';
 
 type Migrations = NonNullable<DataSourceOptions['migrations']>;
 

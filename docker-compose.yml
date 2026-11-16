@@ -47,15 +47,12 @@ services:
     <<: *app-base
     command: ['node', 'dist/apps/cart/main.js']
     environment:
-      DB_SYNCHRONIZE: 'false'
-      DB_MIGRATIONS_RUN: 'true'
-      CART_DB_HOST: cart-db
-      CART_DB_PORT: 5432
+      CART_MONGODB_URI: mongodb://cart-mongodb:27017/cart
       PRODUCTS_HOST: products
       KAFKA_BROKERS: kafka:9092
       KAFKAJS_NO_PARTITIONER_WARNING: 1
     depends_on:
-      cart-db:
+      cart-mongodb:
         condition: service_healthy
       kafka:
         condition: service_healthy
@@ -128,7 +125,11 @@ services:
     volumes:
       - products-db-data:/var/lib/postgresql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${PRODUCTS_DB_USERNAME:-postgres} -d ${PRODUCTS_DB_NAME:-products}']
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${PRODUCTS_DB_USERNAME:-postgres} -d ${PRODUCTS_DB_NAME:-products}',
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -153,7 +154,11 @@ services:
     volumes:
       - kafka-data:/var/lib/kafka/data
     healthcheck:
-      test: ['CMD-SHELL', '/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092']
+      test:
+        [
+          'CMD-SHELL',
+          '/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092',
+        ]
       interval: 10s
       timeout: 10s
       retries: 10
@@ -183,21 +188,24 @@ services:
       timeout: 5s
       retries: 5
 
-  cart-db:
-    image: postgres:18.4-alpine
-    environment:
-      POSTGRES_USER: ${CART_DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${CART_DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${CART_DB_NAME:-cart}
+  cart-mongodb:
+    image: mongo:9.0.8
     ports:
-      - '${CART_DB_PORT:-5533}:5432'
+      - '${CART_MONGODB_PORT:-27017}:27017'
     volumes:
-      - cart-db-data:/var/lib/postgresql
+      - cart-mongodb-data:/data/db
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${CART_DB_USERNAME:-postgres} -d ${CART_DB_NAME:-cart}']
+      test:
+        [
+          'CMD',
+          'mongosh',
+          '--quiet',
+          '--eval',
+          'quit(db.adminCommand({ping: 1}).ok ? 0 : 1)',
+        ]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   orders-db:
     image: postgres:18.4-alpine
@@ -210,7 +218,11 @@ services:
     volumes:
       - orders-db-data:/var/lib/postgresql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${ORDERS_DB_USERNAME:-postgres} -d ${ORDERS_DB_NAME:-orders}']
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${ORDERS_DB_USERNAME:-postgres} -d ${ORDERS_DB_NAME:-orders}',
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -226,7 +238,11 @@ services:
     volumes:
       - users-db-data:/var/lib/postgresql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${USERS_DB_USERNAME:-postgres} -d ${USERS_DB_NAME:-users}']
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${USERS_DB_USERNAME:-postgres} -d ${USERS_DB_NAME:-users}',
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -242,7 +258,11 @@ services:
     volumes:
       - auth-db-data:/var/lib/postgresql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${AUTH_DB_USERNAME:-postgres} -d ${AUTH_DB_NAME:-auth}']
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${AUTH_DB_USERNAME:-postgres} -d ${AUTH_DB_NAME:-auth}',
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -251,7 +271,7 @@ volumes:
   products-db-data:
   kafka-data:
   cache-data:
-  cart-db-data:
+  cart-mongodb-data:
   orders-db-data:
   users-db-data:
   auth-db-data:
