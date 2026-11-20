@@ -21,26 +21,11 @@ import {
 } from '@nestjs/swagger';
 import { parse as parseYaml } from 'yaml';
 
-import { standardSchemaDocumentOptions } from './common/openapi.js';
+import {
+  filterPathsByTag,
+  standardSchemaDocumentOptions,
+} from './common/openapi.js';
 import { GatewayModule } from './gateway.module.js';
-
-function filterPathsByTag(
-  paths: OpenAPIObject['paths'],
-  tag: string,
-): OpenAPIObject['paths'] {
-  const hasTag = (operation: unknown): boolean =>
-    typeof operation === 'object' &&
-    operation !== null &&
-    'tags' in operation &&
-    Array.isArray((operation as { tags?: unknown }).tags) &&
-    (operation as { tags: unknown[] }).tags.includes(tag);
-
-  return Object.fromEntries(
-    Object.entries(paths).filter(([, pathItem]) =>
-      Object.values(pathItem).some(hasTag),
-    ),
-  );
-}
 
 const CODE_FIRST_TAG = 'products';
 

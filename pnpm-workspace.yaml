@@ -2,13 +2,15 @@ overrides:
   'openapi-validator>axios': '0.35.0'
 
 allowBuilds:
+  cpu-features: false
+  protobufjs: false
+  ssh2: false
   '@nestjs/core': true
   '@parcel/watcher': true
   '@scarf/scarf': true
   argon2: true
   fsevents: true
   unrs-resolver: true
-  mongodb-memory-server: true
 
 minimumReleaseAgeExclude:
   - '@oxlint/binding-android-arm-eabi@1.94.0'

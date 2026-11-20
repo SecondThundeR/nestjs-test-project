@@ -15,7 +15,7 @@ import {
   type Product,
   PRODUCT_PATTERNS,
 } from '@app/domains';
-import { RpcErrors } from '@app/filters';
+import { type RpcErrorPayload, RpcErrors } from '@app/filters';
 import { roundPrice } from '@app/utils';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
@@ -26,6 +26,7 @@ import { LessThanOrEqual, Repository } from 'typeorm';
 
 import { StockIntentEntity } from './entities/stock-intent.entity.js';
 import { OrderEntity } from './entities/order.entity.js';
+import { cancellationOperation } from './cancellation-operation.js';
 import {
   PAYPAL_ALREADY_REFUNDED_STATUS,
   PaypalService,
@@ -125,7 +126,17 @@ export class OrdersService {
               })),
             })
             .pipe(timeout(5000)),
-        );
+        ).catch((error: unknown) => {
+          // TCP delivers the Products rejection as a plain payload.
+          const payload = error as Partial<RpcErrorPayload> | null;
+          if (
+            payload?.statusCode === 400 &&
+            typeof payload.message === 'string'
+          ) {
+            throw RpcErrors.badRequest(payload.message);
+          }
+          throw error;
+        });
         const saved = await manager.getRepository(OrderEntity).save(
           manager.getRepository(OrderEntity).create({
             id,
@@ -370,22 +381,13 @@ export class OrdersService {
         }
         await operations.insert({ id, kind: 'capture' });
       } else {
-        if (
-          order.status === OrderStatus.SHIPPED ||
-          order.status === OrderStatus.DELIVERED
-        ) {
-          throw RpcErrors.badRequest('Cannot cancel an order that has shipped');
-        }
-        if (order.status === OrderStatus.PAID) {
-          if (!order.captureId)
-            throw RpcErrors.badRequest('Order has no capture to refund');
-          await operations.insert({ id, kind: 'refund' });
-        } else {
+        const kind = cancellationOperation(order);
+        if (kind === 'release') {
           // Status and the release job commit together.
           await orders.update(id, { status: OrderStatus.CANCELLED });
           order.status = OrderStatus.CANCELLED;
-          await operations.insert({ id, kind: 'release' });
         }
+        await operations.insert({ id, kind });
       }
       return order;
     });

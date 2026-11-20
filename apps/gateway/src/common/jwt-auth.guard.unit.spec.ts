@@ -1,0 +1,127 @@
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import { authConfig } from '@app/config';
+import { AUTH_PATTERNS, type JwtPayload } from '@app/domains';
+import {
+  type ExecutionContext,
+  HttpException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import type { ClientProxy } from '@nestjs/microservices';
+import { of, throwError } from 'rxjs';
+
+import { JwtAuthGuard } from './jwt-auth.guard.js';
+import { JwtStrategy } from './jwt.strategy.js';
+
+describe('JwtAuthGuard', () => {
+  const jwtService = new JwtService({ secret: authConfig().secret });
+  let auth: { send: Mock };
+  let guard: JwtAuthGuard;
+
+  beforeEach(() => {
+    auth = { send: vi.fn() };
+    new JwtStrategy(authConfig(), auth as unknown as ClientProxy);
+    guard = new JwtAuthGuard();
+  });
+
+  it('fails to initialize when the JWT secret is empty', () => {
+    expect(
+      () =>
+        new JwtStrategy(
+          { ...authConfig(), secret: '' },
+          auth as unknown as ClientProxy,
+        ),
+    ).toThrow('JWT_SECRET is required');
+  });
+
+  function signToken(): string {
+    return jwtService.sign({
+      sub: 'alice',
+      email: 'a@example.com',
+      sid: 'session-1',
+    });
+  }
+
+  function contextWithAuth(authorization: string | undefined): {
+    ctx: ExecutionContext;
+    request: { user?: JwtPayload };
+  } {
+    const request = {
+      headers: { authorization },
+    } as { headers: { authorization?: string }; user?: JwtPayload };
+    const ctx = {
+      switchToHttp: () => ({
+        getRequest: () => request,
+        getResponse: () => ({}),
+      }),
+    } as unknown as ExecutionContext;
+    return { ctx, request };
+  }
+
+  it('allows the request and attaches the payload for an active session', async () => {
+    const token = signToken();
+    const { ctx, request } = contextWithAuth(`Bearer ${token}`);
+    auth.send.mockReturnValue(of({ id: 'alice' }));
+
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    expect(request.user).toMatchObject({
+      sub: 'alice',
+      email: 'a@example.com',
+      sid: 'session-1',
+    });
+    expect(auth.send).toHaveBeenCalledWith(AUTH_PATTERNS.VERIFY, 'session-1');
+  });
+
+  it('throws when the Authorization header is missing', async () => {
+    const { ctx } = contextWithAuth(undefined);
+
+    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+    expect(auth.send).not.toHaveBeenCalled();
+  });
+
+  it('throws when the scheme is not Bearer', async () => {
+    const { ctx } = contextWithAuth(`Basic ${signToken()}`);
+
+    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+    expect(auth.send).not.toHaveBeenCalled();
+  });
+
+  it('throws when the token is invalid without calling the auth service', async () => {
+    const { ctx } = contextWithAuth('Bearer not-a-token');
+
+    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+    expect(auth.send).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['expired', () => jwtService.sign({ sid: 'session-1' }, { expiresIn: -1 })],
+    [
+      'wrong signature',
+      () =>
+        new JwtService({ secret: 'wrong-secret' }).sign({ sid: 'session-1' }),
+    ],
+  ])('rejects a token with %s before checking the session', async (_, sign) => {
+    const { ctx, request } = contextWithAuth(`Bearer ${sign()}`);
+
+    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+    expect(auth.send).not.toHaveBeenCalled();
+    expect(request.user).toBeUndefined();
+  });
+
+  it('throws 401 when the session has been revoked', async () => {
+    const { ctx, request } = contextWithAuth(`Bearer ${signToken()}`);
+    auth.send.mockReturnValue(
+      throwError(() => ({
+        statusCode: 401,
+        message: 'Invalid or expired token',
+        error: 'Unauthorized',
+      })),
+    );
+
+    await expect(guard.canActivate(ctx)).rejects.toMatchObject({
+      status: 401,
+    });
+    await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(HttpException);
+    expect(request.user).toBeUndefined();
+  });
+});
