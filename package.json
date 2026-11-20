@@ -44,15 +44,15 @@
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "typeorm:build": "tsc --project tsconfig.typeorm.json",
     "typeorm": "pnpm run typeorm:build && typeorm",
-    "migration:run:products": "pnpm run typeorm -- migration:run -d dist/typeorm/apps/products/src/data-source.js",
-    "migration:run:orders": "pnpm run typeorm -- migration:run -d dist/typeorm/apps/orders/src/data-source.js",
-    "migration:run:users": "pnpm run typeorm -- migration:run -d dist/typeorm/apps/users/src/data-source.js",
-    "migration:run:auth": "pnpm run typeorm -- migration:run -d dist/typeorm/apps/auth/src/data-source.js",
+    "migration:run:products": "pnpm run typeorm migration:run -d dist/typeorm/apps/products/src/data-source.js",
+    "migration:run:orders": "pnpm run typeorm migration:run -d dist/typeorm/apps/orders/src/data-source.js",
+    "migration:run:users": "pnpm run typeorm migration:run -d dist/typeorm/apps/users/src/data-source.js",
+    "migration:run:auth": "pnpm run typeorm migration:run -d dist/typeorm/apps/auth/src/data-source.js",
     "migration:run:all": "pnpm run migration:run:products && pnpm run migration:run:orders && pnpm run migration:run:users && pnpm run migration:run:auth",
-    "migration:revert:products": "pnpm run typeorm -- migration:revert -d dist/typeorm/apps/products/src/data-source.js",
-    "migration:revert:orders": "pnpm run typeorm -- migration:revert -d dist/typeorm/apps/orders/src/data-source.js",
-    "migration:revert:users": "pnpm run typeorm -- migration:revert -d dist/typeorm/apps/users/src/data-source.js",
-    "migration:revert:auth": "pnpm run typeorm -- migration:revert -d dist/typeorm/apps/auth/src/data-source.js"
+    "migration:revert:products": "pnpm run typeorm migration:revert -d dist/typeorm/apps/products/src/data-source.js",
+    "migration:revert:orders": "pnpm run typeorm migration:revert -d dist/typeorm/apps/orders/src/data-source.js",
+    "migration:revert:users": "pnpm run typeorm migration:revert -d dist/typeorm/apps/users/src/data-source.js",
+    "migration:revert:auth": "pnpm run typeorm migration:revert -d dist/typeorm/apps/auth/src/data-source.js"
   },
   "dependencies": {
     "@keyv/redis": "6.1.0",

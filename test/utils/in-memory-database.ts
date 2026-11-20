@@ -12,7 +12,7 @@ export async function createInMemoryDataSource(
   });
   db.public.registerFunction({
     name: 'version',
-    implementation: () => 'PostgreSQL 18.4 (pg-mem)',
+    implementation: () => 'PostgreSQL 19.0 (pg-mem)',
   });
 
   db.public.interceptQueries((sql) =>

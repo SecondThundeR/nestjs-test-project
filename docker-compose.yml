@@ -115,7 +115,7 @@ services:
         condition: service_healthy
 
   products-db:
-    image: postgres:18.7-alpine
+    image: postgres:19.0-alpine
     environment:
       POSTGRES_USER: ${PRODUCTS_DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${PRODUCTS_DB_PASSWORD:-postgres}
@@ -123,7 +123,7 @@ services:
     ports:
       - '${PRODUCTS_DB_PORT:-5532}:5432'
     volumes:
-      - products-db-data:/var/lib/postgresql
+      - products-db-data-pg19:/var/lib/postgresql
     healthcheck:
       test:
         [
@@ -208,7 +208,7 @@ services:
       retries: 10
 
   orders-db:
-    image: postgres:18.7-alpine
+    image: postgres:19.0-alpine
     environment:
       POSTGRES_USER: ${ORDERS_DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${ORDERS_DB_PASSWORD:-postgres}
@@ -216,7 +216,7 @@ services:
     ports:
       - '${ORDERS_DB_PORT:-5534}:5432'
     volumes:
-      - orders-db-data:/var/lib/postgresql
+      - orders-db-data-pg19:/var/lib/postgresql
     healthcheck:
       test:
         [
@@ -228,7 +228,7 @@ services:
       retries: 5
 
   users-db:
-    image: postgres:18.7-alpine
+    image: postgres:19.0-alpine
     environment:
       POSTGRES_USER: ${USERS_DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${USERS_DB_PASSWORD:-postgres}
@@ -236,7 +236,7 @@ services:
     ports:
       - '${USERS_DB_PORT:-5535}:5432'
     volumes:
-      - users-db-data:/var/lib/postgresql
+      - users-db-data-pg19:/var/lib/postgresql
     healthcheck:
       test:
         [
@@ -248,7 +248,7 @@ services:
       retries: 5
 
   auth-db:
-    image: postgres:18.7-alpine
+    image: postgres:19.0-alpine
     environment:
       POSTGRES_USER: ${AUTH_DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-postgres}
@@ -256,7 +256,7 @@ services:
     ports:
       - '${AUTH_DB_PORT:-5536}:5432'
     volumes:
-      - auth-db-data:/var/lib/postgresql
+      - auth-db-data-pg19:/var/lib/postgresql
     healthcheck:
       test:
         [
@@ -268,10 +268,10 @@ services:
       retries: 5
 
 volumes:
-  products-db-data:
+  products-db-data-pg19:
   kafka-data:
   cache-data:
   cart-mongodb-data:
-  orders-db-data:
-  users-db-data:
-  auth-db-data:
+  orders-db-data-pg19:
+  users-db-data-pg19:
+  auth-db-data-pg19:
