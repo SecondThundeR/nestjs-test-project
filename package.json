@@ -73,7 +73,7 @@
     "dotenv": "18.0.10",
     "kafkajs": "2.2.4",
     "keyv": "6.1.0",
-    "mongodb": "7.9.0",
+    "mongodb": "7.9.1",
     "nest-winston": "2.0.0",
     "passport": "0.7.0",
     "passport-jwt": "4.0.1",
@@ -87,8 +87,8 @@
     "zod-openapi": "6.0.2"
   },
   "devDependencies": {
-    "@nestjs/cli": "12.0.13",
-    "@nestjs/schematics": "12.0.13",
+    "@nestjs/cli": "12.0.15",
+    "@nestjs/schematics": "12.0.16",
     "@nestjs/testing": "12.5.1",
     "@rspack/core": "2.3.3",
     "@types/express": "5.0.6",
