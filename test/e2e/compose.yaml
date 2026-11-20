@@ -1,0 +1,46 @@
+# Paths in this override are relative to the root docker-compose.yml.
+x-app: &app
+  image: ${E2E_IMAGE:?}
+  build: !reset null
+  env_file: !override [./test/e2e/compose.env]
+  restart: 'no'
+  healthcheck: &tcp-check
+    test: ['CMD', 'node', '-e', "require('net').connect(+process.env.E2E_TCP_PORT, '127.0.0.1').end()"]
+    interval: 2s
+    timeout: 3s
+    retries: 45
+
+services:
+  gateway:
+    <<: *app
+    ports: !override ['127.0.0.1::3000']
+    healthcheck:
+      <<: *tcp-check
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/api/v1/health').then(r => process.exit(r.ok ? 0 : 1))"]
+  products:
+    <<: *app
+    environment: { E2E_TCP_PORT: '3001' }
+  cart:
+    <<: *app
+    environment: { E2E_TCP_PORT: '3002' }
+  orders:
+    <<: *app
+    environment: { E2E_TCP_PORT: '3003' }
+  users:
+    <<: *app
+    environment: { E2E_TCP_PORT: '3004' }
+  auth:
+    <<: *app
+    environment: { E2E_TCP_PORT: '3005' }
+
+  products-db:
+    ports: !override ['127.0.0.1::5432']
+  orders-db: &internal
+    ports: !reset []
+  users-db: *internal
+  auth-db: *internal
+  cart-mongodb: *internal
+  cache: *internal
+  kafka: *internal
+  kafka-ui:
+    profiles: [tools]
