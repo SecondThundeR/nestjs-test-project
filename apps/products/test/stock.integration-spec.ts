@@ -3,17 +3,17 @@ import { RpcException } from '@nestjs/microservices';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { DataSource } from 'typeorm';
 import { startTestPostgres } from '../../../test/utils/postgresql.js';
-import { createInMemoryCache } from '../../../test/utils/in-memory-cache.js';
+import { useRedisTestCaches } from '../../../test/utils/redis.js';
 import { ProductEntity } from '../src/entities/product.entity.js';
 import { StockReservationEntity } from '../src/entities/stock-reservation.entity.js';
 import { productsMigrations } from '../src/migrations/index.js';
 import { ProductsService } from '../src/products.service.js';
 
 describe('Stock reservations (PostgreSQL)', () => {
+  const cache = useRedisTestCaches('products-stock', 'products');
   let postgres: StartedPostgreSqlContainer | undefined;
   let db: DataSource;
   let service: ProductsService;
-  let cacheStore: Map<string, unknown>;
   beforeAll(async () => {
     postgres = await startTestPostgres('products');
     db = new DataSource({
@@ -28,11 +28,9 @@ describe('Stock reservations (PostgreSQL)', () => {
   });
   beforeEach(async () => {
     await db.query('TRUNCATE products, stock_reservations');
-    const cache = createInMemoryCache();
-    cacheStore = cache.store;
     service = new ProductsService(
       db.getRepository(ProductEntity),
-      cache.service,
+      cache('products').service,
     );
   });
   afterAll(async () => {
@@ -179,7 +177,7 @@ describe('Stock reservations (PostgreSQL)', () => {
       reservationId: randomUUID(),
       items: [{ productId: p.id, quantity: 2 }],
     });
-    cacheStore.set(`product:${p.id}`, p);
+    await cache('products').manager.set(`product:${p.id}`, p);
     await service.update(p.id, { name: 'Updated' });
     expect((await service.findOne(p.id)).stock).toBe(3);
   });

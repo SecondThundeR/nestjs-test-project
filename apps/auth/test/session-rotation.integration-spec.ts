@@ -12,7 +12,7 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { defer, of } from 'rxjs';
 import { DataSource } from 'typeorm';
-import { createInMemoryCache } from '../../../test/utils/in-memory-cache.js';
+import { useRedisTestCaches } from '../../../test/utils/redis.js';
 import { startTestPostgres } from '../../../test/utils/postgresql.js';
 import { AuthService } from '../src/auth.service.js';
 import { SessionEntity } from '../src/entities/session.entity.js';
@@ -28,6 +28,7 @@ const user: PublicUser = {
 };
 
 describe('Concurrent session rotation (PostgreSQL)', () => {
+  const cache = useRedisTestCaches('auth-rotation', 'auth');
   let postgres: Awaited<ReturnType<typeof startTestPostgres>> | undefined;
 
   beforeAll(async () => {
@@ -83,7 +84,7 @@ describe('Concurrent session rotation (PostgreSQL)', () => {
           { provide: JwtService, useValue: jwtService },
           { provide: authConfig.KEY, useValue: config },
           { provide: SERVICE_NAMES.USERS, useValue: users },
-          { provide: CacheService, useValue: createInMemoryCache().service },
+          { provide: CacheService, useValue: cache('auth').service },
           {
             provide: getRepositoryToken(SessionEntity),
             useValue: db.getRepository(SessionEntity),

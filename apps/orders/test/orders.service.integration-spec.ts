@@ -7,8 +7,8 @@ import {
   vi,
   type Mock,
 } from 'vitest';
-import { OrderOperationEntity } from './entities/order-operation.entity.js';
-import { StockIntentEntity } from './entities/stock-intent.entity.js';
+import { OrderOperationEntity } from '../src/entities/order-operation.entity.js';
+import { StockIntentEntity } from '../src/entities/stock-intent.entity.js';
 import { EventBus } from '@nestjs/cqrs';
 import { Logger } from '@nestjs/common';
 import { CacheService } from '@app/cache';
@@ -25,23 +25,19 @@ import { RpcException } from '@nestjs/microservices';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { of, throwError } from 'rxjs';
-import {
-  type DataSource,
-  type ObjectLiteral,
-  SelectQueryBuilder,
-} from 'typeorm';
 
-import { createInMemoryCache } from '../../../test/utils/in-memory-cache.js';
-import { createInMemoryDataSource } from '../../../test/utils/in-memory-database.js';
+import { useRedisTestCaches } from '../../../test/utils/redis.js';
+import { usePostgresTestDatabase } from '../../../test/utils/postgresql.js';
+import source from '../src/data-source.js';
 import {
   makePaypalCapture,
   makePaypalOrder,
   makePaypalRefund,
 } from '../../../test/utils/paypal.js';
-import { OrderCancelledEvent, OrderPaidEvent } from './cqrs/events.js';
-import { OrderEntity } from './entities/order.entity.js';
-import { OrdersService } from './orders.service.js';
-import { PaypalService } from './paypal/paypal.service.js';
+import { OrderCancelledEvent, OrderPaidEvent } from '../src/cqrs/events.js';
+import { OrderEntity } from '../src/entities/order.entity.js';
+import { OrdersService } from '../src/orders.service.js';
+import { PaypalService } from '../src/paypal/paypal.service.js';
 
 const USER = 'user-1';
 const ADDRESS = '1 Test Street';
@@ -89,9 +85,13 @@ describe('OrdersService', () => {
     captureOrder: Mock;
     refundCapture: Mock;
   };
-  let dataSource: DataSource;
+  const database = usePostgresTestDatabase('orders_service', source, [
+    'orders',
+    'order_operations',
+    'stock_intents',
+  ]);
   let moduleRef: TestingModule;
-  let cacheStore: Map<string, unknown>;
+  const cache = useRedisTestCaches('orders-service', 'orders');
 
   beforeEach(async () => {
     productsClient = { send: vi.fn() };
@@ -101,20 +101,14 @@ describe('OrdersService', () => {
       captureOrder: vi.fn(),
       refundCapture: vi.fn(),
     };
-    dataSource = await createInMemoryDataSource([
-      OrderEntity,
-      StockIntentEntity,
-      OrderOperationEntity,
-    ]);
-    const { service: cacheService, store } = createInMemoryCache();
-    cacheStore = store;
+    const { service: cacheService } = cache('orders');
 
     moduleRef = await Test.createTestingModule({
       providers: [
         OrdersService,
         {
           provide: getRepositoryToken(OrderEntity),
-          useValue: dataSource.getRepository(OrderEntity),
+          useValue: database().getRepository(OrderEntity),
         },
         { provide: SERVICE_NAMES.PRODUCTS, useValue: productsClient },
         { provide: SERVICE_NAMES.CART, useValue: cartClient },
@@ -129,7 +123,6 @@ describe('OrdersService', () => {
   afterEach(async () => {
     vi.restoreAllMocks();
     await moduleRef.close();
-    await dataSource.destroy();
   });
 
   async function createOrder() {
@@ -208,7 +201,7 @@ describe('OrdersService', () => {
     it('persists the order so it can be retrieved afterwards', async () => {
       const order = await createOrder();
 
-      await expect(service.findOne(order.id)).resolves.toStrictEqual(order);
+      await expect(service.findOne(order.id)).resolves.toEqual(order);
       await expect(service.findAll(USER)).resolves.toContainEqual(order);
     });
 
@@ -377,7 +370,7 @@ describe('OrdersService', () => {
         service.updateStatus(order.id, OrderStatus.SHIPPED),
       ).rejects.toThrow(RpcException);
       await expect(
-        dataSource.getRepository(OrderEntity).findOneByOrFail({ id: order.id }),
+        database().getRepository(OrderEntity).findOneByOrFail({ id: order.id }),
       ).resolves.toMatchObject({ status: OrderStatus.PAID });
     });
 
@@ -385,7 +378,7 @@ describe('OrdersService', () => {
       const order = await createOrder();
       await payAndCapture(order.id);
       await service.findOne(order.id);
-      await dataSource.getRepository(OrderEntity).delete(order.id);
+      await database().getRepository(OrderEntity).delete(order.id);
       await expect(
         service.updateStatus(order.id, OrderStatus.SHIPPED),
       ).rejects.toThrow(RpcException);
@@ -517,14 +510,20 @@ describe('OrdersService', () => {
 
     it('blocks cancellation while capture is pending', async () => {
       const order = await createPaidForOrder();
-      paypal.captureOrder.mockImplementation(async () => {
-        await expect(service.cancel(order.id)).rejects.toThrow(RpcException);
-        return makePaypalCapture();
-      });
+      paypal.captureOrder.mockRejectedValueOnce(new Error('response lost'));
+      await expect(service.capturePayment(order.id)).rejects.toThrow(
+        'response lost',
+      );
+
+      await expect(service.cancel(order.id)).rejects.toThrow(
+        'Another order operation is pending',
+      );
+      expect(paypal.refundCapture).not.toHaveBeenCalled();
+
+      paypal.captureOrder.mockResolvedValue(makePaypalCapture());
       await expect(service.capturePayment(order.id)).resolves.toMatchObject({
         status: OrderStatus.PAID,
       });
-      expect(paypal.refundCapture).not.toHaveBeenCalled();
     });
 
     it('recovers a capture after a lost response', async () => {
@@ -534,7 +533,7 @@ describe('OrdersService', () => {
         'response lost',
       );
       expect(
-        await dataSource
+        await database()
           .getRepository(OrderOperationEntity)
           .findOneBy({ id: order.id }),
       ).toMatchObject({ kind: 'capture' });
@@ -543,7 +542,7 @@ describe('OrdersService', () => {
       await expect(service.findOne(order.id)).resolves.toMatchObject({
         status: OrderStatus.PAID,
       });
-      expect(await dataSource.getRepository(OrderOperationEntity).count()).toBe(
+      expect(await database().getRepository(OrderOperationEntity).count()).toBe(
         0,
       );
     });
@@ -718,31 +717,22 @@ describe('OrdersService', () => {
       );
       await expect(service.cancel(order.id)).rejects.toThrow('offline');
       expect(
-        await dataSource.getRepository(OrderEntity).findOneBy({ id: order.id }),
+        await database().getRepository(OrderEntity).findOneBy({ id: order.id }),
       ).toMatchObject({ status: OrderStatus.CANCELLED });
       expect(
-        await dataSource
+        await database()
           .getRepository(OrderOperationEntity)
           .findOneBy({ id: order.id }),
       ).toMatchObject({ kind: 'release' });
       productsClient.send.mockReturnValue(of({ success: true }));
       await service.recoverOperations();
-      expect(await dataSource.getRepository(OrderOperationEntity).count()).toBe(
+      expect(await database().getRepository(OrderOperationEntity).count()).toBe(
         0,
       );
     });
   });
 
   describe('order recovery', () => {
-    beforeEach(() => {
-      // pg-mem cannot execute SKIP LOCKED. The PostgreSQL recovery suite checks lock handling.
-      vi.spyOn(SelectQueryBuilder.prototype, 'setOnLocked').mockImplementation(
-        function (this: SelectQueryBuilder<ObjectLiteral>) {
-          return this;
-        },
-      );
-    });
-
     const offline = new Error('Products unavailable');
     const shortage = {
       statusCode: 400,
@@ -777,10 +767,10 @@ describe('OrdersService', () => {
             reservationId: expect.any(String),
           },
         );
-        expect(await dataSource.getRepository(StockIntentEntity).count()).toBe(
+        expect(await database().getRepository(StockIntentEntity).count()).toBe(
           0,
         );
-        expect(await dataSource.getRepository(OrderEntity).count()).toBe(0);
+        expect(await database().getRepository(OrderEntity).count()).toBe(0);
       },
     );
 
@@ -794,7 +784,7 @@ describe('OrdersService', () => {
       await expect(service.create(USER, ADDRESS)).rejects.toThrow(
         offline.message,
       );
-      const intents = dataSource.getRepository(StockIntentEntity);
+      const intents = database().getRepository(StockIntentEntity);
       expect(await intents.count()).toBe(1);
       await service.recoverStock();
       expect(await intents.count()).toBe(1);
@@ -805,7 +795,7 @@ describe('OrdersService', () => {
 
     it('clears a leftover intent for a committed order without releasing its stock', async () => {
       const order = await createOrder();
-      const intents = dataSource.getRepository(StockIntentEntity);
+      const intents = database().getRepository(StockIntentEntity);
       await intents.insert({ id: order.id });
       productsClient.send.mockClear();
       await service.recoverStock();
@@ -814,7 +804,7 @@ describe('OrdersService', () => {
     });
 
     it('does not release a reserve if another worker already cleared its intent', async () => {
-      const intents = dataSource.getRepository(StockIntentEntity);
+      const intents = database().getRepository(StockIntentEntity);
       vi.spyOn(intents, 'find').mockResolvedValueOnce([
         { id: 'missing', createdAt: new Date() },
       ]);
@@ -840,7 +830,7 @@ describe('OrdersService', () => {
       'logs database failures when scanning %s',
       async (_name, entity, recover, message) => {
         vi.spyOn(
-          dataSource.getRepository(entity),
+          database().getRepository(entity),
           'find',
         ).mockRejectedValueOnce(new Error('database unavailable'));
         const log = vi
@@ -855,7 +845,7 @@ describe('OrdersService', () => {
       const order = await createOrder();
       await payAndCapture(order.id);
       await service.findOne(order.id);
-      await dataSource
+      await database()
         .getRepository(OrderEntity)
         .update(order.id, { status: OrderStatus.DELIVERED });
       await expect(
@@ -866,7 +856,7 @@ describe('OrdersService', () => {
     it('rejects capture while a refund is pending', async () => {
       const order = await createOrder();
       await payAndCapture(order.id);
-      await dataSource
+      await database()
         .getRepository(OrderOperationEntity)
         .insert({ id: order.id, kind: 'refund' });
       await expect(service.capturePayment(order.id)).rejects.toThrow(
@@ -876,7 +866,7 @@ describe('OrdersService', () => {
 
     it('retries a pending capture when requested again', async () => {
       const order = await createPaidForOrder();
-      await dataSource
+      await database()
         .getRepository(OrderOperationEntity)
         .insert({ id: order.id, kind: 'capture' });
       paypal.captureOrder.mockResolvedValue(makePaypalCapture());
@@ -885,12 +875,14 @@ describe('OrdersService', () => {
       });
     });
 
-    it('defers orphaned operations and refund work without a capture ID', async () => {
+    it('handles a stale operation scan and defers a refund without a capture ID', async () => {
       const order = await createOrder();
-      const operations = dataSource.getRepository(OrderOperationEntity);
-      await operations.insert([
-        { id: 'missing', kind: 'release' },
-        { id: order.id, kind: 'refund' },
+      const operations = database().getRepository(OrderOperationEntity);
+      await operations.insert({ id: order.id, kind: 'refund' });
+      // The foreign key prevents orphan rows, but the worker can act on a stale scan.
+      vi.spyOn(operations, 'find').mockResolvedValueOnce([
+        operations.create({ id: 'missing', kind: 'release' }),
+        ...(await operations.find()),
       ]);
       const log = vi
         .spyOn(Logger.prototype, 'error')
@@ -898,12 +890,11 @@ describe('OrdersService', () => {
       await service.recoverOperations();
       expect(paypal.refundCapture).not.toHaveBeenCalled();
       const pending = await operations.find();
-      expect(pending).toHaveLength(2);
-      expect(
-        pending.every(
-          ({ nextAttemptAt }) => nextAttemptAt.getTime() > Date.now(),
-        ),
-      ).toBe(true);
+      expect(pending).toHaveLength(1);
+      expect(pending[0].nextAttemptAt.getTime()).toBeGreaterThan(Date.now());
+      expect(log).toHaveBeenCalledWith(
+        expect.stringContaining('Order operation deferred for missing'),
+      );
       expect(log).toHaveBeenCalledWith(
         expect.stringContaining('payment cannot be refunded automatically'),
       );
@@ -915,10 +906,10 @@ describe('OrdersService', () => {
       const shipped = await createOrder();
       await payAndCapture(shipped.id);
       await service.updateStatus(shipped.id, OrderStatus.SHIPPED);
-      await dataSource
+      await database()
         .getRepository(OrderEntity)
         .update(cancel.id, { status: OrderStatus.CANCELLED });
-      const operations = dataSource.getRepository(OrderOperationEntity);
+      const operations = database().getRepository(OrderOperationEntity);
       await operations.insert([
         { id: capture.id, kind: 'capture' },
         { id: cancel.id, kind: 'release' },
@@ -931,7 +922,7 @@ describe('OrdersService', () => {
       paypal.captureOrder.mockResolvedValue(makePaypalCapture());
       const publish = vi.fn();
       const worker = new OrdersService(
-        dataSource.getRepository(OrderEntity),
+        database().getRepository(OrderEntity),
         moduleRef.get(SERVICE_NAMES.PRODUCTS),
         moduleRef.get(SERVICE_NAMES.CART),
         moduleRef.get(CacheService),
@@ -948,33 +939,41 @@ describe('OrdersService', () => {
   describe('caching', () => {
     it('serves a repeated findOne from the cache', async () => {
       const order = await createOrder();
-      const spy = vi.spyOn(dataSource.getRepository(OrderEntity), 'findOneBy');
+      const spy = vi.spyOn(database().getRepository(OrderEntity), 'findOneBy');
 
       await service.findOne(order.id);
       await service.findOne(order.id);
 
       expect(spy).toHaveBeenCalledTimes(1);
-      expect(cacheStore.has(`order:${order.id}`)).toBe(true);
+      await expect(
+        cache('orders').manager.get(`order:${order.id}`),
+      ).resolves.toBeDefined();
     });
 
     it('serves a repeated findAll from the cache', async () => {
       await createOrder();
-      const spy = vi.spyOn(dataSource.getRepository(OrderEntity), 'find');
+      const spy = vi.spyOn(database().getRepository(OrderEntity), 'find');
 
       await service.findAll(USER);
       await service.findAll(USER);
 
       expect(spy).toHaveBeenCalledTimes(1);
-      expect(cacheStore.has(`orders:user:${USER}`)).toBe(true);
+      await expect(
+        cache('orders').manager.get(`orders:user:${USER}`),
+      ).resolves.toBeDefined();
     });
 
     it('evicts the user listing cache when an order is created', async () => {
       await service.findAll(USER);
-      expect(cacheStore.has(`orders:user:${USER}`)).toBe(true);
+      await expect(
+        cache('orders').manager.get(`orders:user:${USER}`),
+      ).resolves.toBeDefined();
 
       await createOrder();
 
-      expect(cacheStore.has(`orders:user:${USER}`)).toBe(false);
+      await expect(
+        cache('orders').manager.get(`orders:user:${USER}`),
+      ).resolves.toBeUndefined();
     });
 
     it('evicts the order cache when its status changes', async () => {
@@ -984,7 +983,9 @@ describe('OrdersService', () => {
 
       await service.updateStatus(order.id, OrderStatus.SHIPPED);
 
-      expect(cacheStore.has(`order:${order.id}`)).toBe(false);
+      await expect(
+        cache('orders').manager.get(`order:${order.id}`),
+      ).resolves.toBeUndefined();
     });
 
     it('evicts the order cache when it is cancelled', async () => {
@@ -994,7 +995,9 @@ describe('OrdersService', () => {
 
       await service.cancel(order.id);
 
-      expect(cacheStore.has(`order:${order.id}`)).toBe(false);
+      await expect(
+        cache('orders').manager.get(`order:${order.id}`),
+      ).resolves.toBeUndefined();
     });
   });
 });

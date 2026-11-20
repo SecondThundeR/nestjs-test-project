@@ -1,6 +1,4 @@
 import type { AddressInfo, Server } from 'node:net';
-import { OrderOperationEntity } from '../src/entities/order-operation.entity.js';
-import { StockIntentEntity } from './../src/entities/stock-intent.entity.js';
 import { KAFKA_CLIENT, SERVICE_NAMES } from '@app/config';
 import {
   type Cart,
@@ -29,16 +27,21 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
-import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom, of } from 'rxjs';
 
-import { createInMemoryDataSource } from './../../../test/utils/in-memory-database.js';
+import {
+  configureTestPostgres,
+  startTestPostgres,
+} from '../../../test/utils/postgresql.js';
+import {
+  configureTestRedis,
+  startTestRedis,
+} from '../../../test/utils/redis.js';
 import {
   makePaypalCapture,
   makePaypalOrder,
   makePaypalRefund,
 } from './../../../test/utils/paypal.js';
-import { OrderEntity } from './../src/entities/order.entity.js';
 import { OrdersModule } from './../src/orders.module.js';
 import { PaypalService } from './../src/paypal/paypal.service.js';
 
@@ -72,6 +75,8 @@ function makeCartItem(overrides: Partial<CartItem> = {}): CartItem {
 }
 
 describe('Orders microservice (e2e)', () => {
+  let postgres: Awaited<ReturnType<typeof startTestPostgres>> | undefined;
+  let redis: Awaited<ReturnType<typeof startTestRedis>> | undefined;
   let app: INestMicroservice;
   let client: ClientProxy;
   const productsClient = { send: vi.fn(), emit: vi.fn() };
@@ -88,17 +93,14 @@ describe('Orders microservice (e2e)', () => {
   };
 
   beforeAll(async () => {
-    const dataSource = await createInMemoryDataSource([
-      OrderEntity,
-      StockIntentEntity,
-      OrderOperationEntity,
-    ]);
+    postgres = await startTestPostgres('orders_rpc');
+    configureTestPostgres('ORDERS', postgres);
+    redis = await startTestRedis('orders-rpc');
+    configureTestRedis(redis);
 
     const moduleFixture = await Test.createTestingModule({
       imports: [OrdersModule],
     })
-      .overrideProvider(getDataSourceToken())
-      .useValue(dataSource)
       .overrideProvider(SERVICE_NAMES.PRODUCTS)
       .useValue(productsClient)
       .overrideProvider(SERVICE_NAMES.CART)
@@ -131,8 +133,16 @@ describe('Orders microservice (e2e)', () => {
   });
 
   afterAll(async () => {
-    await client?.close();
-    await app?.close();
+    try {
+      try {
+        await client?.close();
+      } finally {
+        await app?.close();
+      }
+    } finally {
+      vi.unstubAllEnvs();
+      await Promise.all([redis?.container.stop(), postgres?.stop()]);
+    }
   });
 
   beforeEach(() => {

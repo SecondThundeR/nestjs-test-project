@@ -15,7 +15,7 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { defer, of, throwError } from 'rxjs';
 import { DataSource, Repository } from 'typeorm';
-import { createInMemoryCache } from '../../../test/utils/in-memory-cache.js';
+import { useRedisTestCaches } from '../../../test/utils/redis.js';
 import { startTestPostgres } from '../../../test/utils/postgresql.js';
 import { onTestFinished } from 'vitest';
 import { ProductEntity } from '../../products/src/entities/product.entity.js';
@@ -29,6 +29,7 @@ import { OrdersService } from '../src/orders.service.js';
 import { PaypalService } from '../src/paypal/paypal.service.js';
 
 describe('Stock recovery (PostgreSQL)', () => {
+  const cache = useRedisTestCaches('stock-recovery', 'orders', 'products');
   let db: DataSource;
   let productsDb: DataSource;
   let ordersPostgres: Awaited<ReturnType<typeof startTestPostgres>> | undefined;
@@ -86,7 +87,7 @@ describe('Stock recovery (PostgreSQL)', () => {
     loseReserveResponse = false;
     products = new ProductsService(
       productsDb.getRepository(ProductEntity),
-      createInMemoryCache().service,
+      cache('products').service,
     );
     product = await products.create({ name: 'Widget', price: 10, stock: 5 });
     send.mockImplementation((pattern: string, payload: unknown) => {
@@ -118,7 +119,7 @@ describe('Stock recovery (PostgreSQL)', () => {
           provide: getRepositoryToken(OrderEntity),
           useValue: db.getRepository(OrderEntity),
         },
-        { provide: CacheService, useValue: createInMemoryCache().service },
+        { provide: CacheService, useValue: cache('orders').service },
         { provide: SERVICE_NAMES.PRODUCTS, useValue: { send } },
         {
           provide: SERVICE_NAMES.CART,

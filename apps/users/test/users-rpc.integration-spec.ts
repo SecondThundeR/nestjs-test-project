@@ -15,28 +15,35 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
-import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 
-import { createInMemoryDataSource } from './../../../test/utils/in-memory-database.js';
-import { UserEntity } from './../src/entities/user.entity.js';
+import {
+  configureTestPostgres,
+  startTestPostgres,
+} from '../../../test/utils/postgresql.js';
+import {
+  configureTestRedis,
+  startTestRedis,
+} from '../../../test/utils/redis.js';
 import { UsersModule } from './../src/users.module.js';
 
 const HOST = '127.0.0.1';
 
 describe('Users microservice (e2e)', () => {
+  let postgres: Awaited<ReturnType<typeof startTestPostgres>> | undefined;
+  let redis: Awaited<ReturnType<typeof startTestRedis>> | undefined;
   let app: INestMicroservice;
   let client: ClientProxy;
 
   beforeAll(async () => {
-    const dataSource = await createInMemoryDataSource([UserEntity]);
+    postgres = await startTestPostgres('users_rpc');
+    configureTestPostgres('USERS', postgres);
+    redis = await startTestRedis('users-rpc');
+    configureTestRedis(redis);
 
     const moduleFixture = await Test.createTestingModule({
       imports: [UsersModule],
-    })
-      .overrideProvider(getDataSourceToken())
-      .useValue(dataSource)
-      .compile();
+    }).compile();
 
     app = moduleFixture.createNestMicroservice<MicroserviceOptions>({
       transport: Transport.TCP,
@@ -60,8 +67,16 @@ describe('Users microservice (e2e)', () => {
   });
 
   afterAll(async () => {
-    await client?.close();
-    await app?.close();
+    try {
+      try {
+        await client?.close();
+      } finally {
+        await app?.close();
+      }
+    } finally {
+      vi.unstubAllEnvs();
+      await Promise.all([redis?.container.stop(), postgres?.stop()]);
+    }
   });
 
   function send<T>(pattern: string, payload: unknown): Promise<T> {
@@ -91,6 +106,11 @@ describe('Users microservice (e2e)', () => {
     const found = await send<PublicUser>(USERS_PATTERNS.FIND_BY_ID, created.id);
     expect(found.id).toBe(created.id);
     expect(found).not.toHaveProperty('passwordHash');
+    const key = await redis!.cli('--scan', '--pattern', `*user:${created.id}`);
+    expect(key).toBeTruthy();
+    expect(JSON.parse(await redis!.cli('GET', key))).toMatchObject({
+      value: found,
+    });
   });
 
   it('returns null for an unknown user id', async () => {

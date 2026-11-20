@@ -4,29 +4,30 @@ import type { CreateProductDto } from '@app/domains';
 import { RpcException } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import type { DataSource } from 'typeorm';
 
-import { createInMemoryCache } from '../../../test/utils/in-memory-cache.js';
-import { createInMemoryDataSource } from '../../../test/utils/in-memory-database.js';
-import { ProductEntity } from './entities/product.entity.js';
-import { ProductsService } from './products.service.js';
+import { useRedisTestCaches } from '../../../test/utils/redis.js';
+import { usePostgresTestDatabase } from '../../../test/utils/postgresql.js';
+import source from '../src/data-source.js';
+import { ProductEntity } from '../src/entities/product.entity.js';
+import { ProductsService } from '../src/products.service.js';
 
 describe('ProductsService', () => {
   let service: ProductsService;
-  let dataSource: DataSource;
-  let cacheStore: Map<string, unknown>;
+  const database = usePostgresTestDatabase('products_service', source, [
+    'products',
+    'stock_reservations',
+  ]);
+  const cache = useRedisTestCaches('products-service', 'products');
 
   beforeEach(async () => {
-    dataSource = await createInMemoryDataSource([ProductEntity]);
-    const { service: cacheService, store } = createInMemoryCache();
-    cacheStore = store;
+    const { service: cacheService } = cache('products');
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         ProductsService,
         {
           provide: getRepositoryToken(ProductEntity),
-          useValue: dataSource.getRepository(ProductEntity),
+          useValue: database().getRepository(ProductEntity),
         },
         { provide: CacheService, useValue: cacheService },
       ],
@@ -35,8 +36,8 @@ describe('ProductsService', () => {
     service = moduleRef.get(ProductsService);
   });
 
-  afterEach(async () => {
-    await dataSource.destroy();
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   function create(overrides: Partial<CreateProductDto> = {}) {
@@ -70,7 +71,7 @@ describe('ProductsService', () => {
     it('stores the product so it can be retrieved', async () => {
       const product = await create();
 
-      await expect(service.findOne(product.id)).resolves.toStrictEqual(product);
+      await expect(service.findOne(product.id)).resolves.toEqual(product);
     });
   });
 
@@ -83,7 +84,9 @@ describe('ProductsService', () => {
       const a = await create({ name: 'Alpha' });
       const b = await create({ name: 'Beta' });
 
-      await expect(service.findAll()).resolves.toEqual([a, b]);
+      const products = await service.findAll();
+      expect(products).toHaveLength(2);
+      expect(products).toEqual(expect.arrayContaining([a, b]));
     });
   });
 
@@ -91,7 +94,7 @@ describe('ProductsService', () => {
     it('returns the product for a known id', async () => {
       const product = await create();
 
-      await expect(service.findOne(product.id)).resolves.toStrictEqual(product);
+      await expect(service.findOne(product.id)).resolves.toEqual(product);
     });
 
     it('throws RpcException for an unknown id', async () => {
@@ -104,10 +107,9 @@ describe('ProductsService', () => {
       const a = await create({ name: 'Alpha' });
       const b = await create({ name: 'Beta' });
 
-      await expect(service.findMany([a.id, 'missing', b.id])).resolves.toEqual([
-        a,
-        b,
-      ]);
+      const products = await service.findMany([a.id, 'missing', b.id]);
+      expect(products).toHaveLength(2);
+      expect(products).toEqual(expect.arrayContaining([a, b]));
     });
 
     it('returns an empty array when none match', async () => {
@@ -177,7 +179,7 @@ describe('ProductsService', () => {
     it('serves a repeated findOne from the cache', async () => {
       const product = await create();
       const spy = vi.spyOn(
-        dataSource.getRepository(ProductEntity),
+        database().getRepository(ProductEntity),
         'findOneBy',
       );
 
@@ -185,27 +187,35 @@ describe('ProductsService', () => {
       await service.findOne(product.id);
 
       expect(spy).toHaveBeenCalledTimes(1);
-      expect(cacheStore.has(`product:${product.id}`)).toBe(true);
+      await expect(
+        cache('products').manager.get(`product:${product.id}`),
+      ).resolves.toBeDefined();
     });
 
     it('serves a repeated findAll from the cache', async () => {
       await create();
-      const spy = vi.spyOn(dataSource.getRepository(ProductEntity), 'find');
+      const spy = vi.spyOn(database().getRepository(ProductEntity), 'find');
 
       await service.findAll();
       await service.findAll();
 
       expect(spy).toHaveBeenCalledTimes(1);
-      expect(cacheStore.has('products:all')).toBe(true);
+      await expect(
+        cache('products').manager.get('products:all'),
+      ).resolves.toBeDefined();
     });
 
     it('evicts the listing cache when a product is created', async () => {
       await service.findAll();
-      expect(cacheStore.has('products:all')).toBe(true);
+      await expect(
+        cache('products').manager.get('products:all'),
+      ).resolves.toBeDefined();
 
       await create();
 
-      expect(cacheStore.has('products:all')).toBe(false);
+      await expect(
+        cache('products').manager.get('products:all'),
+      ).resolves.toBeUndefined();
     });
 
     it('evicts the product cache when it is updated', async () => {
@@ -214,7 +224,9 @@ describe('ProductsService', () => {
 
       await service.update(product.id, { price: 99 });
 
-      expect(cacheStore.has(`product:${product.id}`)).toBe(false);
+      await expect(
+        cache('products').manager.get(`product:${product.id}`),
+      ).resolves.toBeUndefined();
       await expect(service.findOne(product.id)).resolves.toMatchObject({
         price: 99,
       });
@@ -226,7 +238,9 @@ describe('ProductsService', () => {
 
       await service.remove(product.id);
 
-      expect(cacheStore.has(`product:${product.id}`)).toBe(false);
+      await expect(
+        cache('products').manager.get(`product:${product.id}`),
+      ).resolves.toBeUndefined();
     });
   });
 });

@@ -20,12 +20,13 @@ import { RpcException } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { from, of, throwError } from 'rxjs';
-import type { DataSource, Repository } from 'typeorm';
+import type { Repository } from 'typeorm';
 
-import { createInMemoryCache } from '../../../test/utils/in-memory-cache.js';
-import { createInMemoryDataSource } from '../../../test/utils/in-memory-database.js';
-import { AuthService } from './auth.service.js';
-import { SessionEntity } from './entities/session.entity.js';
+import { useRedisTestCaches } from '../../../test/utils/redis.js';
+import { usePostgresTestDatabase } from '../../../test/utils/postgresql.js';
+import source from '../src/data-source.js';
+import { AuthService } from '../src/auth.service.js';
+import { SessionEntity } from '../src/entities/session.entity.js';
 
 const USER: PublicUser = {
   id: 'u-1',
@@ -39,17 +40,17 @@ const USER: PublicUser = {
 describe('AuthService', () => {
   let service: AuthService;
   let jwtService: JwtService;
-  let dataSource: DataSource;
+  const database = usePostgresTestDatabase('auth_service', source, [
+    'sessions',
+  ]);
   let sessions: Repository<SessionEntity>;
   let users: { send: Mock };
-  let cacheStore: Map<string, unknown>;
+  const cache = useRedisTestCaches('auth-service', 'auth');
 
   beforeEach(async () => {
-    dataSource = await createInMemoryDataSource([SessionEntity]);
-    sessions = dataSource.getRepository(SessionEntity);
+    sessions = database().getRepository(SessionEntity);
     users = { send: vi.fn().mockReturnValue(of(USER)) };
-    const { service: cacheService, store } = createInMemoryCache();
-    cacheStore = store;
+    const { service: cacheService } = cache('auth');
 
     const config = {
       secret: 'test-jwt-secret',
@@ -81,8 +82,8 @@ describe('AuthService', () => {
     jwtService = moduleRef.get(JwtService);
   });
 
-  afterEach(async () => {
-    await dataSource.destroy();
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   function register() {
@@ -228,7 +229,9 @@ describe('AuthService', () => {
       await service.verify(sid);
 
       expect(spy).toHaveBeenCalledTimes(1);
-      expect(cacheStore.has(`session:${sid}`)).toBe(true);
+      await expect(
+        cache('auth').manager.get(`session:${sid}`),
+      ).resolves.toBeDefined();
     });
 
     it('rejects a cached session once it is revoked by logout', async () => {
@@ -236,11 +239,15 @@ describe('AuthService', () => {
       const { sid } = jwtService.verify<JwtPayload>(accessToken);
 
       await service.verify(sid);
-      expect(cacheStore.has(`session:${sid}`)).toBe(true);
+      await expect(
+        cache('auth').manager.get(`session:${sid}`),
+      ).resolves.toBeDefined();
 
       await service.logout(sid);
 
-      expect(cacheStore.has(`session:${sid}`)).toBe(false);
+      await expect(
+        cache('auth').manager.get(`session:${sid}`),
+      ).resolves.toBeUndefined();
       await expect(service.verify(sid)).rejects.toThrow(RpcException);
     });
   });
@@ -251,7 +258,7 @@ describe('AuthService', () => {
     await service.verify(sid);
     const session = await sessions.findOneByOrFail({ id: sid });
     session.expiresAt = new Date(Date.now() - 1000).toISOString();
-    cacheStore.set(`session:${sid}`, session);
+    await cache('auth').manager.set(`session:${sid}`, session);
     const lookup = vi.spyOn(sessions, 'findOneBy');
     users.send.mockClear();
 

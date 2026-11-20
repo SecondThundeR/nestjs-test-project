@@ -4,29 +4,27 @@ import { type CreateUserDto } from '@app/domains';
 import { RpcException } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import type { DataSource } from 'typeorm';
 
-import { createInMemoryCache } from '../../../test/utils/in-memory-cache.js';
-import { createInMemoryDataSource } from '../../../test/utils/in-memory-database.js';
-import { UserEntity } from './entities/user.entity.js';
-import { UsersService } from './users.service.js';
+import { useRedisTestCaches } from '../../../test/utils/redis.js';
+import { usePostgresTestDatabase } from '../../../test/utils/postgresql.js';
+import source from '../src/data-source.js';
+import { UserEntity } from '../src/entities/user.entity.js';
+import { UsersService } from '../src/users.service.js';
 
 describe('UsersService', () => {
   let service: UsersService;
-  let dataSource: DataSource;
-  let cacheStore: Map<string, unknown>;
+  const database = usePostgresTestDatabase('users_service', source, ['users']);
+  const cache = useRedisTestCaches('users-service', 'users');
 
   beforeEach(async () => {
-    dataSource = await createInMemoryDataSource([UserEntity]);
-    const { service: cacheService, store } = createInMemoryCache();
-    cacheStore = store;
+    const { service: cacheService } = cache('users');
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         UsersService,
         {
           provide: getRepositoryToken(UserEntity),
-          useValue: dataSource.getRepository(UserEntity),
+          useValue: database().getRepository(UserEntity),
         },
         { provide: CacheService, useValue: cacheService },
       ],
@@ -35,8 +33,8 @@ describe('UsersService', () => {
     service = moduleRef.get(UsersService);
   });
 
-  afterEach(async () => {
-    await dataSource.destroy();
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   function create(overrides: Partial<CreateUserDto> = {}) {
@@ -132,23 +130,27 @@ describe('UsersService', () => {
 
     it('serves a repeated lookup from the cache', async () => {
       const created = await create();
-      const spy = vi.spyOn(dataSource.getRepository(UserEntity), 'findOneBy');
+      const spy = vi.spyOn(database().getRepository(UserEntity), 'findOneBy');
 
       await service.findById(created.id);
       await service.findById(created.id);
 
       expect(spy).toHaveBeenCalledTimes(1);
-      expect(cacheStore.has(`user:${created.id}`)).toBe(true);
+      await expect(
+        cache('users').manager.get(`user:${created.id}`),
+      ).resolves.toBeDefined();
     });
 
     it('does not cache a missing user', async () => {
-      const spy = vi.spyOn(dataSource.getRepository(UserEntity), 'findOneBy');
+      const spy = vi.spyOn(database().getRepository(UserEntity), 'findOneBy');
 
       await service.findById('missing');
       await service.findById('missing');
 
       expect(spy).toHaveBeenCalledTimes(2);
-      expect(cacheStore.has('user:missing')).toBe(false);
+      await expect(
+        cache('users').manager.get('user:missing'),
+      ).resolves.toBeUndefined();
     });
   });
 });

@@ -19,28 +19,35 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
-import { getDataSourceToken } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 
-import { createInMemoryDataSource } from './../../../test/utils/in-memory-database.js';
-import { ProductEntity } from './../src/entities/product.entity.js';
+import {
+  configureTestPostgres,
+  startTestPostgres,
+} from '../../../test/utils/postgresql.js';
+import {
+  configureTestRedis,
+  startTestRedis,
+} from '../../../test/utils/redis.js';
 import { ProductsModule } from './../src/products.module.js';
 
 const HOST = '127.0.0.1';
 
 describe('Products microservice (e2e)', () => {
+  let postgres: Awaited<ReturnType<typeof startTestPostgres>> | undefined;
+  let redis: Awaited<ReturnType<typeof startTestRedis>> | undefined;
   let app: INestMicroservice;
   let client: ClientProxy;
 
   beforeAll(async () => {
-    const dataSource = await createInMemoryDataSource([ProductEntity]);
+    postgres = await startTestPostgres('products_rpc');
+    configureTestPostgres('PRODUCTS', postgres);
+    redis = await startTestRedis('products-rpc');
+    configureTestRedis(redis);
 
     const moduleFixture = await Test.createTestingModule({
       imports: [ProductsModule],
-    })
-      .overrideProvider(getDataSourceToken())
-      .useValue(dataSource)
-      .compile();
+    }).compile();
 
     app = moduleFixture.createNestMicroservice<MicroserviceOptions>({
       transport: Transport.TCP,
@@ -64,8 +71,16 @@ describe('Products microservice (e2e)', () => {
   });
 
   afterAll(async () => {
-    await client?.close();
-    await app?.close();
+    try {
+      try {
+        await client?.close();
+      } finally {
+        await app?.close();
+      }
+    } finally {
+      vi.unstubAllEnvs();
+      await Promise.all([redis?.container.stop(), postgres?.stop()]);
+    }
   });
 
   function send<T>(pattern: string, payload: unknown): Promise<T> {
